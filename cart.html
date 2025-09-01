@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Checkout - B's Beauty Blossom</title>
+<link rel="stylesheet" href="style.css">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBSA9iP3kjdYZM0eXt_KOXAgPT_z74cGJ8",
+  authDomain: "beauty-blossom-5247d.firebaseapp.com",
+  databaseURL: "https://beauty-blossom-5247d-default-rtdb.firebaseio.com",
+  projectId: "beauty-blossom-5247d",
+  storageBucket: "beauty-blossom-5247d.firebasestorage.app",
+  messagingSenderId: "916163644879",
+  appId: "1:916163644879:web:2bf1f40e21b1abd73816ba",
+  measurementId: "G-1QD13LXLRM"
+};
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+</script>
+</head>
+<body>
+<header>
+<nav class="navbar">
+  <div class="logo"><a href="index.html"><img src="1.jpg" alt="Logo" width="80"></a></div>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="perfume.html">Perfume</a></li>
+    <li><a href="body.html">Body</a></li>
+    <li><a href="jewellery.html">Jewelry</a></li>
+    <li><a href="gift.html">Gift</a></li>
+    <li><a href="skincare.html">Skincare</a></li>
+    <li><a href="cosmetics.html">Cosmetics</a></li>
+    <li><a href="cart.html" class="active">🛒 Cart (<span id="cart-count">0</span>)</a></li>
+  </ul>
+  <div class="hamburger">&#9776;</div>
+</nav>
+</header>
+
+<section class="cart">
+  <h1>Checkout</h1>
+  <div id="cart-items"></div>
+  <p id="total"></p>
+
+  <h2>Delivery Method</h2>
+  <form id="delivery-form">
+    <label>
+      <input type="radio" name="delivery" value="Pick Up" required> Pick Up (Free)
+    </label><br>
+    <label>
+      <input type="radio" name="delivery" value="Postage"> Postage (+Rs125)
+    </label><br>
+    <label>
+      <input type="radio" name="delivery" value="Delivery"> Delivery (+Rs150)
+    </label><br><br>
+
+    <div id="customer-info" style="display:none;">
+      <h2>Customer Details</h2>
+      <input type="text" id="name" placeholder="Full Name" required><br>
+      <input type="email" id="email" placeholder="Email" required><br>
+      <input type="tel" id="phone" placeholder="Phone Number" required><br>
+      <div id="address-section" style="display:none;">
+        <input type="text" id="address" placeholder="Delivery Address"><br>
+      </div>
+
+      <h2>Payment Method</h2>
+      <label>
+        <input type="radio" name="payment" value="Juice" required> Juice Payment (via account transfer)
+      </label><br>
+      <label>
+        <input type="radio" name="payment" value="Pick Up Payment"> Payment at Pick Up
+      </label><br><br>
+
+      <div id="juice-section" style="display:none; text-align:center;">
+        <h3>Juice Payment Instructions</h3>
+        <p>1. Open your Juice app</p>
+        <p>2. Transfer the total amount to the following account:</p>
+        <p><strong>Account Number: 000450702685</strong></p>
+        <p>3. Send your payment receipt/screenshot to <strong>+230 58195560</strong></p>
+        <p>4. Press "Confirm Order" below once payment is completed</p>
+      </div>
+
+      <button type="submit">Confirm Order</button>
+    </div>
+  </form>
+</section>
+
+<script>
+// Navbar toggle
+const hamburger = document.querySelector(".hamburger");
+const navLinks = document.querySelector(".nav-links");
+if(hamburger) hamburger.addEventListener("click", ()=>navLinks.classList.toggle("show"));
+
+let baseTotal = 0;
+let extraCharge = 0;
+
+// Cart Display
+function loadCart() {
+  const cart = JSON.parse(localStorage.getItem("cart")) || [];
+  const container = document.getElementById("cart-items");
+  container.innerHTML = "";
+  baseTotal = 0;
+
+  if(cart.length===0){
+    container.innerHTML="<p>Your cart is empty.</p>";
+    document.getElementById("total").textContent="";
+    return;
+  }
+
+  cart.forEach((item,index)=>{
+    const itemTotal = item.price * item.quantity;
+    baseTotal += itemTotal;
+    container.innerHTML += `
+      <div class="cart-item">
+        <p><strong>${item.name}</strong> - Rs${item.price} x ${item.quantity} = Rs${itemTotal}</p>
+        <button onclick="removeItem(${index})">Remove</button>
+      </div>
+    `;
+  });
+
+  updateTotal();
+}
+function updateTotal(){
+  document.getElementById("total").textContent="Total: Rs"+(baseTotal+extraCharge);
+}
+loadCart();
+document.getElementById("cart-count").textContent = JSON.parse(localStorage.getItem("cart"))?.reduce((sum,item)=>sum+item.quantity,0) || 0;
+
+function removeItem(index){
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  cart.splice(index,1);
+  localStorage.setItem("cart", JSON.stringify(cart));
+  loadCart();
+  document.getElementById("cart-count").textContent = cart.reduce((sum,item)=>sum+item.quantity,0);
+}
+
+// Delivery & Payment
+const deliveryRadios = document.querySelectorAll('input[name="delivery"]');
+const paymentRadios = document.querySelectorAll('input[name="payment"]');
+const customerInfo = document.getElementById("customer-info");
+const addressSection = document.getElementById("address-section");
+const juiceSection = document.getElementById("juice-section");
+
+deliveryRadios.forEach(radio=>{
+  radio.addEventListener("change",()=>{
+    customerInfo.style.display="block";
+
+    if(radio.value === "Postage"){ 
+      extraCharge = 125;
+      addressSection.style.display="block";
+    } else if(radio.value === "Delivery"){ 
+      extraCharge = 150;
+      addressSection.style.display="block";
+    } else { 
+      extraCharge = 0;
+      addressSection.style.display="none";
+    }
+    updateTotal();
+
+    // Payment restrictions
+    paymentRadios.forEach(pay=>{
+      if(radio.value === "Postage" || radio.value === "Delivery"){
+        if(pay.value === "Pick Up Payment") pay.disabled = true;
+        if(pay.value === "Juice") pay.checked = true;
+      } else {
+        pay.disabled = false;
+      }
+    });
+    juiceSection.style.display = document.querySelector('input[name="payment"]:checked').value === "Juice" ? "block" : "none";
+  });
+});
+
+paymentRadios.forEach(radio=>{
+  radio.addEventListener("change",()=>{
+    juiceSection.style.display = radio.value === "Juice" ? "block" : "none";
+  });
+});
+
+// Validate Form
+function validateForm(){
+  const phone = document.getElementById("phone").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const delivery = document.querySelector('input[name="delivery"]:checked').value;
+
+  if(!/^5\d{7}$/.test(phone)){
+    alert("Phone number must start with 5 and be exactly 8 digits.");
+    return false;
+  }
+  if(!email.includes("@")){
+    alert("Please enter a valid email address.");
+    return false;
+  }
+  if(delivery === "Postage" || delivery === "Delivery"){
+    const payment = document.querySelector('input[name="payment"]:checked').value;
+    if(payment !== "Juice"){
+      alert("For Postage and Delivery, payment must be made via Juice.");
+      return false;
+    }
+  }
+  return true;
+}
+
+// Confirm Order
+document.getElementById("delivery-form").addEventListener("submit", e=>{
+  e.preventDefault();
+
+  if(!validateForm()) return;
+
+  const cart = JSON.parse(localStorage.getItem("cart")) || [];
+  if(cart.length===0){ alert("Cart is empty."); return; }
+
+  const selectedDelivery = document.querySelector('input[name="delivery"]:checked').value;
+
+  const order = {
+    items: cart,
+    delivery: selectedDelivery === "Delivery" ? "Delivery" : null,
+    postage: selectedDelivery === "Postage" ? "Postage" : null,
+    pickup: selectedDelivery === "Pick Up" ? "Pick Up" : null,
+    payment: document.querySelector('input[name="payment"]:checked').value,
+    name: document.getElementById("name").value.trim(),
+    email: document.getElementById("email").value.trim(),
+    phone: document.getElementById("phone").value.trim(),
+    address: document.getElementById("address").value.trim() || "N/A",
+    total: baseTotal+extraCharge,
+    timestamp: new Date().toISOString()
+  };
+
+  const newOrderRef = database.ref('orders').push();
+  newOrderRef.set(order)
+    .then(()=> {
+      alert("Order confirmed! Thank you for shopping with B's Beauty Blossom.");
+      localStorage.removeItem("cart");
+      loadCart();
+      document.getElementById("cart-count").textContent = 0;
+      window.location.href="index.html";
+    })
+    .catch(err=>alert("Error saving order: "+err));
+});
+</script>
+</body>
+</html>
