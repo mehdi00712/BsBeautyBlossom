@@ -3,9 +3,11 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>B’s Beauty Blossom — Home</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <title>B’s Beauty Blossom</title>
   <link rel="stylesheet" href="style.css"/>
+
+  <!-- Fonts (optional, remove if you don't use) -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
 <header>
@@ -14,7 +16,7 @@
       <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
     </div>
     <ul class="nav-links">
-      <li><a href="index.html">Home</a></li>
+      <li><a class="active" href="index.html">Home</a></li>
       <li><a href="perfume.html">Perfume</a></li>
       <li><a href="body.html">Body</a></li>
       <li><a href="skincare.html">Skincare</a></li>
@@ -28,39 +30,122 @@
   </nav>
 </header>
 
-<section class="hero">
+<!-- Hero -->
+<section class="hero section" style="display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:center;max-width:1100px;margin:0 auto;padding:16px">
   <div>
-    <h1>Glow up your routine.</h1>
-    <p>Perfumes, skincare, cosmetics, body care, jewellery & gifts — curated and delivered with care.</p>
-    <div class="cta">
+    <h1 id="hero-title" style="margin:0 0 8px">Welcome to B’s Beauty Blossom</h1>
+    <p id="hero-subtitle" class="muted" style="margin:0 0 16px">
+      Discover perfumes, skincare, and more — curated with love.
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
       <a class="btn" href="perfume.html">Shop Perfume</a>
-      <a class="btn secondary" href="skincare.html">Explore Skincare</a>
+      <a class="btn muted" href="skincare.html">Shop Skincare</a>
     </div>
   </div>
-  <div class="hero-art">
-    <div>
-      <p class="badge">Fresh arrivals</p>
-      <h3 style="margin:6px 0 10px">New this week</h3>
-      <p class="muted">Items update instantly when the admin adds them.</p>
-    </div>
+  <div>
+    <img id="hero-banner" alt="Banner" style="width:100%;border-radius:16px;border:1px solid #23232a;object-fit:cover"
+         src="https://via.placeholder.com/1000x700?text=B%27s+Beauty+Blossom"/>
   </div>
 </section>
 
-<section class="section">
-  <h2>Shop by Category</h2>
-  <div class="product-grid">
-    <a class="product" href="perfume.html"><img src="https://images.unsplash.com/photo-1615634260167-c8cf3a4b1b29?q=80&w=1200&auto=format&fit=crop" alt="Perfume"><h3>Perfume</h3></a>
-    <a class="product" href="skincare.html"><img src="https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=1200&auto=format&fit=crop" alt="Skincare"><h3>Skincare</h3></a>
-    <a class="product" href="cosmetics.html"><img src="https://images.unsplash.com/photo-1512496015851-a90fb38ba796?q=80&w=1200&auto=format&fit=crop" alt="Cosmetics"><h3>Cosmetics</h3></a>
-    <a class="product" href="body.html"><img src="https://images.unsplash.com/photo-1605497788044-5a32c7078486?q=80&w=1200&auto=format&fit=crop" alt="Body"><h3>Body</h3></a>
-    <a class="product" href="jewellery.html"><img src="https://images.unsplash.com/photo-1515569067071-ec3b51335a26?q=80&w=1200&auto=format&fit=crop" alt="Jewellery"><h3>Jewellery</h3></a>
-    <a class="product" href="gift.html"><img src="https://images.unsplash.com/photo-1511396275278-a2c7fc9e8d3f?q=80&w=1200&auto=format&fit=crop" alt="Gift"><h3>Gift</h3></a>
+<!-- Featured -->
+<section class="section" style="max-width:1100px;margin:8px auto;padding:0 16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <h2 style="margin:0">Featured</h2>
+    <a class="muted" id="featured-link" href="perfume.html">See all</a>
+  </div>
+  <div id="home-featured" class="product-grid">
+    <!-- Filled dynamically from Firestore -->
+    <p class="muted">Loading…</p>
   </div>
 </section>
 
 <footer class="site-footer">
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
-<script src="script.js" defer></script>
+
+<!-- Firebase (ORDER MATTERS) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<!-- Shared site logic (navbar/cart + addToCart helper used on other pages) -->
+<script src="script.js"></script>
+
+<!-- Home content loader -->
+<script>
+(async function(){
+  try{
+    // Get site/home config
+    const doc = await db.collection('site').doc('home').get();
+    const h = doc.exists ? doc.data() : {};
+
+    // Elements
+    const titleEl = document.getElementById('hero-title');
+    const subEl   = document.getElementById('hero-subtitle');
+    const banner  = document.getElementById('hero-banner');
+    const grid    = document.getElementById('home-featured');
+    const linkEl  = document.getElementById('featured-link');
+
+    // Apply hero content if present
+    if (h.heroTitle)    titleEl.textContent = h.heroTitle;
+    if (h.heroSubtitle) subEl.textContent   = h.heroSubtitle;
+    if (h.bannerImage)  banner.src          = h.bannerImage;
+
+    // Featured products
+    const cat = String(h.featuredCategory || 'perfume').toLowerCase();
+    if (linkEl) linkEl.href = (cat || 'perfume') + '.html';
+
+    if (h.showFeatured !== false) {
+      const snap = await db.collection('products')
+        .where('category','==', cat)
+        .where('active','==', true)
+        .limit(8)
+        .get();
+
+      grid.innerHTML = '';
+      if (snap.empty){ grid.innerHTML = '<p class="muted">No featured products yet.</p>'; return; }
+
+      snap.forEach(d=>{
+        const p = d.data();
+        const id = d.id;
+
+        // Compute a "from" price
+        let from = 0;
+        if (Array.isArray(p.sizes) && p.sizes.length) {
+          const nums = p.sizes.map(s => {
+            if (s && typeof s === 'object') return Number(s.price||0)||0;
+            if (typeof s === 'string') {
+              const m = s.match(/([\d.,]+)/);
+              return m ? Number((m[1]||'0').replace(/[^\d.]/g,''))||0 : 0;
+            }
+            return 0;
+          }).filter(n=>n>0);
+          from = nums.length ? Math.min(...nums) : Number(p.basePrice||0)||0;
+        } else {
+          from = Number(p.basePrice||0)||0;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'product';
+        card.innerHTML = `
+          <a class="img-wrap" href="product.html?id=${id}">
+            <img src="${p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
+          </a>
+          <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
+          <p class="price">${from>0 ? 'From Rs'+from : ''}</p>
+        `;
+        grid.appendChild(card);
+      });
+    } else {
+      grid.innerHTML = '<p class="muted">Featured is hidden.</p>';
+    }
+  }catch(e){
+    console.error('Home init error:', e);
+    const grid = document.getElementById('home-featured');
+    if (grid) grid.innerHTML = '<p style="color:#ff9c9c">Could not load home content.</p>';
+  }
+})();
+</script>
 </body>
 </html>
