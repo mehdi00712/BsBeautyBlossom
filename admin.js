@@ -1,17 +1,22 @@
-// admin.js — Cloudinary unsigned uploads, Firebase Auth + Firestore, multi-images
-(function(){
-  const $ = (s)=>document.querySelector(s);
+// admin.js — Firebase Auth + Firestore products + Cloudinary uploads (unsigned)
+(function () {
+  // EARLY GUARD: fail clearly if Firebase not initialized
+  if (!window.auth || !window.db) {
+    throw new Error("Firebase not initialized: ensure admin.html loads auth-compat + firestore-compat BEFORE firebase-config.js, and firebase-config.js BEFORE admin.js.");
+  }
 
-  // Only allow this UID (your admin account)
+  const $ = (s) => document.querySelector(s);
+
+  // Allow only your admin UID
   const ALLOWED_ADMIN_UIDS = new Set([
     "w5jtigflSVezQwUvnsgM7AY4ZK73"
   ]);
 
-  // Cloudinary config (set in admin.html)
+  // Cloudinary (set in admin.html)
   const CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME;
   const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET;
 
-  // Elements
+  // Auth UI
   const authStatus = $('#auth-status');
   const loginBtn = $('#loginBtn');
   const signupBtn = $('#signupBtn');
@@ -19,16 +24,16 @@
   const email = $('#email');
   const password = $('#password');
 
+  // Product form
   const productSection = $('#product-section');
   const listSection = document.getElementById('list-section');
-
   const nameEl = $('#name');
   const brandEl = $('#brand');
   const priceEl = $('#price');
   const sizesEl = $('#sizes');
   const descEl = $('#description');
   const categoryEl = $('#category');
-  const imgEl = $('#images'); // multiple files
+  const imgEl = $('#images'); // multiple
   const activeEl = $('#active');
   const saveBtn = $('#saveBtn');
   const resetBtn = $('#resetBtn');
@@ -37,49 +42,51 @@
   const refreshBtn = $('#refreshBtn');
   const docIdEl = $('#docId');
 
-  // --- Smarter sizes parser (accepts many formats) ---
-  // "50ml | 1000", "50ml - 1000", "50ml 1000", "50ml : Rs 1,000"
-  const parseSizes = (text='') => {
-    return text
-      .split('\n')
-      .map(l => l.trim())
-      .filter(Boolean)
-      .map(l => {
-        const m = l.match(/^(.*?)[\s|:\-–—]*\s*(?:Rs)?\s*([\d.,]+)\s*$/i);
-        if (!m) return null;
-        const label = m[1].trim().replace(/[|:\-–—]$/, '').trim();
-        const priceNum = Number((m[2] || '0').replace(/[^\d.]/g,''));
-        if (!label || !isFinite(priceNum) || priceNum <= 0) return null;
-        return { label, price: priceNum };
-      })
-      .filter(Boolean);
+  // Parse “label | price” lines, accept variants like “50ml - 1000”, “50ml Rs 1,000”
+  const parseSizes = (text = '') =>
+    text.split('\n')
+        .map(l => l.trim())
+        .filter(Boolean)
+        .map(l => {
+          const m = l.match(/^(.*?)[\s|:\-–—]*\s*(?:Rs)?\s*([\d.,]+)\s*$/i);
+          if (!m) return null;
+          const label = m[1].trim().replace(/[|:\-–—]$/, '').trim();
+          const priceNum = Number((m[2] || '0').replace(/[^\d.]/g, ''));
+          if (!label || !isFinite(priceNum) || priceNum <= 0) return null;
+          return { label, price: priceNum };
+        })
+        .filter(Boolean);
+
+  const renderSizes = (sizes = []) => sizes.map(s => `${s.label} (Rs${s.price})`).join(', ');
+
+  const resetForm = () => {
+    docIdEl.value = '';
+    nameEl.value = '';
+    brandEl.value = '';
+    priceEl.value = '';
+    sizesEl.value = '';
+    descEl.value = '';
+    categoryEl.value = 'perfume';
+    if (imgEl) imgEl.value = '';
+    activeEl.checked = true;
   };
 
-  const renderSizes = (sizes=[]) => sizes.map(s=>`${s.label} (Rs${s.price})`).join(', ');
-
-  const resetForm = ()=>{
-    docIdEl.value=''; nameEl.value=''; brandEl.value='';
-    priceEl.value=''; sizesEl.value=''; descEl.value='';
-    categoryEl.value='perfume'; if (imgEl) imgEl.value='';
-    activeEl.checked=true;
+  // Auth handlers
+  loginBtn.onclick = async () => {
+    try { await auth.signInWithEmailAndPassword(email.value, password.value); }
+    catch (e) { alert(e.message); }
   };
-
-  // ---- Auth ----
-  loginBtn.onclick = async ()=>{
-    try{ await auth.signInWithEmailAndPassword(email.value, password.value); }
-    catch(e){ alert(e.message); }
-  };
-  signupBtn.onclick = async ()=>{
-    try{
+  signupBtn.onclick = async () => {
+    try {
       const cred = await auth.createUserWithEmailAndPassword(email.value, password.value);
       console.log('New UID:', cred.user?.uid);
-      alert('Account created. Check DevTools console for your UID and add it to ALLOWED_ADMIN_UIDS + Firestore rules.');
-    }catch(e){ alert(e.message); }
+      alert('Account created. Check console for UID and add to Firestore rules + ALLOWED_ADMIN_UIDS.');
+    } catch (e) { alert(e.message); }
   };
-  logoutBtn.onclick = ()=>auth.signOut();
+  logoutBtn.onclick = () => auth.signOut();
 
-  auth.onAuthStateChanged((user)=>{
-    const ok = !!user && (ALLOWED_ADMIN_UIDS.size===0 || ALLOWED_ADMIN_UIDS.has(user.uid));
+  auth.onAuthStateChanged((user) => {
+    const ok = !!user && (ALLOWED_ADMIN_UIDS.size === 0 || ALLOWED_ADMIN_UIDS.has(user.uid));
     authStatus.textContent = user ? (ok ? `Signed in as ${user.email}` : 'Signed in but not authorized.') : 'Not signed in';
     logoutBtn.style.display = user ? 'inline-block' : 'none';
     productSection.style.display = ok ? 'block' : 'none';
@@ -87,16 +94,16 @@
     if (ok) loadTable();
   });
 
-  // ---- Cloudinary upload (unsigned) ----
-  async function uploadToCloudinary(file){
+  // Cloudinary unsigned upload
+  async function uploadToCloudinary(file) {
     if (!file) return '';
-    if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error('Missing Cloudinary config in admin.html');
+    if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error('Missing Cloudinary config');
     const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
     const form = new FormData();
     form.append('file', file);
     form.append('upload_preset', UPLOAD_PRESET);
-    const res = await fetch(url, { method:'POST', body:form });
-    if (!res.ok){
+    const res = await fetch(url, { method: 'POST', body: form });
+    if (!res.ok) {
       const txt = await res.text();
       throw new Error('Cloudinary upload failed: ' + txt);
     }
@@ -104,35 +111,37 @@
     return data.secure_url;
   }
 
-  // ---- Save (create/update) with validation to prevent Rs0 ----
-  saveBtn.onclick = async ()=>{
+  // Save (create/update)
+  saveBtn.onclick = async () => {
     const sizes = parseSizes(sizesEl.value);
-    const data = {
+    let data = {
       name: nameEl.value.trim(),
       brand: brandEl.value.trim(),
       basePrice: Number(priceEl.value || 0),
       sizes,
       description: descEl.value.trim(),
       category: categoryEl.value,
-      imageURL: undefined,
-      images: undefined,
       active: !!activeEl.checked,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     };
 
-    // Validation: must have a valid price (base or any size)
     if (!data.name) return alert('Name required');
+
+    // If basePrice is 0 but a size has a price, use the first size as base
+    if (!(data.basePrice > 0) && Array.isArray(data.sizes) && data.sizes.length) {
+      const first = data.sizes.find(s => Number(s.price) > 0);
+      if (first) data.basePrice = Number(first.price);
+    }
+
+    // Must have a valid base or at least one valid size price
     const hasValidBase = Number(data.basePrice) > 0;
-    const hasValidSize = Array.isArray(data.sizes) && data.sizes.some(s => Number(s.price)>0);
+    const hasValidSize = Array.isArray(data.sizes) && data.sizes.some(s => Number(s.price) > 0);
     if (!hasValidBase && !hasValidSize) {
       return alert('Set a Base price OR at least one Size with a valid price.');
     }
-    if (hasValidSize && data.sizes.some(s => !s.price || s.price <= 0)) {
-      return alert('One or more sizes have invalid price. Please fix them.');
-    }
 
-    try{
+    try {
       const docId = docIdEl.value || db.collection('products').doc().id;
 
       // Upload images if provided
@@ -143,48 +152,51 @@
           urls.push(u);
         }
         data.imageURL = urls[0];
-        data.images   = urls;
+        data.images = urls;
       }
 
-      if (docIdEl.value){
-        const toUpdate = {...data}; delete toUpdate.createdAt;
+      if (docIdEl.value) {
+        const toUpdate = { ...data };
+        delete toUpdate.createdAt;
         if (toUpdate.imageURL === undefined) delete toUpdate.imageURL;
-        if (toUpdate.images   === undefined) delete toUpdate.images;
-        await db.collection('products').doc(docId).set(toUpdate, { merge:true });
+        if (toUpdate.images === undefined) delete toUpdate.images;
+        await db.collection('products').doc(docId).set(toUpdate, { merge: true });
       } else {
-        await db.collection('products').doc(docId).set(data, { merge:true });
+        await db.collection('products').doc(docId).set(data, { merge: true });
         docIdEl.value = docId;
       }
       alert('Saved ✓');
-    }catch(e){ console.error(e); alert(e.message); }
+    } catch (e) {
+      console.error(e);
+      alert(e.message);
+    }
   };
 
   resetBtn.onclick = resetForm;
 
-  // ---- Live list (Edit/Delete) ----
-  function loadTable(){
+  // Live table
+  function loadTable() {
     const cat = filterCategory.value;
     tableBody.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
 
     try {
       db.collection('products')
-        .where('category','==', cat)
+        .where('category', '==', cat)
         .onSnapshot((snap) => {
           tableBody.innerHTML = '';
-          if (snap.empty){
+          if (snap.empty) {
             tableBody.innerHTML = '<tr><td colspan="6">No products yet</td></tr>';
             return;
           }
-          snap.forEach(doc=>{
+          snap.forEach(doc => {
             const p = doc.data();
             const tr = document.createElement('tr');
-            const sizesText = renderSizes(p.sizes||[]);
             tr.innerHTML = `
               <td>${p.imageURL ? `<img src="${p.imageURL}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #23232a">` : ''}</td>
-              <td>${p.name||''}${p.brand?`<div class="muted">${p.brand}</div>`:''}</td>
-              <td>${sizesText}</td>
-              <td>Rs${(p.basePrice||0).toFixed(2)}</td>
-              <td>${p.active?'Yes':'No'}</td>
+              <td>${p.name || ''}${p.brand ? `<div class="muted">${p.brand}</div>` : ''}</td>
+              <td>${renderSizes(p.sizes || [])}</td>
+              <td>Rs${(Number(p.basePrice || 0)).toFixed(2)}</td>
+              <td>${p.active ? 'Yes' : 'No'}</td>
               <td>
                 <button data-id="${doc.id}" class="btn muted edit">Edit</button>
                 <button data-id="${doc.id}" class="btn danger delete">Delete</button>
@@ -192,7 +204,7 @@
             tableBody.appendChild(tr);
           });
 
-          tableBody.querySelectorAll('button.edit').forEach(btn=>btn.onclick=async (e)=>{
+          tableBody.querySelectorAll('button.edit').forEach(btn => btn.onclick = async (e) => {
             const id = e.currentTarget.dataset.id;
             const d = await db.collection('products').doc(id).get();
             if (!d.exists) return;
@@ -201,19 +213,19 @@
             nameEl.value = p.name || '';
             brandEl.value = p.brand || '';
             priceEl.value = p.basePrice || '';
-            sizesEl.value = (p.sizes||[]).map(s=>`${s.label} | ${s.price}`).join('\n');
+            sizesEl.value = (p.sizes || []).map(s => typeof s === 'string' ? s : `${s.label} | ${s.price}`).join('\n');
             descEl.value = p.description || '';
             categoryEl.value = p.category || 'perfume';
             activeEl.checked = !!p.active;
-            window.scrollTo({top:0,behavior:'smooth'});
+            window.scrollTo({ top: 0, behavior: 'smooth' });
           });
 
-          tableBody.querySelectorAll('button.delete').forEach(btn=>btn.onclick=async (e)=>{
+          tableBody.querySelectorAll('button.delete').forEach(btn => btn.onclick = async (e) => {
             const id = e.currentTarget.dataset.id;
             if (!confirm('Delete this product?')) return;
             await db.collection('products').doc(id).delete();
           });
-        }, (err)=>{
+        }, (err) => {
           console.error('Admin list error:', err);
           tableBody.innerHTML = `<tr><td colspan="6" style="color:#ff9c9c">Error: ${err.message}</td></tr>`;
         });
