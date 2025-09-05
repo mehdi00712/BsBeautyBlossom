@@ -1,8 +1,8 @@
-// admin.js (Cloudinary unsigned uploads, Firebase Auth + Firestore, live table, multiple images)
+// admin.js — Cloudinary unsigned uploads, Firebase Auth + Firestore, multi-images
 (function(){
   const $ = (s)=>document.querySelector(s);
 
-  // Allow only this UID to write (your UID)
+  // Only allow this UID (your admin account)
   const ALLOWED_ADMIN_UIDS = new Set([
     "w5jtigflSVezQwUvnsgM7AY4ZK73"
   ]);
@@ -37,13 +37,23 @@
   const refreshBtn = $('#refreshBtn');
   const docIdEl = $('#docId');
 
-  // Helpers
-  const parseSizes = (text='') =>
-    text.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
-      const [label, priceStr] = l.split('|').map(x=>x.trim());
-      const price = Number((priceStr||'').replace(/[^0-9.]/g,''));
-      return { label, price: isNaN(price) ? null : price };
-    }).filter(s=>s.label && s.price!=null);
+  // --- Smarter sizes parser (accepts many formats) ---
+  // "50ml | 1000", "50ml - 1000", "50ml 1000", "50ml : Rs 1,000"
+  const parseSizes = (text='') => {
+    return text
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean)
+      .map(l => {
+        const m = l.match(/^(.*?)[\s|:\-–—]*\s*(?:Rs)?\s*([\d.,]+)\s*$/i);
+        if (!m) return null;
+        const label = m[1].trim().replace(/[|:\-–—]$/, '').trim();
+        const priceNum = Number((m[2] || '0').replace(/[^\d.]/g,''));
+        if (!label || !isFinite(priceNum) || priceNum <= 0) return null;
+        return { label, price: priceNum };
+      })
+      .filter(Boolean);
+  };
 
   const renderSizes = (sizes=[]) => sizes.map(s=>`${s.label} (Rs${s.price})`).join(', ');
 
@@ -54,30 +64,30 @@
     activeEl.checked=true;
   };
 
-  // Auth
+  // ---- Auth ----
   loginBtn.onclick = async ()=>{
     try{ await auth.signInWithEmailAndPassword(email.value, password.value); }
     catch(e){ alert(e.message); }
   };
   signupBtn.onclick = async ()=>{
     try{
-      await auth.createUserWithEmailAndPassword(email.value, password.value);
-      alert('Account created. Open DevTools console to copy your UID and add it to ALLOWED_ADMIN_UIDS + Firestore Rules.');
+      const cred = await auth.createUserWithEmailAndPassword(email.value, password.value);
+      console.log('New UID:', cred.user?.uid);
+      alert('Account created. Check DevTools console for your UID and add it to ALLOWED_ADMIN_UIDS + Firestore rules.');
     }catch(e){ alert(e.message); }
   };
   logoutBtn.onclick = ()=>auth.signOut();
 
   auth.onAuthStateChanged((user)=>{
-    console.log('Auth user UID:', user?.uid);
     const ok = !!user && (ALLOWED_ADMIN_UIDS.size===0 || ALLOWED_ADMIN_UIDS.has(user.uid));
-    authStatus.textContent = user ? (ok ? `Signed in as ${user.email}` : 'Signed in but not authorized for admin.') : 'Not signed in';
+    authStatus.textContent = user ? (ok ? `Signed in as ${user.email}` : 'Signed in but not authorized.') : 'Not signed in';
     logoutBtn.style.display = user ? 'inline-block' : 'none';
     productSection.style.display = ok ? 'block' : 'none';
     listSection.style.display = ok ? 'block' : 'none';
     if (ok) loadTable();
   });
 
-  // Cloudinary upload (unsigned, multiple)
+  // ---- Cloudinary upload (unsigned) ----
   async function uploadToCloudinary(file){
     if (!file) return '';
     if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error('Missing Cloudinary config in admin.html');
@@ -91,10 +101,10 @@
       throw new Error('Cloudinary upload failed: ' + txt);
     }
     const data = await res.json();
-    return data.secure_url; // store in Firestore
+    return data.secure_url;
   }
 
-  // Save (create/update)
+  // ---- Save (create/update) with validation to prevent Rs0 ----
   saveBtn.onclick = async ()=>{
     const sizes = parseSizes(sizesEl.value);
     const data = {
@@ -104,26 +114,36 @@
       sizes,
       description: descEl.value.trim(),
       category: categoryEl.value,
-      imageURL: undefined, // set after upload
-      images: undefined,   // gallery
+      imageURL: undefined,
+      images: undefined,
       active: !!activeEl.checked,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     };
+
+    // Validation: must have a valid price (base or any size)
     if (!data.name) return alert('Name required');
+    const hasValidBase = Number(data.basePrice) > 0;
+    const hasValidSize = Array.isArray(data.sizes) && data.sizes.some(s => Number(s.price)>0);
+    if (!hasValidBase && !hasValidSize) {
+      return alert('Set a Base price OR at least one Size with a valid price.');
+    }
+    if (hasValidSize && data.sizes.some(s => !s.price || s.price <= 0)) {
+      return alert('One or more sizes have invalid price. Please fix them.');
+    }
 
     try{
       const docId = docIdEl.value || db.collection('products').doc().id;
 
-      // MULTI upload
+      // Upload images if provided
       if (imgEl && imgEl.files && imgEl.files.length > 0) {
         const urls = [];
         for (const f of imgEl.files) {
           const u = await uploadToCloudinary(f);
           urls.push(u);
         }
-        data.imageURL = urls[0]; // main image
-        data.images   = urls;    // gallery
+        data.imageURL = urls[0];
+        data.images   = urls;
       }
 
       if (docIdEl.value){
@@ -136,13 +156,12 @@
         docIdEl.value = docId;
       }
       alert('Saved ✓');
-      // no manual reload — live listener updates table
     }catch(e){ console.error(e); alert(e.message); }
   };
 
   resetBtn.onclick = resetForm;
 
-  // List / Edit / Delete — live listener, no orderBy (avoids composite index)
+  // ---- Live list (Edit/Delete) ----
   function loadTable(){
     const cat = filterCategory.value;
     tableBody.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
@@ -173,7 +192,6 @@
             tableBody.appendChild(tr);
           });
 
-          // wire buttons after render
           tableBody.querySelectorAll('button.edit').forEach(btn=>btn.onclick=async (e)=>{
             const id = e.currentTarget.dataset.id;
             const d = await db.collection('products').doc(id).get();
