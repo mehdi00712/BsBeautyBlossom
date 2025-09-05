@@ -1,348 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Cosmetics - B's Beauty Blossom</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cosmetics – B’s Beauty Blossom</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-
-<div class="bubbles">
-  <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
-  <div class="bubble"></div><div class="bubble"></div>
-</div>
-
 <header>
-<nav class="navbar">
-  <div class="logo"><a href="index.html"><img src="1.jpg" alt="Logo" width="80"></a></div>
-  <ul class="nav-links">
-    <li><a href="index.html">Home</a></li>
-    <li><a href="perfume.html">Perfume</a></li>
-    <li><a href="body.html">Body</a></li>
-    <li><a href="jewellery.html">Jewelry</a></li>
-    <li><a href="gift.html">Gift</a></li>
-    <li><a href="skincare.html">Skincare</a></li>
-    <li><a href="cosmetics.html" class="active">Cosmetics</a></li>
-    <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
-  </ul>
-  <div class="hamburger">&#9776;</div>
-</nav>
+  <nav class="navbar">
+    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="perfume.html">Perfume</a></li>
+      <li><a href="body.html">Body</a></li>
+      <li><a href="skincare.html">Skincare</a></li>
+      <li><a class="active" href="cosmetics.html">Cosmetics</a></li>
+      <li><a href="jewellery.html">Jewellery</a></li>
+      <li><a href="gift.html">Gift</a></li>
+      <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
+      <li><a href="admin.html">Admin</a></li>
+    </ul>
+    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
+  </nav>
 </header>
 
 <div class="search-container">
   <input type="text" id="search-bar" placeholder="Search by brand or product name...">
 </div>
 
-<section class="products">
+<section class="section">
   <h1 class="page-title">Cosmetics</h1>
-
-  <!-- HUDABEAUTY -->
-  <div class="brand-section">
-    <h2>Huda Beauty</h2>
-    <div class="product-grid">
-
-      <div class="product" data-brand="hudabeauty" data-name="Easy Bake Setting Spray">
-        <img src="c1.JPG" alt="Easy bake Setting Spray">
-        <h3>Easy Bake Setting Spray</h3>
-        <p class="price" data-base="2550">Rs2550</p>
-        <select class="ml-select">
-          <option value="2550">100ml - Rs2550</option>
-          <option value="1550">30ml - Rs1550</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="hudabeauty" data-name="Concealer">
-        <img src="c8.JPG" alt="Concealer">
-        <h3>Concealer</h3>
-        <p class="price" data-base="2200">Rs2200</p>
-        <select class="ml-select">
-          <option value="2200">9ml - Rs2200</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="hudabeauty" data-name="Foundation brush">
-        <img src="c2.JPG" alt="Foundation brush">
-        <h3>Foundation brush</h3>
-        <p class="price" data-base="2300">Rs2300</p>
-        <select class="ml-select">
-          <option value="2300">Rs2300</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="hudabeauty" data-name="Easy Blur Foundation">
-        <img src="c3.JPG" alt="Easy Blur Foundation">
-        <h3>Easy Blur Foundation</h3>
-        <p class="price" data-base="2850">Rs2850</p>
-        <select class="ml-select">
-          <option value="2850">30ml - Rs2850</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="hudabeauty" data-name="Easy Blur Primer">
-        <img src="c4.JPG" alt="Easy Blur Primer">
-        <h3>Easy Blur Primer</h3>
-        <p class="price" data-base="2200">Rs2200</p>
-        <select class="ml-select">
-          <option value="2200">30ml - Rs2200</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="hudabeauty" data-name="Lip Contour Stain">
-        <img src="c5.JPG" alt="Lip Contour Stain">
-        <h3>Lip Contour Stain</h3>
-        <p class="price" data-base="1875">Rs1875</p>
-        <select class="ml-select">
-          <option value="1875">Rich Brown - Rs1875</option>
-          <option value="1875">Cinnamon - Rs1875</option>
-          <option value="1875">Cherry Red - Rs1875</option>
-          <option value="1875">Warm Brown - Rs1875</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="hudabeauty" data-name="Liquid Blush Filter">
-        <img src="c6.JPG" alt="Liquid Blush Filter">
-        <h3>Liquid Blush Filter</h3>
-        <p class="price" data-base="1800">Rs1800</p>
-        <select class="ml-select">
-          <option value="1800">4.5ml - Rs1800</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="hudabeauty" data-name="Easy Bake Powder">
-        <img src="c7.JPG" alt="Easy Bake Powder">
-        <h3>Easy Bake Powder</h3>
-        <p class="price" data-base="2700">Rs2700</p>
-        <select class="ml-select">
-          <option value="2700">Rs2700</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Charlotte Tillbury's -->
-  <div class="brand-section">
-    <h2>Charlotte Tillbury</h2>
-    <div class="product-grid">
-
-      <div class="product" data-brand="Charlotte Tillbury" data-name="Iconic Hollywood Lip Trio">
-        <img src="c9.JPG" alt="Iconic Hollywood Lip Trio">
-        <h3>Iconic Hollywood Lip Trio</h3>
-        <p class="price" data-base="2800">Rs2800</p>
-        <select class="ml-select">
-          <option value="2800">Rs2800</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="Charlotte Tillbury" data-name="Pillow Talk Lip & Cheek">
-        <img src="c10.JPG" alt="Pillow Talk Lip & Cheek">
-        <h3>Pillow Talk Lip & cheek</h3>
-        <p class="price" data-base="2000">Rs2000</p>
-        <select class="ml-select">
-          <option value="2000">Rs2000</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="Charlotte Tillbury" data-name="Air brush Micro Powder">
-        <img src="c11.JPG" alt="Air brush Micro Powder">
-        <h3>Air Brush Micro Powder</h3>
-        <p class="price" data-base="2950">Rs2950</p>
-        <select class="ml-select">
-          <option value="2950">Rs2950</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="Charlotte Tillbury" data-name="Lip Plump">
-        <img src="c12.JPG" alt="Lip Plump">
-        <h3>Lip Plump</h3>
-        <p class="price" data-base="2500">Rs2500</p>
-        <select class="ml-select">
-          <option value="2500"> Medium Deep - Rs2500</option>
-          <option value="2500"> Fair Medium - Rs2500</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="Charlotte Tillbury" data-name="Collagen SuperFusion">
-        <img src="c13.JPG" alt="Collagen SuperFusion">
-        <h3>Collagen SuperFusion</h3>
-        <p class="price" data-base="6500">Rs6500</p>
-        <select class="ml-select">
-          <option value="6500">30ml - Rs6500</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="Charlotte Tillbury" data-name="Magic Serum">
-        <img src="c14.JPG" alt="Magic Serum">
-        <h3>Magic Serum</h3>
-        <p class="price" data-base="6000">Rs6000</p>
-        <select class="ml-select">
-          <option value="6000">30ml - Rs6000</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="Charlotte Tillbury" data-name="Lip Stick">
-        <img src="c15.JPG" alt="Lip Stick">
-        <h3>Lip Stick</h3>
-        <p class="price" data-base="2500">Rs2500</p>
-        <select class="ml-select">
-          <option value="2500">90s pink - Rs2500</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="Charlotte Tillbury" data-name="Travel Trio Set">
-        <img src="c16.JPG" alt="Travel Trio Set">
-        <h3>Travel Trio Set</h3>
-        <p class="price" data-base="4500">Rs4500</p>
-        <select class="ml-select">
-          <option value="4500">10ml x3 - Rs4500</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="Charlotte Tillbury" data-name="Setting Spray">
-        <img src="c17.JPG" alt="Setting Spray">
-        <h3>Setting Spray</h3>
-        <p class="price" data-base="1500">Rs1500</p>
-        <select class="ml-select">
-          <option value="1500">34ml - Rs1500</option>
-          <option value="2500">100ml - Rs2500</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="Charlotte Tillbury" data-name="Take It All Off">
-        <img src="c18.JPG" alt="Take It All Off">
-        <h3>Take It All Off</h3>
-        <p class="price" data-base="2950">Rs2950</p>
-        <select class="ml-select">
-          <option value="2950">120ml - Rs2950</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-      <div class="product" data-brand="Charlotte Tillbury" data-name="Foundation">
-        <img src="c19.JPG" alt="Foundation">
-        <h3>Foundation</h3>
-        <p class="price" data-base="1500">Rs2950</p>
-        <select class="ml-select">
-          <option value="2950">50ml - Rs2950</option>
-        </select>
-        <div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-        <button class="add-btn">Add to Cart</button>
-      </div>
-
-    </div>
-  </div>
-
+  <div id="product-grid" class="product-grid"></div>
 </section>
 
-<script>
-// Navbar toggle & Cart
-const hamburger = document.querySelector(".hamburger");
-const navLinks = document.querySelector(".nav-links");
-if(hamburger) hamburger.addEventListener("click", ()=>navLinks.classList.toggle("show"));
+<footer class="site-footer">
+  <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
+</footer>
 
-// ✅ Add to Cart with variant
-function addToCartHandler(prod){
-  const baseName = prod.querySelector("h3").textContent;
-  const qty = parseInt(prod.querySelector(".qty").textContent);
-
-  // Get selected option text (e.g. "Rich Brown - Rs1875")
-  const select = prod.querySelector(".ml-select");
-  const selectedOption = select ? select.options[select.selectedIndex].text : "";
-  const selectedValue = select ? parseInt(select.value) : parseInt(prod.querySelector(".price").dataset.base);
-
-  // Append variant to product name
-  const fullName = selectedOption ? `${baseName} (${selectedOption})` : baseName;
-
-  let cart = JSON.parse(localStorage.getItem("cart"))||[];
-  const existing = cart.find(item=>item.name===fullName && item.price===selectedValue);
-
-  if(existing) {
-    existing.quantity += qty;
-  } else {
-    cart.push({name: fullName, price: selectedValue, quantity: qty});
-  }
-
-  localStorage.setItem("cart", JSON.stringify(cart));
-  updateCartCount();
-  alert(`${qty} x ${fullName} added to cart!`);
-}
-
-function updateCartCount(){
-  const cart = JSON.parse(localStorage.getItem("cart"))||[];
-  const count = cart.reduce((sum,item)=>sum+item.quantity,0);
-  document.getElementById("cart-count").textContent=count;
-}
-updateCartCount();
-
-document.querySelectorAll(".product").forEach(prod=>{
-  const minus=prod.querySelector(".minus");
-  const plus=prod.querySelector(".plus");
-  const qtyEl=prod.querySelector(".qty");
-  const addBtn=prod.querySelector(".add-btn");
-  const mlSelect=prod.querySelector(".ml-select");
-  const priceEl=prod.querySelector(".price");
-
-  minus.addEventListener("click",()=>{let q=parseInt(qtyEl.textContent); if(q>1) qtyEl.textContent=q-1;});
-  plus.addEventListener("click",()=>{let q=parseInt(qtyEl.textContent); qtyEl.textContent=q+1;});
-  if(mlSelect){
-    mlSelect.addEventListener("change",()=>{priceEl.textContent="Rs"+mlSelect.value;});
-  }
-  addBtn.addEventListener("click",()=>addToCartHandler(prod));
-});
-
-// Search
-const searchBar=document.getElementById("search-bar");
-const brandSections=document.querySelectorAll(".brand-section");
-searchBar.addEventListener("keyup",()=>{
-  const text=searchBar.value.toLowerCase();
-  brandSections.forEach(section=>{
-    let visible=false;
-    section.querySelectorAll(".product").forEach(prod=>{
-      const name=prod.dataset.name.toLowerCase();
-      const brand=prod.dataset.brand.toLowerCase();
-      if(name.includes(text)||brand.includes(text)){prod.style.display="block"; visible=true;}
-      else prod.style.display="none";
-    });
-    section.style.display=visible?"block":"none";
-  });
-});
-</script>
-
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>window.PRODUCT_CATEGORY='cosmetics';</script>
+<script src="products.js" defer></script>
+<script src="script.js" defer></script>
 </body>
 </html>

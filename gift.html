@@ -1,212 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Gift - B's Beauty Blossom</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gift – B’s Beauty Blossom</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-
-<div class="bubbles">
-<div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
-</div>
-
 <header>
-<nav class="navbar">
-<div class="logo"><a href="index.html"><img src="1.jpg" alt="Logo" width="80"></a></div>
-<ul class="nav-links">
-<li><a href="index.html">Home</a></li>
-<li><a href="perfume.html">Perfume</a></li>
-<li><a href="body.html">Body</a></li>
-<li><a href="jewellery.html">Jewelry</a></li>
-<li><a href="gift.html" class="active">Gift</a></li>
-<li><a href="skincare.html">Skincare</a></li>
-<li><a href="cosmetics.html">Cosmetics</a></li>
-<li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
-</ul>
-<div class="hamburger">&#9776;</div>
-</nav>
+  <nav class="navbar">
+    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="perfume.html">Perfume</a></li>
+      <li><a href="body.html">Body</a></li>
+      <li><a href="skincare.html">Skincare</a></li>
+      <li><a href="cosmetics.html">Cosmetics</a></li>
+      <li><a href="jewellery.html">Jewellery</a></li>
+      <li><a class="active" href="gift.html">Gift</a></li>
+      <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
+      <li><a href="admin.html">Admin</a></li>
+    </ul>
+    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
+  </nav>
 </header>
 
 <div class="search-container">
-<input type="text" id="search-bar" placeholder="Search by brand or product name...">
+  <input type="text" id="search-bar" placeholder="Search by brand or product name...">
 </div>
 
-<section class="products">
-<h1 class="page-title">Gift Items</h1>
-
-<div class="brand-section">
-<h2>Yves Saint Laurent</h2>
-<div class="product-grid">
-<div class="product" data-brand="Yves Saint Laurent " data-name="Black Opiium Gift Set">
-<img src="1c.jpg" alt="Black Opiium Gift Set">
-<h3>Black Opiium Gift Set</h3>
-<p class="price" data-base="8900">Rs8900</p>
-<select class="ml-select">
-<option value="8900">10ml + 90ml - Rs8900</option>
-</select>
-<div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-<button class="add-btn">Add to Cart</button>
-</div>
-</div>
-</div>
-
-<div class="brand-section">
-<h2>Dior</h2>
-<div class="product-grid">
-<div class="product" data-brand="Dior" data-name="Le Mini 30 Montagne">
-<img src="2c.JPG" alt="Le Mini 30 Montagne">
-<h3>Le Mini 30 Montagne</h3>
-<p class="price" data-base="1200">Rs6900</p>
-<select class="ml-select">
-<option value="6900">5 mini - Rs6900</option>
-</select>
-<div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-<button class="add-btn">Add to Cart</button>
-</div>
-</div>
-</div>
-
-<div class="brand-section">
-<h2>narciso rodriguez</h2>
-<div class="product-grid">
-<div class="product" data-brand="narciso rodriguez" data-name="all of me box">
-<img src="3c.JPG" alt="all of me">
-<h3>all of me box</h3>
-<p class="price" data-base="7500">Rs7500</p>
-<select class="ml-select">
-<option value="1200">Parfum + lotion 30ml - Rs7500</option>
-</select>
-<div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-<button class="add-btn">Add to Cart</button>
-</div>
-</div>
-</div>
-
-<div class="brand-section">
-<h2>Lancôme</h2>
-<div class="product-grid">
-<div class="product" data-brand="Lancôme" data-name="La vie est belle box">
-<img src="4c.JPG" alt="La vie est belle box">
-<h3>La vie est belle box</h3>
-<p class="price" data-base="1200">Rs4600</p>
-<select class="ml-select">
-<option value="1200">Parfum + lotion 30ml - Rs4600</option>
-</select>
-<div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-<button class="add-btn">Add to Cart</button>
-</div>
-</div>
-</div>
-
-<div class="brand-section">
-<h2>Givenchy</h2>
-<div class="product-grid">
-<div class="product" data-brand="Givenchy" data-name="Irresistible Box">
-<img src="6c.PNG" alt="Irresistible Box">
-<h3>Irresistible Box</h3>
-<p class="price" data-base="6500">Rs6500</p>
-<select class="ml-select">
-<option value="6500">Parfum 50ml+Travel 12.5ml- Rs6500</option>
-</select>
-<div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-<button class="add-btn">Add to Cart</button>
-</div>
-</div>
-</div>
-
-<div class="brand-section">
-<h2>Burberry</h2>
-<div class="product-grid">
-<div class="product" data-brand="Burberry" data-name="Goddess Box">
-<img src="5c.JPG" alt="Goddess Box">
-<h3>Goddess Box</h3>
-<p class="price" data-base="1200">Rs6500</p>
-<select class="ml-select">
-<option value="1200">Parfum 50ml + Lotion 75ml</option>
-</select>
-<div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-<button class="add-btn">Add to Cart</button>
-</div>
-</div>
-</div>
-
-<div class="brand-section">
-<h2>Valentino</h2>
-<div class="product-grid">
-<div class="product" data-brand="Valentino" data-name="Voge Viva">
-<img src="7c.JPG" alt="Voge Viva">
-<h3>Voge Viva</h3>
-<p class="price" data-base="5800">Rs5800</p>
-<select class="ml-select">
-<option value="5800">50ml + 15ml - Rs5800</option>
-</select>
-<div class="quantity-controls"><button class="minus">–</button><span class="qty">1</span><button class="plus">+</button></div>
-<button class="add-btn">Add to Cart</button>
-</div>
-</div>
-</div>
-
-
+<section class="section">
+  <h1 class="page-title">Gift</h1>
+  <div id="product-grid" class="product-grid"></div>
 </section>
 
-<script>
-// Navbar toggle & Cart
-const hamburger = document.querySelector(".hamburger");
-const navLinks = document.querySelector(".nav-links");
-if(hamburger) hamburger.addEventListener("click", ()=>navLinks.classList.toggle("show"));
+<footer class="site-footer">
+  <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
+</footer>
 
-function addToCartHandler(prod){
-  const name = prod.querySelector("h3").textContent;
-  const qty = parseInt(prod.querySelector(".qty").textContent);
-  const price = parseInt(prod.querySelector(".ml-select").value);
-  let cart = JSON.parse(localStorage.getItem("cart"))||[];
-  const existing = cart.find(item=>item.name===name && item.price===price);
-  if(existing) existing.quantity+=qty;
-  else cart.push({name, price, quantity:qty});
-  localStorage.setItem("cart", JSON.stringify(cart));
-  updateCartCount();
-  alert(`${qty} x ${name} (${price} Rs) added to cart!`);
-}
-
-function updateCartCount(){
-  const cart = JSON.parse(localStorage.getItem("cart"))||[];
-  const count = cart.reduce((sum,item)=>sum+item.quantity,0);
-  document.getElementById("cart-count").textContent=count;
-}
-updateCartCount();
-
-document.querySelectorAll(".product").forEach(prod=>{
-  const minus=prod.querySelector(".minus");
-  const plus=prod.querySelector(".plus");
-  const qtyEl=prod.querySelector(".qty");
-  const addBtn=prod.querySelector(".add-btn");
-  const mlSelect=prod.querySelector(".ml-select");
-  const priceEl=prod.querySelector(".price");
-
-  minus.addEventListener("click",()=>{let q=parseInt(qtyEl.textContent); if(q>1) qtyEl.textContent=q-1;});
-  plus.addEventListener("click",()=>{let q=parseInt(qtyEl.textContent); qtyEl.textContent=q+1;});
-  mlSelect.addEventListener("change",()=>{priceEl.textContent="Rs"+mlSelect.value;});
-  addBtn.addEventListener("click",()=>addToCartHandler(prod));
-});
-
-// Search
-const searchBar=document.getElementById("search-bar");
-const brandSections=document.querySelectorAll(".brand-section");
-searchBar.addEventListener("keyup",()=>{
-  const text=searchBar.value.toLowerCase();
-  brandSections.forEach(section=>{
-    let visible=false;
-    section.querySelectorAll(".product").forEach(prod=>{
-      const name=prod.dataset.name.toLowerCase();
-      const brand=prod.dataset.brand.toLowerCase();
-      if(name.includes(text)||brand.includes(text)){prod.style.display="block"; visible=true;}
-      else prod.style.display="none";
-    });
-    section.style.display=visible?"block":"none";
-  });
-});
-</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>window.PRODUCT_CATEGORY='gift';</script>
+<script src="products.js" defer></script>
+<script src="script.js" defer></script>
 </body>
 </html>
