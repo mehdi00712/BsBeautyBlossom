@@ -1,5 +1,4 @@
-// script.js — hardened Add to Cart with price/qty/image guards
-
+// script.js — shared helpers + hardened addToCart (blocks Rs0)
 (function () {
   // Navbar hamburger
   const hamburger = document.querySelector(".hamburger");
@@ -22,7 +21,7 @@
 
   function writeCart(items) {
     localStorage.setItem(CART_KEY, JSON.stringify(items));
-    // clean any legacy key to avoid conflicts
+    // clean legacy
     localStorage.removeItem("cart");
   }
 
@@ -35,8 +34,6 @@
     const cc = document.getElementById("cart-count");
     if (cc) cc.textContent = count;
   }
-
-  // Call this once on every page load that has the badge
   updateCartCountBadge();
 
   // ---- DOM utils for product cards ----
@@ -47,30 +44,24 @@
     const p = Number(opt?.dataset?.price || 0);
     return isFinite(p) ? p : 0;
   }
-
   function getSelectedLabel(productEl) {
     const sel = productEl.querySelector("select");
     return sel ? sel.value : "Default";
   }
-
   function getQty(productEl) {
     const qEl = productEl.querySelector(".qty");
     const q = Number((qEl?.textContent || "1").trim());
     return Math.max(1, isFinite(q) ? q : 1);
   }
-
   function getImageURL(productEl) {
-    // try cover image first
     const img = productEl.querySelector("img");
     return img?.src || "";
   }
-
   function sanitizeName(name) {
     return (name || "").toString().trim();
   }
 
   // ---- Public: addToCart(name, buttonEl) ----
-  // It is called from products.js via onclick="addToCart(this.dataset.name, this)"
   window.addToCart = function (name, btn) {
     try {
       const safeName = sanitizeName(name);
@@ -78,23 +69,15 @@
         alert("Product name missing.");
         return;
       }
-
-      // Find the product card container
       const productEl = btn?.closest(".product") || document;
-      // Price from selected option (with fallback logic)
-      let unitPrice = getSelectedOptionPrice(productEl);
 
-      // EXTRA fallback if option was missing data-price
-      // Try to read any displayed "From RsX" on card OR data attribute set by products.js
+      let unitPrice = getSelectedOptionPrice(productEl);
+      // parse fallback from "From RsX" text if needed
       if (!unitPrice || unitPrice <= 0) {
         const priceText = productEl.querySelector(".price")?.textContent || "";
         const m = priceText.match(/Rs\s*([\d.,]+)/i);
-        if (m) {
-          unitPrice = Number((m[1] || "0").replace(/[^\d.]/g, ""));
-        }
+        if (m) unitPrice = Number((m[1] || "0").replace(/[^\d.]/g, ""));
       }
-
-      // FINAL safety: block adding if still zero or invalid
       if (!unitPrice || unitPrice <= 0) {
         alert("This item has no valid price. Please choose a size or contact admin.");
         return;
@@ -108,9 +91,8 @@
       const idKey = `${safeName}__${unitPrice}__${sizeLabel}`;
       const existing = cart.find((i) => i.id === idKey);
 
-      if (existing) {
-        existing.qty += qty;
-      } else {
+      if (existing) existing.qty += qty;
+      else {
         cart.push({
           id: idKey,
           name: `${safeName} (${sizeLabel})`,
@@ -122,7 +104,6 @@
       writeCart(cart);
       updateCartCountBadge();
 
-      // Nice feedback
       if (btn) {
         const old = btn.textContent;
         btn.textContent = "Added ✓";
@@ -138,7 +119,7 @@
     }
   };
 
-  // ---- Quantity +/- handlers for cards (delegation) ----
+  // ---- Quantity +/- handlers (delegated) ----
   document.addEventListener("click", (e) => {
     if (e.target.matches(".quantity-controls .plus")) {
       const wrap = e.target.closest(".quantity-controls");
