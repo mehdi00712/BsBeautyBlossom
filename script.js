@@ -1,13 +1,14 @@
-// script.js — shared helpers + hardened addToCart (blocks Rs0)
+// script.js — shared navbar + hardened Add to Cart using unitPrice
+
 (function () {
-  // Navbar hamburger
+  // Navbar toggle
   const hamburger = document.querySelector(".hamburger");
   const navLinks = document.querySelector(".nav-links");
   if (hamburger && navLinks) {
     hamburger.addEventListener("click", () => navLinks.classList.toggle("show"));
   }
 
-  // ---- Cart helpers (single canonical key) ----
+  // Canonical cart key
   const CART_KEY = "bbb_cart_v2";
 
   function readCart() {
@@ -18,17 +19,14 @@
       return [];
     }
   }
-
   function writeCart(items) {
     localStorage.setItem(CART_KEY, JSON.stringify(items));
-    // clean legacy
+    // remove legacy key
     localStorage.removeItem("cart");
   }
-
   function cartCount(items) {
     return items.reduce((n, i) => n + (Number(i.qty) || 0), 0);
   }
-
   function updateCartCountBadge() {
     const count = cartCount(readCart());
     const cc = document.getElementById("cart-count");
@@ -36,7 +34,7 @@
   }
   updateCartCountBadge();
 
-  // ---- DOM utils for product cards ----
+  // DOM utils for product cards
   function getSelectedOptionPrice(productEl) {
     const sel = productEl.querySelector("select");
     if (!sel) return 0;
@@ -61,23 +59,24 @@
     return (name || "").toString().trim();
   }
 
-  // ---- Public: addToCart(name, buttonEl) ----
+  // Public: addToCart(name, buttonEl) — used by products.js
   window.addToCart = function (name, btn) {
     try {
       const safeName = sanitizeName(name);
-      if (!safeName) {
-        alert("Product name missing.");
-        return;
-      }
+      if (!safeName) return alert("Product name missing.");
+
       const productEl = btn?.closest(".product") || document;
 
+      // Primary price: data-price on selected <option>
       let unitPrice = getSelectedOptionPrice(productEl);
-      // parse fallback from "From RsX" text if needed
+
+      // Fallback: parse "From RsX" text if needed
       if (!unitPrice || unitPrice <= 0) {
         const priceText = productEl.querySelector(".price")?.textContent || "";
         const m = priceText.match(/Rs\s*([\d.,]+)/i);
         if (m) unitPrice = Number((m[1] || "0").replace(/[^\d.]/g, ""));
       }
+
       if (!unitPrice || unitPrice <= 0) {
         alert("This item has no valid price. Please choose a size or contact admin.");
         return;
@@ -111,7 +110,7 @@
         setTimeout(() => {
           btn.textContent = old;
           btn.disabled = false;
-        }, 1000);
+        }, 900);
       }
     } catch (e) {
       console.error("addToCart error:", e);
@@ -119,7 +118,7 @@
     }
   };
 
-  // ---- Quantity +/- handlers (delegated) ----
+  // Quantity +/- delegated
   document.addEventListener("click", (e) => {
     if (e.target.matches(".quantity-controls .plus")) {
       const wrap = e.target.closest(".quantity-controls");
