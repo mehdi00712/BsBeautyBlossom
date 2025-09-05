@@ -1,6 +1,5 @@
-// product-detail.js
+// product-detail.js — gallery + safe pricing
 (function(){
-  // util
   const $ = (s)=>document.querySelector(s);
   const params = new URLSearchParams(location.search);
   const id = params.get('id');
@@ -23,7 +22,7 @@
     return;
   }
 
-  function setPriceText(p){ price.textContent = p ? `From Rs${p}` : ''; }
+  const setPriceText = (p)=> { price.textContent = p ? `From Rs${p}` : ''; };
 
   function renderImages(images=[], imageURL=''){
     const list = images && images.length ? images : (imageURL ? [imageURL] : []);
@@ -45,31 +44,44 @@
   }
 
   function renderSizes(sizes=[], basePrice=0){
+    const base = Number(basePrice||0);
     sizeSel.innerHTML = '';
+
     if (sizes && sizes.length){
+      let any = false;
       sizes.forEach(s=>{
-        const opt = document.createElement('option');
-        opt.value = s.label;
-        opt.textContent = `${s.label} - Rs${s.price}`;
-        opt.dataset.price = s.price;
-        sizeSel.appendChild(opt);
+        const sp = Number(s?.price || 0) || base;
+        if (sp > 0) {
+          const opt = document.createElement('option');
+          opt.value = s.label;
+          opt.textContent = `${s.label} - Rs${sp}`;
+          opt.dataset.price = sp;
+          sizeSel.appendChild(opt);
+          any = true;
+        }
       });
-      setPriceText(sizes[0].price);
+      const first = sizeSel.options[0];
+      setPriceText(first ? Number(first.dataset.price) : base);
+      if (!any && base > 0) {
+        const opt = document.createElement('option');
+        opt.value = 'Default';
+        opt.textContent = `Rs${base}`;
+        opt.dataset.price = base;
+        sizeSel.appendChild(opt);
+      }
     } else {
       const opt = document.createElement('option');
       opt.value = 'Default';
-      opt.textContent = `Rs${basePrice||0}`;
-      opt.dataset.price = basePrice||0;
+      opt.textContent = `Rs${base}`;
+      opt.dataset.price = base;
       sizeSel.appendChild(opt);
-      setPriceText(basePrice||0);
+      setPriceText(base);
     }
   }
 
-  // qty controls
   minus.onclick = ()=>{ const n = Math.max(1, Number(qtyEl.textContent)-1); qtyEl.textContent = n; };
   plus.onclick  = ()=>{ qtyEl.textContent = Number(qtyEl.textContent)+1; };
 
-  // load product
   db.collection('products').doc(id).get().then(doc=>{
     if (!doc.exists){
       title.textContent = 'Product not found';
@@ -85,11 +97,18 @@
 
     addBtn.onclick = ()=>{
       const sel = sizeSel.options[sizeSel.selectedIndex];
-      const unitPrice = Number(sel?.dataset?.price || p.basePrice || 0);
-      const qty = Number(qtyEl.textContent || 1);
+      let unitPrice = Number(sel?.dataset?.price);
+      if (!unitPrice || unitPrice <= 0) {
+        const firstSizePrice = (p.sizes||[]).map(s=>Number(s.price||0)).find(n=>n>0);
+        unitPrice = firstSizePrice || Number(p.basePrice||0) || 0;
+      }
+      if (unitPrice <= 0) {
+        alert('This product has no valid price set. Please contact admin.');
+        return;
+      }
+      const qty = Math.max(1, Number(qtyEl.textContent || 1));
       const nameSafe = (p.name||'').trim();
 
-      // Write to new cart format directly (robust even if addToCart isn't available here)
       const key = 'bbb_cart_v2';
       const existing = JSON.parse(localStorage.getItem(key) || '[]');
       const idKey = `${nameSafe}__${unitPrice}`;
@@ -106,7 +125,6 @@
       }
       localStorage.setItem(key, JSON.stringify(existing));
 
-      // update cart count in navbar
       const count = existing.reduce((n,i)=>n+(i.qty||0),0);
       const cc = document.getElementById('cart-count'); if (cc) cc.textContent = count;
 
