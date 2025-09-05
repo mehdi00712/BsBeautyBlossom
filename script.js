@@ -1,13 +1,11 @@
 // script.js — navbar + hardened Add to Cart using unitPrice
 (function () {
-  // Navbar toggle
   const hamburger = document.querySelector(".hamburger");
   const navLinks = document.querySelector(".nav-links");
   if (hamburger && navLinks) {
     hamburger.addEventListener("click", () => navLinks.classList.toggle("show"));
   }
 
-  // Canonical cart key
   const CART_KEY = "bbb_cart_v2";
 
   function readCart() {
@@ -18,16 +16,15 @@
   }
   function writeCart(items) {
     localStorage.setItem(CART_KEY, JSON.stringify(items));
-    localStorage.removeItem("cart"); // drop legacy
+    localStorage.removeItem("cart");
   }
-  function cartCount(items) { return items.reduce((n, i) => n + (Number(i.qty) || 0), 0); }
-  function updateCartCountBadge() {
+  const cartCount = (items) => items.reduce((n, i) => n + (Number(i.qty) || 0), 0);
+  const updateCartCountBadge = () => {
     const cc = document.getElementById("cart-count");
     if (cc) cc.textContent = cartCount(readCart());
-  }
+  };
   updateCartCountBadge();
 
-  // Helpers for product cards
   function getSelectedOptionPrice(productEl) {
     const sel = productEl.querySelector("select");
     if (!sel) return 0;
@@ -43,7 +40,6 @@
   const getImageURL = (el) => el.querySelector("img")?.src || "";
   const cleanName = (s) => (s || "").toString().trim();
 
-  // Public: used by products.js (onclick="addToCart(...)")
   window.addToCart = function (name, btn) {
     try {
       const safe = cleanName(name);
@@ -85,7 +81,6 @@
     }
   };
 
-  // Quantity +/- delegates
   document.addEventListener("click", (e) => {
     if (e.target.matches(".quantity-controls .plus")) {
       const q = e.target.closest(".quantity-controls")?.querySelector(".qty");
