@@ -1,159 +1,154 @@
-// =========================
-// NAVBAR TOGGLE
-// =========================
-const hamburger = document.querySelector(".hamburger");
-const navLinks = document.querySelector(".nav-links");
-if (hamburger) {
-  hamburger.addEventListener("click", () => {
-    const expanded = hamburger.getAttribute("aria-expanded") === "true";
-    hamburger.setAttribute("aria-expanded", String(!expanded));
-    navLinks.classList.toggle("show");
-  });
-}
+// script.js — hardened Add to Cart with price/qty/image guards
 
-// =========================
-// CART SYSTEM (localStorage)
-// =========================
-const CART_KEY = "bbb_cart_v2";
-let cart = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
-
-function saveCart(){ localStorage.setItem(CART_KEY, JSON.stringify(cart)); }
-function cartCount(){ return cart.reduce((n,i)=>n + (i.qty||0), 0); }
-function updateCartCount(){
-  const el = document.getElementById("cart-count");
-  if (el) el.textContent = String(cartCount());
-}
-
-// Called from product cards ("Add to Cart" button)
-function addToCart(name, btn){
-  const card = btn.closest(".product");
-  const select = card.querySelector(".size-select");
-  const qtyEl = card.querySelector(".qty");
-  const img = card.querySelector("img");
-
-  const sizeLabel = select?.value || "Default";
-  const unitPrice = Number(select?.selectedOptions[0]?.dataset?.price || 0);
-  const qty = Number(qtyEl?.textContent || 1);
-
-  if (!name || !unitPrice || qty <= 0) {
-    alert("Please select a size and quantity.");
-    return;
+(function () {
+  // Navbar hamburger
+  const hamburger = document.querySelector(".hamburger");
+  const navLinks = document.querySelector(".nav-links");
+  if (hamburger && navLinks) {
+    hamburger.addEventListener("click", () => navLinks.classList.toggle("show"));
   }
 
-  const id = `${name}__${sizeLabel}`;
-  const existing = cart.find(i => i.id === id);
-  if (existing) existing.qty += qty;
-  else cart.push({ id, name, sizeLabel, unitPrice, qty, imageURL: img?.src || "" });
+  // ---- Cart helpers (single canonical key) ----
+  const CART_KEY = "bbb_cart_v2";
 
-  saveCart();
-  updateCartCount();
-  btn.textContent = "Added ✓";
-  setTimeout(()=>btn.textContent="Add to Cart", 1200);
-}
-
-// Quantity +/- handler for product cards and cart table
-document.addEventListener("click", (e)=>{
-  const plus = e.target.closest(".plus");
-  const minus = e.target.closest(".minus");
-  if (plus || minus){
-    const wrap = e.target.closest(".product") || e.target.closest("tr");
-    const q = wrap?.querySelector(".qty");
-    if (q){
-      let v = Number(q.textContent||1);
-      if (plus) v++;
-      if (minus) v = Math.max(1, v-1);
-      q.textContent = String(v);
+  function readCart() {
+    try {
+      const arr = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
+      return Array.isArray(arr) ? arr : [];
+    } catch {
+      return [];
     }
   }
-});
 
-// =========================
-// CART PAGE RENDER + TOTALS
-// =========================
-function formatRs(n){ return `Rs${(Number(n)||0).toFixed(2)}`; }
-
-function displayCart(){
-  const tbody = document.getElementById("cart-body");
-  const subtotalEl = document.getElementById("subtotal");
-  const shippingEl = document.getElementById("shipping");
-  const totalEl = document.getElementById("total");
-
-  if (!tbody) return;
-  tbody.innerHTML = "";
-  if (!cart.length){
-    tbody.innerHTML = '<tr><td colspan="6">Your cart is empty.</td></tr>';
-    if (subtotalEl) subtotalEl.textContent = formatRs(0);
-    if (shippingEl) shippingEl.textContent = formatRs(0);
-    if (totalEl) totalEl.textContent = formatRs(0);
-    return;
+  function writeCart(items) {
+    localStorage.setItem(CART_KEY, JSON.stringify(items));
+    // clean any legacy key to avoid conflicts
+    localStorage.removeItem("cart");
   }
 
-  let subtotal = 0;
-  cart.forEach((item)=>{
-    subtotal += item.unitPrice * item.qty;
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><img src="${item.imageURL||""}" alt="" /></td>
-      <td><strong>${item.name}</strong><br/><span class="badge">${item.sizeLabel}</span></td>
-      <td>${formatRs(item.unitPrice)}</td>
-      <td class="qty-cell">
-        <button class="minus btn muted" type="button">–</button>
-        <span class="qty">${item.qty}</span>
-        <button class="plus btn muted" type="button">+</button>
-      </td>
-      <td>${formatRs(item.unitPrice * item.qty)}</td>
-      <td><button class="btn danger remove" data-id="${item.id}">Remove</button></td>
-    `;
-    tbody.appendChild(tr);
+  function cartCount(items) {
+    return items.reduce((n, i) => n + (Number(i.qty) || 0), 0);
+  }
 
-    tr.querySelector(".minus").addEventListener("click", ()=>{
-      const i = cart.findIndex(it=>it.id===item.id);
-      if (i>=0){ cart[i].qty = Math.max(1, cart[i].qty-1); saveCart(); displayCart(); updateCartCount(); }
-    });
-    tr.querySelector(".plus").addEventListener("click", ()=>{
-      const i = cart.findIndex(it=>it.id===item.id);
-      if (i>=0){ cart[i].qty += 1; saveCart(); displayCart(); updateCartCount(); }
-    });
-    tr.querySelector(".remove").addEventListener("click", ()=>{
-      cart = cart.filter(it=>it.id!==item.id);
-      saveCart(); displayCart(); updateCartCount();
-    });
+  function updateCartCountBadge() {
+    const count = cartCount(readCart());
+    const cc = document.getElementById("cart-count");
+    if (cc) cc.textContent = count;
+  }
+
+  // Call this once on every page load that has the badge
+  updateCartCountBadge();
+
+  // ---- DOM utils for product cards ----
+  function getSelectedOptionPrice(productEl) {
+    const sel = productEl.querySelector("select");
+    if (!sel) return 0;
+    const opt = sel.options[sel.selectedIndex];
+    const p = Number(opt?.dataset?.price || 0);
+    return isFinite(p) ? p : 0;
+  }
+
+  function getSelectedLabel(productEl) {
+    const sel = productEl.querySelector("select");
+    return sel ? sel.value : "Default";
+  }
+
+  function getQty(productEl) {
+    const qEl = productEl.querySelector(".qty");
+    const q = Number((qEl?.textContent || "1").trim());
+    return Math.max(1, isFinite(q) ? q : 1);
+  }
+
+  function getImageURL(productEl) {
+    // try cover image first
+    const img = productEl.querySelector("img");
+    return img?.src || "";
+  }
+
+  function sanitizeName(name) {
+    return (name || "").toString().trim();
+  }
+
+  // ---- Public: addToCart(name, buttonEl) ----
+  // It is called from products.js via onclick="addToCart(this.dataset.name, this)"
+  window.addToCart = function (name, btn) {
+    try {
+      const safeName = sanitizeName(name);
+      if (!safeName) {
+        alert("Product name missing.");
+        return;
+      }
+
+      // Find the product card container
+      const productEl = btn?.closest(".product") || document;
+      // Price from selected option (with fallback logic)
+      let unitPrice = getSelectedOptionPrice(productEl);
+
+      // EXTRA fallback if option was missing data-price
+      // Try to read any displayed "From RsX" on card OR data attribute set by products.js
+      if (!unitPrice || unitPrice <= 0) {
+        const priceText = productEl.querySelector(".price")?.textContent || "";
+        const m = priceText.match(/Rs\s*([\d.,]+)/i);
+        if (m) {
+          unitPrice = Number((m[1] || "0").replace(/[^\d.]/g, ""));
+        }
+      }
+
+      // FINAL safety: block adding if still zero or invalid
+      if (!unitPrice || unitPrice <= 0) {
+        alert("This item has no valid price. Please choose a size or contact admin.");
+        return;
+      }
+
+      const qty = getQty(productEl);
+      const imageURL = getImageURL(productEl);
+      const sizeLabel = getSelectedLabel(productEl);
+
+      const cart = readCart();
+      const idKey = `${safeName}__${unitPrice}__${sizeLabel}`;
+      const existing = cart.find((i) => i.id === idKey);
+
+      if (existing) {
+        existing.qty += qty;
+      } else {
+        cart.push({
+          id: idKey,
+          name: `${safeName} (${sizeLabel})`,
+          unitPrice,
+          qty,
+          imageURL,
+        });
+      }
+      writeCart(cart);
+      updateCartCountBadge();
+
+      // Nice feedback
+      if (btn) {
+        const old = btn.textContent;
+        btn.textContent = "Added ✓";
+        btn.disabled = true;
+        setTimeout(() => {
+          btn.textContent = old;
+          btn.disabled = false;
+        }, 1000);
+      }
+    } catch (e) {
+      console.error("addToCart error:", e);
+      alert("Could not add to cart. Please try again.");
+    }
+  };
+
+  // ---- Quantity +/- handlers for cards (delegation) ----
+  document.addEventListener("click", (e) => {
+    if (e.target.matches(".quantity-controls .plus")) {
+      const wrap = e.target.closest(".quantity-controls");
+      const qtyEl = wrap?.querySelector(".qty");
+      if (qtyEl) qtyEl.textContent = String(Math.max(1, Number(qtyEl.textContent || "1") + 1));
+    }
+    if (e.target.matches(".quantity-controls .minus")) {
+      const wrap = e.target.closest(".quantity-controls");
+      const qtyEl = wrap?.querySelector(".qty");
+      if (qtyEl) qtyEl.textContent = String(Math.max(1, Number(qtyEl.textContent || "1") - 1));
+    }
   });
-
-  if (subtotalEl) subtotalEl.textContent = formatRs(subtotal);
-  updateTotals();
-}
-
-function selectedDelivery(){
-  const r = document.querySelector('input[name="delivery"]:checked');
-  return r ? r.value : "pickup";
-}
-function deliveryFee(){
-  const v = selectedDelivery();
-  if (v === "delivery") return 150;
-  if (v === "postage") return 125;
-  return 0;
-}
-function updateTotals(){
-  const subtotalEl = document.getElementById("subtotal");
-  const shippingEl = document.getElementById("shipping");
-  const totalEl = document.getElementById("total");
-  const subtotal = Number((subtotalEl?.textContent||"0").replace(/[^0-9.]/g,''));
-  const ship = deliveryFee();
-  if (shippingEl) shippingEl.textContent = formatRs(ship);
-  if (totalEl) totalEl.textContent = formatRs(subtotal + ship);
-}
-function handleDeliveryUI(){
-  const addressRow = document.getElementById("address-row");
-  const v = selectedDelivery();
-  if (addressRow) addressRow.style.display = (v === "pickup") ? "none" : "grid";
-  updateTotals();
-}
-document.addEventListener("change", (e)=>{
-  if (e.target.name === "delivery"){ handleDeliveryUI(); }
-});
-
-// Init on every page (safe if elements don’t exist)
-updateCartCount();
-displayCart();
-handleDeliveryUI();
+})();
