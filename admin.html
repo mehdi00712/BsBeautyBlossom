@@ -6,23 +6,22 @@
   <title>Admin – B’s Beauty Blossom</title>
   <link rel="stylesheet" href="style.css"/>
 
-<!-- Firebase SDKs (ORDER MATTERS) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <!-- Firebase SDKs (ORDER MATTERS) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-<!-- Your Firebase initializer (defines window.auth & window.db) -->
-<script src="firebase-config.js"></script>
+  <!-- Your initializer (creates window.auth & window.db) -->
+  <script src="firebase-config.js"></script>
 
-<!-- Cloudinary keys -->
-<script>
-  window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
-  window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
-</script>
+  <!-- Cloudinary keys for admin uploads -->
+  <script>
+    window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
+    window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
+  </script>
 
-<!-- Admin logic -->
-<script src="admin.js" defer></script>
-
+  <!-- Admin logic -->
+  <script src="admin.js" defer></script>
 </head>
 <body>
 <header>
