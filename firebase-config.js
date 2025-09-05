@@ -1,10 +1,11 @@
-// firebase-config.js (Compat SDK initializer)
-// Include these in pages BEFORE this file:
+// firebase-config.js — initialize Firebase (Compat) and expose window.auth & window.db
+// REQUIRE these BEFORE this file on any page using Auth/Firestore:
 //   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+//   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 //   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 if (!window.firebase) {
-  throw new Error("Firebase SDK not loaded. Add firebase-app-compat & firebase-firestore-compat before firebase-config.js");
+  throw new Error("Firebase SDK not loaded. Include compat scripts before firebase-config.js");
 }
 
 const firebaseConfig = {
@@ -22,4 +23,6 @@ if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 
-window.db = firebase.firestore();
+// expose auth + db for other scripts
+window.auth = firebase.auth();
+window.db   = firebase.firestore();
