@@ -1,8 +1,6 @@
-// firebase-config.js — load AFTER firebase-app-compat.js AND firebase-firestore-compat.js
+// firebase-config.js — load AFTER firebase-app-compat.js + firebase-auth-compat.js + firebase-firestore-compat.js
 (function () {
-  if (!window.firebase) {
-    throw new Error("Firebase SDK not loaded. Include firebase-app-compat.js and firebase-firestore-compat.js BEFORE firebase-config.js");
-  }
+  if (!window.firebase) throw new Error("Firebase SDK not loaded.");
 
   const firebaseConfig = {
     apiKey: "AIzaSyBSA9iP3kjdYZM0eXt_KOXAgPT_z74cGJ8",
@@ -17,13 +15,12 @@
 
   if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 
-  if (!firebase.firestore) {
-    throw new Error("firebase-firestore-compat.js not loaded — add it BEFORE firebase-config.js");
+  if (!firebase.auth || !firebase.firestore) {
+    throw new Error("Load firebase-auth-compat.js and firebase-firestore-compat.js BEFORE firebase-config.js");
   }
 
-  // Expose Firestore (and RTDB only if you load its compat script on that page)
-  window.db = firebase.firestore();
-  try { window.rtdb = firebase.database?.(); } catch (_) {}
+  window.auth = firebase.auth();
+  window.db   = firebase.firestore();
 
-  console.log("✅ Firebase ready", { apps: firebase.apps.length, hasDb: !!window.db });
+  console.log("✅ Firebase initialized:", { apps: firebase.apps.length, hasAuth: !!window.auth, hasDb: !!window.db });
 })();
