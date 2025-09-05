@@ -1,11 +1,7 @@
-// firebase-config.js — initialize Firebase (Compat) and expose window.auth & window.db
-// REQUIRE these BEFORE this file on any page using Auth/Firestore:
-//   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-//   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-//   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+// firebase-config.js — must be loaded AFTER firebase-app-compat.js + firebase-auth-compat.js + firebase-firestore-compat.js
 
 if (!window.firebase) {
-  throw new Error("Firebase SDK not loaded. Include compat scripts before firebase-config.js");
+  throw new Error("Firebase SDK not loaded. Add compat scripts before firebase-config.js");
 }
 
 const firebaseConfig = {
@@ -19,10 +15,13 @@ const firebaseConfig = {
   measurementId: "G-1QD13LXLRM"
 };
 
+// Initialize Firebase if not already
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 
-// expose auth + db for other scripts
+// Export globals so admin.js can see them
 window.auth = firebase.auth();
 window.db   = firebase.firestore();
+
+console.log("✅ Firebase initialized, auth and db ready", window.auth, window.db);
