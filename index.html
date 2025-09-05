@@ -3,140 +3,64 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>B's Beauty Blossom</title>
+  <title>B’s Beauty Blossom — Home</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
-  <script src="script.js" defer></script>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&family=Roboto&display=swap" rel="stylesheet">
-  <style>
-    /* Optional: Google Map styling */
-    .google-map iframe {
-      width: 100%;
-      max-width: 800px;
-      height: 450px;
-      border: 0;
-      border-radius: 10px;
-      margin: 20px 0;
-    }
-  </style>
 </head>
 <body>
-  <!-- Header / Navbar -->
-  <header>
-    <nav class="navbar">
-      <div class="logo">
-        <a href="index.html">
-          <img src="1.jpg" alt="B's Beauty Blossom Logo">
-        </a>
-      </div>
-      <ul class="nav-links">
-        <li><a href="#home">Home</a></li>
-        <li><a href="#about">About</a></li>
-        <li><a href="perfume.html">Perfume</a></li>
-        <li><a href="body.html">Body Mist</a></li>
-        <li><a href="skincare.html">Skincare</a></li>
-        <li><a href="cosmetics.html">Cosmetics</a></li>
-        <li><a href="jewellery.html">Jewellery</a></li>
-        <li><a href="gift.html">Gift Box</a></li>
-        <li><a href="#contact">Contact</a></li>
-        <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
-      </ul>
-      <div class="hamburger">&#9776;</div>
-    </nav>
-  </header>
-
-  <!-- Hero -->
-  <section id="home" class="hero">
-    <div class="hero-text">
-      <h1>Discover Your True Essence</h1>
-      <p>Perfume, Skincare, Body Mist, Jewellery & Cosmetics made to blossom your beauty.</p>
-      <a href="perfume.html" class="btn">Shop Perfumes</a>
+<header>
+  <nav class="navbar">
+    <div class="logo">
+      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
     </div>
-  </section>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="perfume.html">Perfume</a></li>
+      <li><a href="body.html">Body</a></li>
+      <li><a href="skincare.html">Skincare</a></li>
+      <li><a href="cosmetics.html">Cosmetics</a></li>
+      <li><a href="jewellery.html">Jewellery</a></li>
+      <li><a href="gift.html">Gift</a></li>
+      <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
+      <li><a href="admin.html">Admin</a></li>
+    </ul>
+    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
+  </nav>
+</header>
 
-  <!-- About -->
-  <section id="about" class="about">
-    <h2>About Us</h2>
-    <p>At B’s Beauty Blossom, we celebrate women’s beauty with perfumes, skincare, body mists, jewellery, cosmetics, and gifts that bring out confidence and elegance.</p>
-  </section>
-
-  <!-- Categories -->
-  <section class="products">
-    <h2>Our Collections</h2>
-    <div class="product-grid">
-      <!-- Perfume -->
-      <div class="product-card">
-        <img src="21p.JPG" alt="Perfume">
-        <h3>Perfume</h3>
-        <p>Elegant long-lasting fragrances.</p>
-        <a href="perfume.html" class="btn">Explore</a>
-      </div>
-
-      <!-- Body Mist -->
-      <div class="product-card">
-        <img src="1b.jpg" alt="Body Mist">
-        <h3>Body Mist</h3>
-        <p>Fresh and light daily scents.</p>
-        <a href="body.html" class="btn">Explore</a>
-      </div>
-
-      <!-- Skincare -->
-      <div class="product-card">
-        <img src="2.jpg" alt="Skincare">
-        <h3>Skincare</h3>
-        <p>Nourishment for glowing skin.</p>
-        <a href="skincare.html" class="btn">Explore</a>
-      </div>
-
-      <!-- Cosmetics -->
-      <div class="product-card">
-        <img src="c1.JPG" alt="Cosmetics">
-        <h3>Cosmetics</h3>
-        <p>Enhance your natural beauty.</p>
-        <a href="cosmetics.html" class="btn">Explore</a>
-      </div>
-
-      <!-- Jewellery -->
-      <div class="product-card">
-        <img src="j3.jpg" alt="Jewellery">
-        <h3>Jewellery</h3>
-        <p>Stylish pieces for every occasion.</p>
-        <a href="jewellery.html" class="btn">Explore</a>
-      </div>
-
-      <!-- Gift Box -->
-      <div class="product-card">
-        <img src="4c.JPG" alt="Gift Box">
-        <h3>Gift Box</h3>
-        <p>Perfect gifts for your loved ones.</p>
-        <a href="gift.html" class="btn">Explore</a>
-      </div>
+<section class="hero">
+  <div>
+    <h1>Glow up your routine.</h1>
+    <p>Perfumes, skincare, cosmetics, body care, jewellery & gifts — curated and delivered with care.</p>
+    <div class="cta">
+      <a class="btn" href="perfume.html">Shop Perfume</a>
+      <a class="btn secondary" href="skincare.html">Explore Skincare</a>
     </div>
-  </section>
-
-  <!-- Contact -->
-  <section id="contact" class="contact">
-    <h2>Contact Us</h2>
-    <div class="social-links">
-      <a href="https://www.instagram.com/bsbeautyblossom2023" target="_blank" class="social-btn instagram">Instagram</a>
-      <a href="https://www.tiktok.com/@flowerbenazire?is_from_webapp=1&sender_device=pc" target="_blank" class="social-btn tiktok">TikTok</a>
-      <a href="https://www.facebook.com/p/Bs-Beauty-Blossom-100094748116935/" target="_blank" class="social-btn facebook">Facebook</a>
-      <a href="https://wa.me/23058195560" target="_blank" class="social-btn whatsapp">WhatsApp</a>
+  </div>
+  <div class="hero-art">
+    <div>
+      <p class="badge">Fresh arrivals</p>
+      <h3 style="margin:6px 0 10px">New this week</h3>
+      <p class="muted">Items update instantly when the admin adds them.</p>
     </div>
+  </div>
+</section>
 
-    <!-- Google Map Embed -->
-    <div class="google-map">
-      <iframe
-        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2928.686417050115!2d57.46584751568794!3d-20.23021138640407!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x217c5b2d861ff511%3A0xb20a5bfac294b613!2sB&#39;s%20Beauty%20Blossom!5e0!3m2!1sen!2smu!4v1692871345678!5m2!1sen!2smu"
-        allowfullscreen=""
-        loading="lazy"
-        referrerpolicy="no-referrer-when-downgrade">
-      </iframe>
-    </div>
-  </section>
+<section class="section">
+  <h2>Shop by Category</h2>
+  <div class="product-grid">
+    <a class="product" href="perfume.html"><img src="https://images.unsplash.com/photo-1615634260167-c8cf3a4b1b29?q=80&w=1200&auto=format&fit=crop" alt="Perfume"><h3>Perfume</h3></a>
+    <a class="product" href="skincare.html"><img src="https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=1200&auto=format&fit=crop" alt="Skincare"><h3>Skincare</h3></a>
+    <a class="product" href="cosmetics.html"><img src="https://images.unsplash.com/photo-1512496015851-a90fb38ba796?q=80&w=1200&auto=format&fit=crop" alt="Cosmetics"><h3>Cosmetics</h3></a>
+    <a class="product" href="body.html"><img src="https://images.unsplash.com/photo-1605497788044-5a32c7078486?q=80&w=1200&auto=format&fit=crop" alt="Body"><h3>Body</h3></a>
+    <a class="product" href="jewellery.html"><img src="https://images.unsplash.com/photo-1515569067071-ec3b51335a26?q=80&w=1200&auto=format&fit=crop" alt="Jewellery"><h3>Jewellery</h3></a>
+    <a class="product" href="gift.html"><img src="https://images.unsplash.com/photo-1511396275278-a2c7fc9e8d3f?q=80&w=1200&auto=format&fit=crop" alt="Gift"><h3>Gift</h3></a>
+  </div>
+</section>
 
-  <!-- Footer -->
-  <footer>
-    <p>&copy; 2025 B's Beauty Blossom | All Rights Reserved</p>
-  </footer>
+<footer class="site-footer">
+  <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
+</footer>
+<script src="script.js" defer></script>
 </body>
 </html>
