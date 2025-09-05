@@ -1,171 +1,242 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin – B’s Beauty Blossom</title>
-  <link rel="stylesheet" href="style.css"/>
+// admin.js — Firebase Auth + Firestore products + Cloudinary uploads (NO site settings)
+(function () {
+  if (!window.db) {
+    throw new Error("❌ Firestore not initialized: ensure firebase-firestore-compat.js loads before firebase-config.js.");
+  }
+  if (!window.auth) {
+    alert("Firebase Auth isn’t loaded. On admin.html, add:\n" +
+          '<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>\n' +
+          "ABOVE firebase-config.js.");
+    return;
+  }
 
-  <!-- Firebase SDKs (ORDER MATTERS) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  const $ = (s) => document.querySelector(s);
 
-  <!-- Your initializer (creates window.auth & window.db) -->
-  <script src="firebase-config.js"></script>
+  // Allow only your admin UID
+  const ALLOWED_ADMIN_UIDS = new Set([
+    "w5jtigflSVezQwUvnsgM7AY4ZK73"
+  ]);
 
-  <!-- Cloudinary keys for admin uploads -->
-  <script>
-    window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
-    window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
-  </script>
+  // Cloudinary (set in admin.html)
+  const CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME;
+  const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET;
 
-  <!-- Admin logic -->
-  <script src="admin.js" defer></script>
-
-  <style>
-    .card{border:1px solid #23232a;border-radius:16px;padding:16px;background:#0d0d12}
-    .btn{padding:8px 12px;border:1px solid #2c2c36;background:#15151c;color:#fff;border-radius:10px;cursor:pointer}
-    .btn.muted{opacity:.85}
-    .btn.danger{background:#3a1717;border-color:#5b1f1f}
-    label{font-weight:600}
-    input[type="text"],input[type="number"],input[type="email"],input[type="password"],textarea,select{background:#0b0b10;color:#fff;border:1px solid #23232a;border-radius:10px;padding:10px}
-    .table-wrap{overflow:auto}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:8px;border-bottom:1px solid #23232a}
-
-    /* Hamburger menu fixes */
-    .hamburger { display:none; cursor:pointer; font-size:24px; line-height:1; }
-    .nav-links { display:flex; gap:14px; list-style:none; }
-    @media (max-width:768px){
-      .hamburger{display:block;}
-      .nav-links{
-        display:none;
-        position:absolute;
-        top:100%;
-        right:0;
-        background:#0d0d12;
-        border:1px solid #23232a;
-        border-radius:12px;
-        padding:10px;
-        flex-direction:column;
-        gap:10px;
-        min-width:200px;
-        z-index:1000;
-      }
-      .nav-links.show{display:flex;}
-      .nav-links a{display:block;padding:6px 10px;}
+  async function uploadToCloudinary(file) {
+    if (!file) return '';
+    if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error('Missing Cloudinary config');
+    const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
+    const form = new FormData();
+    form.append('file', file);
+    form.append('upload_preset', UPLOAD_PRESET);
+    const res = await fetch(url, { method: 'POST', body: form });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error('Cloudinary upload failed: ' + txt);
     }
-  </style>
-</head>
-<body>
-<header>
-  <nav class="navbar">
-    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
-    <ul class="nav-links">
-      <li><a href="index.html">Home</a></li>
-      <li>Admin</li>
-    </ul>
-    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
-  </nav>
-</header>
+    const data = await res.json();
+    return data.secure_url;
+  }
 
-<main class="admin-wrap">
-  <h1>Admin Dashboard</h1>
+  // -------------------------
+  // AUTH
+  // -------------------------
+  const authStatus = $('#auth-status');
+  const loginBtn = $('#loginBtn');
+  const signupBtn = $('#signupBtn');
+  const logoutBtn = $('#logoutBtn');
+  const email = $('#email');
+  const password = $('#password');
 
-  <!-- Auth -->
-  <section id="auth-section" class="card">
-    <h2>Login</h2>
-    <label>Admin email</label>
-    <input id="email" type="email" placeholder="Email">
-    <label>Password</label>
-    <input id="password" type="password" placeholder="Password">
-    <div style="display:flex;gap:8px;margin:8px 0">
-      <button id="loginBtn" class="btn">Log In</button>
-      <button id="signupBtn" class="btn muted">Sign Up (first time)</button>
-      <button id="logoutBtn" class="btn danger" style="display:none">Log Out</button>
-    </div>
-    <p id="auth-status" class="muted"></p>
-  </section>
+  loginBtn.onclick = async () => {
+    try { await auth.signInWithEmailAndPassword(email.value, password.value); }
+    catch (e) { alert(e.message); }
+  };
+  signupBtn.onclick = async () => {
+    try {
+      const cred = await auth.createUserWithEmailAndPassword(email.value, password.value);
+      console.log('New UID:', cred.user?.uid);
+      alert('Account created. Check console for UID and add to Firestore rules + ALLOWED_ADMIN_UIDS.');
+    } catch (e) { alert(e.message); }
+  };
+  logoutBtn.onclick = () => auth.signOut();
 
-  <!-- Product Form -->
-  <section id="product-section" class="card" style="display:none">
-    <h2>Add / Edit Product</h2>
-    <div style="display:grid;gap:10px;max-width:720px">
-      <label>Category</label>
-      <select id="category">
-        <option value="perfume">Perfume</option>
-        <option value="body">Body</option>
-        <option value="skincare">Skincare</option>
-        <option value="cosmetics">Cosmetics</option>
-        <option value="jewellery">Jewellery</option>
-        <option value="gift">Gift</option>
-      </select>
+  const productSection = $('#product-section');
+  const listSection = $('#list-section');
 
-      <label>Product name</label>
-      <input id="name" placeholder="Product name">
-
-      <label>Base price (Rs)</label>
-      <input id="price" type="number" placeholder="Base price (Rs)">
-
-      <label>Brand (optional)</label>
-      <input id="brand" placeholder="Brand">
-
-      <label>Sizes (one per line): <small>Label | Price — e.g. “100ml | 2350”</small></label>
-      <textarea id="sizes" rows="4" placeholder="100ml | 2350&#10;30ml | 1550"></textarea>
-
-      <label>Short description (optional)</label>
-      <textarea id="description" rows="3" placeholder="Description"></textarea>
-
-      <label>Image(s) (upload)</label>
-      <input id="images" type="file" accept="image/*" multiple>
-
-      <label><input id="active" type="checkbox" checked> Active (visible on site)</label>
-
-      <div style="display:flex;gap:8px">
-        <button id="saveBtn" class="btn">Save Product</button>
-        <button id="resetBtn" class="btn muted">Reset Form</button>
-      </div>
-      <input type="hidden" id="docId">
-    </div>
-  </section>
-
-  <!-- Product List -->
-  <section id="list-section" class="card" style="display:none">
-    <h2>Products</h2>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-      <select id="filterCategory">
-        <option value="perfume">Perfume</option>
-        <option value="body">Body</option>
-        <option value="skincare">Skincare</option>
-        <option value="cosmetics">Cosmetics</option>
-        <option value="jewellery">Jewellery</option>
-        <option value="gift">Gift</option>
-      </select>
-      <button id="refreshBtn" class="btn muted">Refresh</button>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th>Image</th><th>Name</th><th>Sizes</th><th>Base</th><th>Active</th><th>Actions</th></tr>
-        </thead>
-        <tbody id="tableBody"><tr><td colspan="6">Loading…</td></tr></tbody>
-      </table>
-    </div>
-  </section>
-</main>
-
-<!-- Navbar toggle script -->
-<script>
-(function(){
-  const burger = document.querySelector(".hamburger");
-  const links  = document.querySelector(".nav-links");
-  if (!burger || !links) return;
-  burger.addEventListener("click", () => {
-    const open = links.classList.toggle("show");
-    burger.setAttribute("aria-expanded", open ? "true" : "false");
+  auth.onAuthStateChanged((user) => {
+    const ok = !!user && (ALLOWED_ADMIN_UIDS.size === 0 || ALLOWED_ADMIN_UIDS.has(user.uid));
+    authStatus.textContent = user ? (ok ? `Signed in as ${user.email}` : 'Signed in but not authorized.') : 'Not signed in';
+    logoutBtn.style.display = user ? 'inline-block' : 'none';
+    productSection.style.display = ok ? 'block' : 'none';
+    listSection.style.display = ok ? 'block' : 'none';
+    if (ok) loadTable();
   });
+
+  // -------------------------
+  // PRODUCT CRUD
+  // -------------------------
+  const nameEl = $('#name');
+  const brandEl = $('#brand');
+  const priceEl = $('#price');
+  const sizesEl = $('#sizes');
+  const descEl = $('#description');
+  const categoryEl = $('#category');
+  const imgEl = $('#images'); // multiple
+  const activeEl = $('#active');
+  const saveBtn = $('#saveBtn');
+  const resetBtn = $('#resetBtn');
+  const tableBody = $('#tableBody');
+  const filterCategory = $('#filterCategory');
+  const refreshBtn = $('#refreshBtn');
+  const docIdEl = $('#docId');
+
+  const parseSizes = (text = '') =>
+    text.split('\n')
+        .map(l => l.trim())
+        .filter(Boolean)
+        .map(l => {
+          const m = l.match(/^(.*?)[\s|:\-–—]*\s*(?:Rs)?\s*([\d.,]+)\s*$/i);
+          if (!m) return null;
+          const label = m[1].trim().replace(/[|:\-–—]$/, '').trim();
+          const priceNum = Number((m[2] || '0').replace(/[^\d.]/g, ''));
+          if (!label || !isFinite(priceNum) || priceNum <= 0) return null;
+          return { label, price: priceNum };
+        })
+        .filter(Boolean);
+
+  const renderSizes = (sizes = []) => sizes.map(s => `${s.label} (Rs${s.price})`).join(', ');
+
+  const resetForm = () => {
+    docIdEl.value = '';
+    nameEl.value = '';
+    brandEl.value = '';
+    priceEl.value = '';
+    sizesEl.value = '';
+    descEl.value = '';
+    categoryEl.value = 'perfume';
+    if (imgEl) imgEl.value = '';
+    activeEl.checked = true;
+  };
+
+  saveBtn.onclick = async () => {
+    const sizes = parseSizes(sizesEl.value);
+    let data = {
+      name: nameEl.value.trim(),
+      brand: brandEl.value.trim(),
+      basePrice: Number(priceEl.value || 0),
+      sizes,
+      description: descEl.value.trim(),
+      category: categoryEl.value,
+      active: !!activeEl.checked,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    if (!data.name) return alert('Name required');
+
+    if (!(data.basePrice > 0) && Array.isArray(data.sizes) && data.sizes.length) {
+      const first = data.sizes.find(s => Number(s.price) > 0);
+      if (first) data.basePrice = Number(first.price);
+    }
+
+    const hasValidBase = Number(data.basePrice) > 0;
+    const hasValidSize = Array.isArray(data.sizes) && data.sizes.some(s => Number(s.price) > 0);
+    if (!hasValidBase && !hasValidSize) {
+      return alert('Set a Base price OR at least one Size with a valid price.');
+    }
+
+    try {
+      const docId = docIdEl.value || db.collection('products').doc().id;
+
+      if (imgEl && imgEl.files && imgEl.files.length > 0) {
+        const urls = [];
+        for (const f of imgEl.files) {
+          const u = await uploadToCloudinary(f);
+          urls.push(u);
+        }
+        data.imageURL = urls[0];
+        data.images = urls;
+      }
+
+      if (docIdEl.value) {
+        const toUpdate = { ...data };
+        delete toUpdate.createdAt;
+        if (toUpdate.imageURL === undefined) delete toUpdate.imageURL;
+        if (toUpdate.images === undefined) delete toUpdate.images;
+        await db.collection('products').doc(docId).set(toUpdate, { merge: true });
+      } else {
+        await db.collection('products').doc(docId).set(data, { merge: true });
+        docIdEl.value = docId;
+      }
+      alert('Saved ✓');
+    } catch (e) {
+      console.error(e);
+      alert(e.message);
+    }
+  };
+
+  resetBtn.onclick = resetForm;
+
+  function loadTable() {
+    const cat = filterCategory.value;
+    tableBody.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
+
+    try {
+      db.collection('products')
+        .where('category', '==', cat)
+        .onSnapshot((snap) => {
+          tableBody.innerHTML = '';
+          if (snap.empty) {
+            tableBody.innerHTML = '<tr><td colspan="6">No products yet</td></tr>';
+            return;
+          }
+          snap.forEach(doc => {
+            const p = doc.data();
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${p.imageURL ? `<img src="${p.imageURL}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #23232a">` : ''}</td>
+              <td>${p.name || ''}${p.brand ? `<div class="muted">${p.brand}</div>` : ''}</td>
+              <td>${renderSizes(p.sizes || [])}</td>
+              <td>Rs${(Number(p.basePrice || 0)).toFixed(2)}</td>
+              <td>${p.active ? 'Yes' : 'No'}</td>
+              <td>
+                <button data-id="${doc.id}" class="btn muted edit">Edit</button>
+                <button data-id="${doc.id}" class="btn danger delete">Delete</button>
+              </td>`;
+            tableBody.appendChild(tr);
+          });
+
+          tableBody.querySelectorAll('button.edit').forEach(btn => btn.onclick = async (e) => {
+            const id = e.currentTarget.dataset.id;
+            const d = await db.collection('products').doc(id).get();
+            if (!d.exists) return;
+            const p = d.data();
+            docIdEl.value = id;
+            nameEl.value = p.name || '';
+            brandEl.value = p.brand || '';
+            priceEl.value = p.basePrice || '';
+            sizesEl.value = (p.sizes || []).map(s => typeof s === 'string' ? s : `${s.label} | ${s.price}`).join('\n');
+            descEl.value = p.description || '';
+            categoryEl.value = p.category || 'perfume';
+            activeEl.checked = !!p.active;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+
+          tableBody.querySelectorAll('button.delete').forEach(btn => btn.onclick = async (e) => {
+            const id = e.currentTarget.dataset.id;
+            if (!confirm('Delete this product?')) return;
+            await db.collection('products').doc(id).delete();
+          });
+        }, (err) => {
+          console.error('Admin list error:', err);
+          tableBody.innerHTML = `<tr><td colspan="6" style="color:#ff9c9c">Error: ${err.message}</td></tr>`;
+        });
+    } catch (e) {
+      console.error('loadTable failed:', e);
+      tableBody.innerHTML = `<tr><td colspan="6" style="color:#ff9c9c">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  refreshBtn.onclick = loadTable;
+  filterCategory.onchange = loadTable;
 })();
-</script>
-</body>
-</html>
