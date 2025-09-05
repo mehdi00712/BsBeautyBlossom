@@ -1,26 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin – B's Beauty Blossom</title>
-  <link rel="stylesheet" href="style.css" />
-  <!-- Firebase (Compat) -->
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin – B’s Beauty Blossom</title>
+  <link rel="stylesheet" href="style.css"/>
+
+  <!-- Firebase (ORDER MATTERS) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <!-- Your Firebase config must define window.auth and window.db -->
+
+  <!-- Your initializer (creates window.auth & window.db) -->
   <script src="firebase-config.js"></script>
-  <style>
-    .admin-wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
-    .admin-wrap input, .admin-wrap textarea, .admin-wrap select { width: 100%; padding: 8px; margin: 6px 0 12px; }
-    .admin-wrap table { width: 100%; border-collapse: collapse; }
-    .admin-wrap th, .admin-wrap td { border: 1px solid #23232a; padding: 8px; vertical-align: top; }
-    .muted{color:#9aa0a6;font-size:12px}
-    .btn{padding:6px 10px;border:1px solid #23232a;border-radius:8px;background:#17171d;cursor:pointer}
-    .btn.danger{border-color:#6b2a2a;background:#2a1717}
-    .btn.muted{opacity:0.85}
-  </style>
+
+  <!-- Cloudinary config (change to your values if different) -->
+  <script>
+    window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
+    window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
+  </script>
+
+  <!-- Admin logic -->
+  <script src="admin.js" defer></script>
 </head>
 <body>
 <header>
@@ -30,6 +31,7 @@
       <li><a href="index.html">Home</a></li>
       <li>Admin</li>
     </ul>
+    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
   </nav>
 </header>
 
@@ -37,61 +39,61 @@
   <h1>Admin Dashboard</h1>
 
   <section id="auth-section">
-    <input id="email" type="email" placeholder="Admin email">
+    <label>Admin email</label>
+    <input id="email" type="email" placeholder="Email">
+    <label>Password</label>
     <input id="password" type="password" placeholder="Password">
-    <button id="loginBtn" class="btn">Log In</button>
-    <button id="signupBtn" class="btn">Sign Up (first time)</button>
-    <button id="logoutBtn" class="btn" style="display:none">Log Out</button>
+    <div style="display:flex;gap:8px;margin:8px 0">
+      <button id="loginBtn" class="btn">Log In</button>
+      <button id="signupBtn" class="btn muted">Sign Up (first time)</button>
+      <button id="logoutBtn" class="btn danger" style="display:none">Log Out</button>
+    </div>
     <p id="auth-status" class="muted"></p>
   </section>
 
   <section id="product-section" style="display:none">
     <h2>Add / Edit Product</h2>
+    <div class="card" style="padding:12px;display:grid;gap:10px;max-width:720px">
+      <label>Category</label>
+      <select id="category">
+        <option value="perfume">Perfume</option>
+        <option value="body">Body</option>
+        <option value="skincare">Skincare</option>
+        <option value="cosmetics">Cosmetics</option>
+        <option value="jewellery">Jewellery</option>
+        <option value="gift">Gift</option>
+      </select>
 
-    <label>Category</label>
-    <select id="category">
-      <option value="perfume">Perfume</option>
-      <option value="body">Body</option>
-      <option value="skincare">Skincare</option>
-      <option value="cosmetics">Cosmetics</option>
-      <option value="jewellery">Jewellery</option>
-      <option value="gift">Gift</option>
-    </select>
+      <label>Product name</label>
+      <input id="name" placeholder="Product name">
 
-    <label>Product name</label>
-    <input id="name" placeholder="Product name">
+      <label>Base price (Rs)</label>
+      <input id="price" type="number" placeholder="Base price (Rs)">
 
-    <label>Base price (Rs)</label>
-    <input id="price" type="number" placeholder="Base price (Rs)">
+      <label>Brand (optional)</label>
+      <input id="brand" placeholder="Brand">
 
-    <label>Brand (optional)</label>
-    <input id="brand" placeholder="Brand (optional)">
+      <label>Sizes (one per line):<br><small>Label | Price — e.g. “100ml | 2350”</small></label>
+      <textarea id="sizes" rows="4" placeholder="100ml | 2350&#10;30ml | 1550"></textarea>
 
-    <label>Sizes (one per line): <span class="muted">Label | Price</span></label>
-    <textarea id="sizes" rows="5" placeholder="Example:
-100ml | 2350
-30ml | 1550"></textarea>
+      <label>Short description (optional)</label>
+      <textarea id="description" rows="3" placeholder="Description"></textarea>
 
-    <label>Short description (optional)</label>
-    <textarea id="description" rows="4" placeholder="Write a short description…"></textarea>
+      <label>Image(s) (upload)</label>
+      <input id="images" type="file" accept="image/*" multiple>
 
-    <label>Images (upload multiple)</label>
-    <input id="images" type="file" accept="image/*" multiple>
-    <small class="muted">Tip: select multiple photos to create a gallery. The first image becomes the main picture.</small>
+      <label><input id="active" type="checkbox" checked> Active (visible on site)</label>
 
-    <label style="display:block;margin-top:10px">
-      <input id="active" type="checkbox" checked> Active (visible on site)
-    </label>
-
-    <div style="display:flex; gap:10px; margin:12px 0;">
-      <button id="saveBtn" class="btn">Save Product</button>
-      <button id="resetBtn" class="btn">Reset Form</button>
+      <div style="display:flex;gap:8px">
+        <button id="saveBtn" class="btn">Save Product</button>
+        <button id="resetBtn" class="btn muted">Reset Form</button>
+      </div>
+      <input type="hidden" id="docId">
     </div>
-    <input type="hidden" id="docId">
 
-    <section id="list-section">
-      <h3>Products</h3>
-      <div style="display:flex; gap:10px; align-items:center; margin:8px 0 12px">
+    <h3>Products</h3>
+    <div id="list-section" class="card" style="padding:12px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
         <select id="filterCategory">
           <option value="perfume">Perfume</option>
           <option value="body">Body</option>
@@ -100,26 +102,18 @@
           <option value="jewellery">Jewellery</option>
           <option value="gift">Gift</option>
         </select>
-        <button id="refreshBtn" class="btn">Refresh</button>
+        <button id="refreshBtn" class="btn muted">Refresh</button>
       </div>
-      <table>
-        <thead>
-          <tr><th>Image</th><th>Name</th><th>Sizes</th><th>Base</th><th>Active</th><th>Actions</th></tr>
-        </thead>
-        <tbody id="tableBody"><tr><td colspan="6">Loading…</td></tr></tbody>
-      </table>
-    </section>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Image</th><th>Name</th><th>Sizes</th><th>Base</th><th>Active</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="tableBody"><tr><td colspan="6">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
   </section>
 </main>
-
-<!-- Cloudinary config for unsigned uploads -->
-<script>
-  // TODO: set these to your Cloudinary details
-  window.CLOUDINARY_CLOUD_NAME = 'dlwk13ady';
-  window.CLOUDINARY_UPLOAD_PRESET = 'unsigned_bbb'; // must exist and be Unsigned
-</script>
-
-<!-- Admin logic -->
-<script src="admin.js"></script>
 </body>
 </html>
