@@ -1,4 +1,8 @@
-// firebase-config.js — load AFTER firebase-app-compat.js + firebase-auth-compat.js + firebase-firestore-compat.js
+// firebase-config.js — must load AFTER:
+//   firebase-app-compat.js
+//   firebase-auth-compat.js   (needed on admin.html)
+//   firebase-firestore-compat.js
+
 (function () {
   if (!window.firebase) throw new Error("Firebase SDK not loaded.");
 
@@ -15,12 +19,23 @@
 
   if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 
-  if (!firebase.auth || !firebase.firestore) {
-    throw new Error("Load firebase-auth-compat.js and firebase-firestore-compat.js BEFORE firebase-config.js");
+  // Always expose Firestore
+  if (!firebase.firestore) {
+    throw new Error("firebase-firestore-compat.js not loaded");
+  }
+  window.db = firebase.firestore();
+
+  // Expose Auth when the page loaded auth-compat (admin.html does)
+  if (firebase.auth) {
+    window.auth = firebase.auth();
+  } else {
+    // On catalog pages you might not include auth-compat, that’s fine.
+    window.auth = null;
   }
 
-  window.auth = firebase.auth();
-  window.db   = firebase.firestore();
-
-  console.log("✅ Firebase initialized:", { apps: firebase.apps.length, hasAuth: !!window.auth, hasDb: !!window.db });
+  console.log("✅ Firebase ready", {
+    apps: firebase.apps.length,
+    hasDb: !!window.db,
+    hasAuth: !!window.auth
+  });
 })();
