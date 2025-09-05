@@ -6,11 +6,10 @@
 <title>Checkout - B's Beauty Blossom</title>
 <link rel="stylesheet" href="style.css">
 
-<!-- Firebase -->
+<!-- Firebase Realtime DB for orders -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
-// Inline Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyBSA9iP3kjdYZM0eXt_KOXAgPT_z74cGJ8",
   authDomain: "beauty-blossom-5247d.firebaseapp.com",
@@ -28,14 +27,8 @@ const database = firebase.database();
 <style>
 .cart-list { display: grid; gap: 10px; }
 .cart-row {
-  display: grid;
-  grid-template-columns: 70px 1fr auto;
-  gap: 10px;
-  align-items: center;
-  padding: 10px;
-  border: 1px solid #222;
-  border-radius: 12px;
-  background: var(--card, #15151a);
+  display: grid; grid-template-columns: 70px 1fr auto; gap: 10px; align-items: center;
+  padding: 10px; border: 1px solid #222; border-radius: 12px; background: var(--card,#15151a);
 }
 .cart-img { width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid #23232a; background: #0d0d12; }
 .cart-row .meta { line-height: 1.3 }
@@ -51,9 +44,7 @@ const database = firebase.database();
 <body>
 <header>
 <nav class="navbar">
-  <div class="logo">
-    <a href="index.html"><img src="1.jpg" alt="Logo" width="80"></a>
-  </div>
+  <div class="logo"><a href="index.html"><img src="1.jpg" alt="Logo" width="80"></a></div>
   <ul class="nav-links">
     <li><a href="index.html">Home</a></li>
     <li><a href="perfume.html">Perfume</a></li>
@@ -113,79 +104,50 @@ const hamburger = document.querySelector(".hamburger");
 const navLinks = document.querySelector(".nav-links");
 if(hamburger) hamburger.addEventListener("click", ()=>navLinks.classList.toggle("show"));
 
-let baseTotal = 0;
-let extraCharge = 0;
+// Canonical cart key only
+const CART_KEY = 'bbb_cart_v2';
 
-// --- Read/merge carts (new + old), sanitize to drop zero-price items ---
-function readCartRaw(){
-  const a = JSON.parse(localStorage.getItem("bbb_cart_v2") || "[]");
-  const b = JSON.parse(localStorage.getItem("cart") || "[]");
-  const normA = a.map(i=>({
-    name: i.name,
-    unitPrice: Number(i.unitPrice ?? i.price ?? 0),
-    qty: Number(i.qty ?? i.quantity ?? 1),
-    imageURL: i.imageURL || i.image || ""
-  }));
-  const normB = b.map(i=>({
-    name: i.name,
-    unitPrice: Number(i.price ?? 0),
-    qty: Number(i.quantity ?? 1),
-    imageURL: i.imageURL || i.image || ""
-  }));
-  return [...normA, ...normB];
-}
-function collapse(items){
-  const map = new Map();
-  items.forEach(i=>{
-    const key = `${i.name}|${i.unitPrice}`;
-    const prev = map.get(key);
-    if (prev){
-      prev.qty += i.qty;
-      if (!prev.imageURL && i.imageURL) prev.imageURL = i.imageURL;
-    } else {
-      map.set(key, {...i});
-    }
-  });
-  return Array.from(map.values());
-}
 function readCart(){
-  const merged = readCartRaw()
-    .map(i=>({ ...i, unitPrice: Number(i.unitPrice||0), qty: Number(i.qty||0) }))
-    .filter(i => i.unitPrice > 0 && i.qty > 0); // <-- drop zero-price or zero-qty
-  return collapse(merged);
+  const arr = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+  if (!Array.isArray(arr)) return [];
+  // normalize fields we use
+  return arr.map(i => ({
+    name: i.name,
+    unitPrice: Number(i.unitPrice ?? i.price ?? 0), // <- always resolve to unitPrice
+    qty: Number(i.qty ?? i.quantity ?? 1),
+    imageURL: i.imageURL || i.image || ''
+  }));
 }
 function writeCart(items){
-  const payload = items.map(i=>({
-    id: `${i.name}__${i.unitPrice}`,
-    name: i.name,
-    unitPrice: i.unitPrice,
-    qty: i.qty,
-    imageURL: i.imageURL || ""
-  }));
-  localStorage.setItem("bbb_cart_v2", JSON.stringify(payload));
-  localStorage.removeItem("cart");
+  localStorage.setItem(CART_KEY, JSON.stringify(items));
+  localStorage.removeItem('cart'); // drop legacy
 }
-function writeCartEmpty(){
-  localStorage.removeItem("bbb_cart_v2");
-  localStorage.removeItem("cart");
+function clearCart(){
+  localStorage.removeItem(CART_KEY);
+  localStorage.removeItem('cart');
 }
-function cartCount(items){ return items.reduce((n,i)=>n + (i.qty||0), 0); }
+function cartCount(items){ return items.reduce((n,i)=>n+(i.qty||0),0); }
 
-// --- Render cart (with images) ---
+let baseTotal = 0, extraCharge = 0;
+
 function loadCart() {
   const cart = readCart();
   const container = document.getElementById("cart-items");
   container.innerHTML = "";
   baseTotal = 0;
 
-  if(cart.length===0){
-    container.innerHTML="<p>Your cart is empty.</p>";
-    document.getElementById("total").textContent="";
+  const badge = document.getElementById("cart-count");
+  if(!cart.length){
+    container.innerHTML = "<p>Your cart is empty.</p>";
+    document.getElementById("total").textContent = "";
+    if (badge) badge.textContent = 0;
     return;
   }
 
   cart.forEach((item, index)=>{
-    const itemTotal = item.unitPrice * item.qty;
+    const price = Number(item.unitPrice)||0;
+    const qty = Number(item.qty)||0;
+    const itemTotal = price * qty;
     baseTotal += itemTotal;
 
     const row = document.createElement('div');
@@ -194,7 +156,7 @@ function loadCart() {
       <img class="cart-img" src="${item.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="">
       <div class="meta">
         <div class="name">${item.name}</div>
-        <div class="muted">Rs${item.unitPrice} × ${item.qty}</div>
+        <div class="muted">Rs${price} × ${qty}</div>
       </div>
       <div class="tot">
         <div><strong>Rs${itemTotal}</strong></div>
@@ -204,23 +166,23 @@ function loadCart() {
     container.appendChild(row);
 
     row.querySelector('button').addEventListener('click', ()=>{
-      const current = readCart();
-      current.splice(index,1);
-      writeCart(current);
+      const now = readCart();
+      now.splice(index,1);
+      writeCart(now);
       loadCart();
-      document.getElementById("cart-count").textContent = cartCount(readCart());
+      if (badge) badge.textContent = cartCount(readCart());
     });
   });
 
   updateTotal();
+  if (badge) badge.textContent = cartCount(cart);
 }
 function updateTotal(){
-  document.getElementById("total").textContent="Total: Rs"+(baseTotal+extraCharge);
+  document.getElementById("total").textContent = "Total: Rs" + (baseTotal + extraCharge);
 }
 loadCart();
-document.getElementById("cart-count").textContent = cartCount(readCart());
 
-// --- Delivery & Payment ---
+// Delivery & Payment logic
 const deliveryRadios = document.querySelectorAll('input[name="delivery"]');
 const paymentRadios = document.querySelectorAll('input[name="payment"]');
 const customerInfo = document.getElementById("customer-info");
@@ -243,7 +205,6 @@ deliveryRadios.forEach(radio=>{
     }
     updateTotal();
 
-    // Payment restrictions
     paymentRadios.forEach(pay=>{
       if(radio.value === "Postage" || radio.value === "Delivery"){
         if(pay.value === "Pick Up Payment") pay.disabled = true;
@@ -263,7 +224,7 @@ paymentRadios.forEach(radio=>{
   });
 });
 
-// --- Validate Form ---
+// Validate
 function validateForm(){
   const phone = document.getElementById("phone").value.trim();
   const email = document.getElementById("email").value.trim();
@@ -287,7 +248,7 @@ function validateForm(){
   return true;
 }
 
-// --- Confirm Order -> RTDB (block zero-priced orders) ---
+// Submit
 document.getElementById("delivery-form").addEventListener("submit", async (e)=>{
   e.preventDefault();
 
@@ -296,16 +257,19 @@ document.getElementById("delivery-form").addEventListener("submit", async (e)=>{
   const cart = readCart();
   if(cart.length===0){ alert("Cart is empty."); return; }
 
-  // Guard: no zero-priced lines
+  // guard zero-priced lines
   if (cart.some(i => !i.unitPrice || i.unitPrice <= 0 || !i.qty || i.qty <= 0)) {
     alert('One or more items have invalid price/quantity. Please remove and re-add.');
     return;
   }
 
   const selectedDelivery = document.querySelector('input[name="delivery"]:checked').value;
+  const subtotal = cart.reduce((n,i)=> n + Number(i.unitPrice||0) * Number(i.qty||0), 0);
+  const shipping = (selectedDelivery==="Postage") ? 125 : (selectedDelivery==="Delivery") ? 150 : 0;
+  const total = subtotal + shipping;
 
   const order = {
-    items: cart, // includes imageURL
+    items: cart,               // includes imageURL, name, unitPrice, qty
     delivery: selectedDelivery === "Delivery" ? "Delivery" : null,
     postage: selectedDelivery === "Postage" ? "Postage" : null,
     pickup: selectedDelivery === "Pick Up" ? "Pick Up" : null,
@@ -314,9 +278,7 @@ document.getElementById("delivery-form").addEventListener("submit", async (e)=>{
     email: document.getElementById("email").value.trim(),
     phone: document.getElementById("phone").value.trim(),
     address: document.getElementById("address").value.trim() || "N/A",
-    subtotal: cart.reduce((n,i)=>n + i.unitPrice*i.qty, 0),
-    shipping: (selectedDelivery==="Postage") ? 125 : (selectedDelivery==="Delivery") ? 150 : 0,
-    total: (function(){ const sub = cart.reduce((n,i)=>n + i.unitPrice*i.qty, 0); return sub + ((selectedDelivery==="Postage") ? 125 : (selectedDelivery==="Delivery") ? 150 : 0); })(),
+    subtotal, shipping, total,
     timestamp: new Date().toISOString()
   };
 
@@ -324,9 +286,9 @@ document.getElementById("delivery-form").addEventListener("submit", async (e)=>{
     const newOrderRef = database.ref('orders').push();
     await newOrderRef.set(order);
     alert("Order confirmed! Thank you for shopping with B's Beauty Blossom.");
-    writeCartEmpty();
+    clearCart();
     loadCart();
-    document.getElementById("cart-count").textContent = 0;
+    const badge = document.getElementById("cart-count"); if (badge) badge.textContent = 0;
     window.location.href="index.html";
   }catch(err){
     alert("Error saving order: "+err);
