@@ -26,104 +26,33 @@
   </nav>
 </header>
 
-<!-- Hero Section -->
-<section id="hero" class="hero">
-  <img id="hero-banner" src="https://via.placeholder.com/1200x400?text=Banner" alt="Banner" class="hero-img">
+<!-- Static hero -->
+<section class="hero">
+  <img src="https://via.placeholder.com/1200x400?text=Welcome+to+B%E2%80%99s+Beauty+Blossom" alt="Banner" class="hero-img">
   <div class="hero-overlay">
-    <h1 id="hero-title">Welcome to B’s Beauty Blossom</h1>
-    <p id="hero-subtitle">Curated beauty & fragrances</p>
+    <h1>Welcome to B’s Beauty Blossom</h1>
+    <p>Curated beauty & fragrances</p>
   </div>
 </section>
 
-<!-- Featured Products Section -->
-<section id="featured-section" class="section">
-  <h2>Featured Products</h2>
-  <div id="home-featured" class="product-grid">
-    <p>Loading featured products…</p>
+<!-- Static sections (edit freely) -->
+<section class="section">
+  <h2>Shop by Category</h2>
+  <div class="category-grid">
+    <a class="cat" href="perfume.html">Perfume</a>
+    <a class="cat" href="body.html">Body</a>
+    <a class="cat" href="skincare.html">Skincare</a>
+    <a class="cat" href="cosmetics.html">Cosmetics</a>
+    <a class="cat" href="jewellery.html">Jewellery</a>
+    <a class="cat" href="gift.html">Gift</a>
   </div>
-</section>
-
-<!-- Gallery -->
-<section id="gallery-section" class="section">
-  <h2>Our Collection</h2>
-  <div id="home-gallery" class="gallery-grid"></div>
 </section>
 
 <footer class="site-footer">
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js"></script>
-
-<!-- Navbar + Cart -->
+<!-- Only site helpers (no Firebase) -->
 <script src="script.js"></script>
-
-<!-- Home Loader -->
-<script>
-(async function(){
-  try {
-    const snap = await db.collection('site').doc('home').get();
-    const h = snap.exists ? snap.data() : {};
-
-    // Hero text
-    if (h.heroTitle) document.getElementById('hero-title').textContent = h.heroTitle;
-    if (h.heroSubtitle) document.getElementById('hero-subtitle').textContent = h.heroSubtitle;
-    if (h.bannerImage) document.getElementById('hero-banner').src = h.bannerImage;
-
-    // Gallery
-    const galleryEl = document.getElementById('home-gallery');
-    galleryEl.innerHTML = '';
-    if (Array.isArray(h.gallery) && h.gallery.length > 0) {
-      h.gallery.forEach(url => {
-        const img = document.createElement('img');
-        img.src = url;
-        img.alt = "Gallery image";
-        img.className = "gallery-img";
-        galleryEl.appendChild(img);
-      });
-    } else {
-      galleryEl.innerHTML = '<p>No gallery images yet.</p>';
-    }
-
-    // Featured products
-    if (h.showFeatured && h.featuredCategory) {
-      const grid = document.getElementById('home-featured');
-      const snapP = await db.collection('products')
-        .where('category','==', String(h.featuredCategory).toLowerCase())
-        .where('active','==', true)
-        .limit(8).get();
-      grid.innerHTML = '';
-      if (snapP.empty) {
-        grid.innerHTML = '<p>No featured products yet.</p>';
-      } else {
-        snapP.forEach(d => {
-          const p = d.data();
-          const id = d.id;
-          const price = Array.isArray(p.sizes)&&p.sizes.length
-            ? Math.min(...p.sizes.map(s=>Number(s.price||0)||0)) || Number(p.basePrice||0)||0
-            : Number(p.basePrice||0)||0;
-          const card = document.createElement('div');
-          card.className = 'product';
-          card.innerHTML = `
-            <a href="product.html?id=${id}">
-              <img src="${p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
-            </a>
-            <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
-            <p class="price">${price>0 ? 'From Rs'+price : ''}</p>
-          `;
-          grid.appendChild(card);
-        });
-      }
-    } else {
-      document.getElementById('featured-section').style.display = 'none';
-    }
-  } catch(e) {
-    console.error("Home load error:", e);
-  }
-})();
-</script>
 </body>
 </html>
