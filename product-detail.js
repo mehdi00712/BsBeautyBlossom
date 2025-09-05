@@ -25,10 +25,7 @@
   function normalizeSizes(raw, basePrice) {
     const base = Number(basePrice || 0) || 0;
     const out = [];
-    if (!Array.isArray(raw)) {
-      if (base > 0) out.push({ label: 'Default', price: base });
-      return out;
-    }
+    if (!Array.isArray(raw)) { if (base > 0) out.push({ label: 'Default', price: base }); return out; }
     for (const s of raw) {
       if (s && typeof s === 'object' && 'label' in s) {
         const p = Number(s.price || 0);
@@ -58,8 +55,7 @@
       list.forEach((u, idx) => {
         const img = document.createElement('img');
         img.className = 'pd-thumb';
-        img.src = u;
-        img.alt = `thumb ${idx + 1}`;
+        img.src = u; img.alt = `thumb ${idx + 1}`;
         img.onclick = () => { main.src = u; };
         thumbs.appendChild(img);
       });
@@ -112,13 +108,9 @@
     addBtn.onclick = () => {
       const sel = sizeSel.options[sizeSel.selectedIndex];
       let unitPrice = Number(sel?.dataset?.price || 0);
-      if (!unitPrice || unitPrice <= 0) {
-        unitPrice = (normSizes[0]?.price || Number(p.basePrice || 0) || 0);
-      }
-      if (!unitPrice || unitPrice <= 0) {
-        alert('This product has no valid price set. Please contact admin.');
-        return;
-      }
+      if (!unitPrice || unitPrice <= 0) unitPrice = (normSizes[0]?.price || Number(p.basePrice || 0) || 0);
+      if (!unitPrice || unitPrice <= 0) return alert('This product has no valid price set.');
+
       const qty = Math.max(1, Number(qtyEl.textContent || 1));
       const nameSafe = (p.name || '').trim();
 
@@ -126,18 +118,10 @@
       const cart = JSON.parse(localStorage.getItem(key) || '[]');
       const idKey = `${nameSafe}__${unitPrice}__${sel?.value || 'Default'}`;
       const found = cart.find(i => i.id === idKey);
-      if (found) { found.qty += qty; }
-      else {
-        cart.push({
-          id: idKey,
-          name: `${nameSafe} (${sel?.value || 'Default'})`,
-          unitPrice,
-          qty,
-          imageURL: (p.images && p.images[0]) || p.imageURL || ''
-        });
-      }
-      localStorage.setItem(key, JSON.stringify(cart));
+      if (found) found.qty += qty;
+      else cart.push({ id: idKey, name: `${nameSafe} (${sel?.value || 'Default'})`, unitPrice, qty, imageURL: (p.images && p.images[0]) || p.imageURL || '' });
 
+      localStorage.setItem(key, JSON.stringify(cart));
       const count = cart.reduce((n, i) => n + (i.qty || 0), 0);
       const cc = document.getElementById('cart-count'); if (cc) cc.textContent = count;
 
