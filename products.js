@@ -1,4 +1,4 @@
-// products.js — normalize legacy sizes, show correct "From RsX", safe add-to-cart pricing
+// products.js — normalize legacy sizes, proper data-price for Add to Cart
 (function () {
   const grid = document.getElementById('product-grid');
   const search = document.getElementById('search-bar');
@@ -7,7 +7,6 @@
   const cat = (window.PRODUCT_CATEGORY || '').toLowerCase();
   let all = [];
 
-  // --- normalize sizes coming from Firestore (objects or strings like "50ml | 1000") ---
   function normalizeSizes(raw, basePrice) {
     const base = Number(basePrice || 0) || 0;
     const out = [];
@@ -22,7 +21,6 @@
         continue;
       }
       if (typeof s === 'string') {
-        // e.g. "50ml | 1000", "50ml 1,000", "50ml : Rs 950"
         const m = s.trim().match(/^(.*?)[\s|:\-–—]*\s*(?:Rs)?\s*([\d.,]+)\s*$/i);
         if (m) {
           const label = m[1].trim().replace(/[|:\-–—]$/, '').trim();
