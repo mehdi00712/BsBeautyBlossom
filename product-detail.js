@@ -1,4 +1,4 @@
-// product-detail.js — gallery + robust size normalization + price fallback
+// product-detail.js — gallery + normalized sizes + safe pricing
 (function () {
   const $ = (s) => document.querySelector(s);
   const params = new URLSearchParams(location.search);
@@ -113,7 +113,6 @@
       const sel = sizeSel.options[sizeSel.selectedIndex];
       let unitPrice = Number(sel?.dataset?.price || 0);
       if (!unitPrice || unitPrice <= 0) {
-        // fallback to first normalized price or base
         unitPrice = (normSizes[0]?.price || Number(p.basePrice || 0) || 0);
       }
       if (!unitPrice || unitPrice <= 0) {
