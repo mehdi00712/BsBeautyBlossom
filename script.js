@@ -1,5 +1,4 @@
-// script.js — shared navbar + hardened Add to Cart using unitPrice
-
+// script.js — navbar + hardened Add to Cart using unitPrice
 (function () {
   // Navbar toggle
   const hamburger = document.querySelector(".hamburger");
@@ -15,26 +14,20 @@
     try {
       const arr = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
       return Array.isArray(arr) ? arr : [];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   }
   function writeCart(items) {
     localStorage.setItem(CART_KEY, JSON.stringify(items));
-    // remove legacy key
-    localStorage.removeItem("cart");
+    localStorage.removeItem("cart"); // drop legacy
   }
-  function cartCount(items) {
-    return items.reduce((n, i) => n + (Number(i.qty) || 0), 0);
-  }
+  function cartCount(items) { return items.reduce((n, i) => n + (Number(i.qty) || 0), 0); }
   function updateCartCountBadge() {
-    const count = cartCount(readCart());
     const cc = document.getElementById("cart-count");
-    if (cc) cc.textContent = count;
+    if (cc) cc.textContent = cartCount(readCart());
   }
   updateCartCountBadge();
 
-  // DOM utils for product cards
+  // Helpers for product cards
   function getSelectedOptionPrice(productEl) {
     const sel = productEl.querySelector("select");
     if (!sel) return 0;
@@ -42,75 +35,49 @@
     const p = Number(opt?.dataset?.price || 0);
     return isFinite(p) ? p : 0;
   }
-  function getSelectedLabel(productEl) {
-    const sel = productEl.querySelector("select");
-    return sel ? sel.value : "Default";
+  const getSelectedLabel = (el) => (el.querySelector("select")?.value || "Default");
+  function getQty(el) {
+    const n = Number(el.querySelector(".qty")?.textContent || "1");
+    return Math.max(1, isFinite(n) ? n : 1);
   }
-  function getQty(productEl) {
-    const qEl = productEl.querySelector(".qty");
-    const q = Number((qEl?.textContent || "1").trim());
-    return Math.max(1, isFinite(q) ? q : 1);
-  }
-  function getImageURL(productEl) {
-    const img = productEl.querySelector("img");
-    return img?.src || "";
-  }
-  function sanitizeName(name) {
-    return (name || "").toString().trim();
-  }
+  const getImageURL = (el) => el.querySelector("img")?.src || "";
+  const cleanName = (s) => (s || "").toString().trim();
 
-  // Public: addToCart(name, buttonEl) — used by products.js
+  // Public: used by products.js (onclick="addToCart(...)")
   window.addToCart = function (name, btn) {
     try {
-      const safeName = sanitizeName(name);
-      if (!safeName) return alert("Product name missing.");
+      const safe = cleanName(name);
+      if (!safe) return alert("Product name missing.");
+      const card = btn?.closest(".product") || document;
 
-      const productEl = btn?.closest(".product") || document;
-
-      // Primary price: data-price on selected <option>
-      let unitPrice = getSelectedOptionPrice(productEl);
-
-      // Fallback: parse "From RsX" text if needed
+      let unitPrice = getSelectedOptionPrice(card);
       if (!unitPrice || unitPrice <= 0) {
-        const priceText = productEl.querySelector(".price")?.textContent || "";
+        const priceText = card.querySelector(".price")?.textContent || "";
         const m = priceText.match(/Rs\s*([\d.,]+)/i);
         if (m) unitPrice = Number((m[1] || "0").replace(/[^\d.]/g, ""));
       }
-
       if (!unitPrice || unitPrice <= 0) {
         alert("This item has no valid price. Please choose a size or contact admin.");
         return;
       }
 
-      const qty = getQty(productEl);
-      const imageURL = getImageURL(productEl);
-      const sizeLabel = getSelectedLabel(productEl);
+      const qty = getQty(card);
+      const imageURL = getImageURL(card);
+      const sizeLabel = getSelectedLabel(card);
 
       const cart = readCart();
-      const idKey = `${safeName}__${unitPrice}__${sizeLabel}`;
-      const existing = cart.find((i) => i.id === idKey);
+      const idKey = `${safe}__${unitPrice}__${sizeLabel}`;
+      const found = cart.find(i => i.id === idKey);
+      if (found) found.qty += qty;
+      else cart.push({ id: idKey, name: `${safe} (${sizeLabel})`, unitPrice, qty, imageURL });
 
-      if (existing) existing.qty += qty;
-      else {
-        cart.push({
-          id: idKey,
-          name: `${safeName} (${sizeLabel})`,
-          unitPrice,
-          qty,
-          imageURL,
-        });
-      }
       writeCart(cart);
       updateCartCountBadge();
 
       if (btn) {
         const old = btn.textContent;
-        btn.textContent = "Added ✓";
-        btn.disabled = true;
-        setTimeout(() => {
-          btn.textContent = old;
-          btn.disabled = false;
-        }, 900);
+        btn.textContent = "Added ✓"; btn.disabled = true;
+        setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 900);
       }
     } catch (e) {
       console.error("addToCart error:", e);
@@ -118,17 +85,15 @@
     }
   };
 
-  // Quantity +/- delegated
+  // Quantity +/- delegates
   document.addEventListener("click", (e) => {
     if (e.target.matches(".quantity-controls .plus")) {
-      const wrap = e.target.closest(".quantity-controls");
-      const qtyEl = wrap?.querySelector(".qty");
-      if (qtyEl) qtyEl.textContent = String(Math.max(1, Number(qtyEl.textContent || "1") + 1));
+      const q = e.target.closest(".quantity-controls")?.querySelector(".qty");
+      if (q) q.textContent = String(Math.max(1, Number(q.textContent || "1") + 1));
     }
     if (e.target.matches(".quantity-controls .minus")) {
-      const wrap = e.target.closest(".quantity-controls");
-      const qtyEl = wrap?.querySelector(".qty");
-      if (qtyEl) qtyEl.textContent = String(Math.max(1, Number(qtyEl.textContent || "1") - 1));
+      const q = e.target.closest(".quantity-controls")?.querySelector(".qty");
+      if (q) q.textContent = String(Math.max(1, Number(q.textContent || "1") - 1));
     }
   });
 })();
