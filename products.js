@@ -1,4 +1,4 @@
-// products.js — normalize legacy sizes, proper data-price for Add to Cart
+// products.js — normalize sizes, correct data-price, live Firestore list
 (function () {
   const grid = document.getElementById('product-grid');
   const search = document.getElementById('search-bar');
@@ -10,10 +10,7 @@
   function normalizeSizes(raw, basePrice) {
     const base = Number(basePrice || 0) || 0;
     const out = [];
-    if (!Array.isArray(raw)) {
-      if (base > 0) out.push({ label: 'Default', price: base });
-      return out;
-    }
+    if (!Array.isArray(raw)) { if (base > 0) out.push({ label: 'Default', price: base }); return out; }
     for (const s of raw) {
       if (s && typeof s === 'object' && 'label' in s) {
         const price = Number(s.price || 0);
@@ -36,16 +33,13 @@
   function minPrice(sizes, basePrice) {
     const base = Number(basePrice || 0) || 0;
     const arr = (sizes || []).map(x => Number(x.price || 0)).filter(n => n > 0);
-    if (arr.length) return Math.min(...arr);
-    return base;
+    return arr.length ? Math.min(...arr) : base;
   }
 
   function render(list) {
     grid.innerHTML = '';
-    if (!list.length) {
-      grid.innerHTML = '<p>No products yet.</p>';
-      return;
-    }
+    if (!list.length) { grid.innerHTML = '<p>No products yet.</p>'; return; }
+
     list.forEach(p => {
       const normSizes = normalizeSizes(p.sizes, p.basePrice);
       const from = minPrice(normSizes, p.basePrice) || 0;
@@ -74,9 +68,7 @@
           type="button"
           data-name="${(p.name || '').replace(/"/g, '&quot;')}"
           onclick="addToCart(this.dataset.name, this)"
-        >
-          Add to Cart
-        </button>
+        >Add to Cart</button>
       `;
       grid.appendChild(card);
     });
@@ -105,11 +97,9 @@
       const t = setInterval(() => {
         tries++;
         if (window.db && typeof window.db.collection === 'function') {
-          clearInterval(t);
-          resolve();
+          clearInterval(t); resolve();
         } else if (tries >= maxTries) {
-          clearInterval(t);
-          reject(new Error('firebase-config.js did not initialize window.db'));
+          clearInterval(t); reject(new Error('firebase-config.js did not initialize window.db'));
         }
       }, 200);
     });
@@ -125,12 +115,10 @@
           all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           render(all);
         }, (err) => showError('Error loading products: ' + err.message));
-
       attachSearch();
     } catch (e) {
       showError('Init error: ' + e.message);
     }
   }
-
   init();
 })();
