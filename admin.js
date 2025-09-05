@@ -1,10 +1,8 @@
 // admin.js — Firebase Auth + Firestore products + Cloudinary uploads (unsigned)
 (function () {
-  // EARLY GUARD: fail clearly if Firebase not initialized
- if (!window.auth || !window.db) {
-   throw new Error("❌ Firebase not initialized: check that admin.html loads firebase-auth-compat.js and firebase-config.js in the right order.");
- }
-
+  if (!window.auth || !window.db) {
+    throw new Error("❌ Firebase not initialized: ensure admin.html loads firebase-auth-compat.js + firebase-firestore-compat.js BEFORE firebase-config.js, and loads admin.js AFTER firebase-config.js.");
+  }
 
   const $ = (s) => document.querySelector(s);
 
@@ -43,7 +41,6 @@
   const refreshBtn = $('#refreshBtn');
   const docIdEl = $('#docId');
 
-  // Parse “label | price” lines, accept variants like “50ml - 1000”, “50ml Rs 1,000”
   const parseSizes = (text = '') =>
     text.split('\n')
         .map(l => l.trim())
@@ -95,7 +92,6 @@
     if (ok) loadTable();
   });
 
-  // Cloudinary unsigned upload
   async function uploadToCloudinary(file) {
     if (!file) return '';
     if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error('Missing Cloudinary config');
@@ -129,13 +125,11 @@
 
     if (!data.name) return alert('Name required');
 
-    // If basePrice is 0 but a size has a price, use the first size as base
     if (!(data.basePrice > 0) && Array.isArray(data.sizes) && data.sizes.length) {
       const first = data.sizes.find(s => Number(s.price) > 0);
       if (first) data.basePrice = Number(first.price);
     }
 
-    // Must have a valid base or at least one valid size price
     const hasValidBase = Number(data.basePrice) > 0;
     const hasValidSize = Array.isArray(data.sizes) && data.sizes.some(s => Number(s.price) > 0);
     if (!hasValidBase && !hasValidSize) {
@@ -145,7 +139,6 @@
     try {
       const docId = docIdEl.value || db.collection('products').doc().id;
 
-      // Upload images if provided
       if (imgEl && imgEl.files && imgEl.files.length > 0) {
         const urls = [];
         for (const f of imgEl.files) {
@@ -175,7 +168,6 @@
 
   resetBtn.onclick = resetForm;
 
-  // Live table
   function loadTable() {
     const cat = filterCategory.value;
     tableBody.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
