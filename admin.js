@@ -1,5 +1,6 @@
-// admin.js
+// admin.js — Firebase Auth + Firestore products + Cloudinary uploads + Site Settings
 (function () {
+  // Guards
   if (!window.db) {
     throw new Error("❌ Firestore not initialized: ensure firebase-firestore-compat.js loads before firebase-config.js.");
   }
@@ -7,22 +8,39 @@
     alert("Firebase Auth isn’t loaded. On admin.html, add:\n" +
           '<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>\n' +
           "ABOVE firebase-config.js.");
-    return; // stop running the rest of admin.js until auth is available
+    return;
   }
-
 
   const $ = (s) => document.querySelector(s);
 
-  // Allow only your admin UID
+  // Limit to your admin UID
   const ALLOWED_ADMIN_UIDS = new Set([
     "w5jtigflSVezQwUvnsgM7AY4ZK73"
   ]);
 
-  // Cloudinary (set in admin.html)
+  // Cloudinary
   const CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME;
   const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET;
 
-  // Auth UI
+  async function uploadToCloudinary(file) {
+    if (!file) return '';
+    if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error('Missing Cloudinary config');
+    const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
+    const form = new FormData();
+    form.append('file', file);
+    form.append('upload_preset', UPLOAD_PRESET);
+    const res = await fetch(url, { method: 'POST', body: form });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error('Cloudinary upload failed: ' + txt);
+    }
+    const data = await res.json();
+    return data.secure_url;
+  }
+
+  // -------------------------
+  // AUTH
+  // -------------------------
   const authStatus = $('#auth-status');
   const loginBtn = $('#loginBtn');
   const signupBtn = $('#signupBtn');
@@ -30,16 +48,136 @@
   const email = $('#email');
   const password = $('#password');
 
-  // Product form
+  loginBtn.onclick = async () => {
+    try { await auth.signInWithEmailAndPassword(email.value, password.value); }
+    catch (e) { alert(e.message); }
+  };
+  signupBtn.onclick = async () => {
+    try {
+      const cred = await auth.createUserWithEmailAndPassword(email.value, password.value);
+      console.log('New UID:', cred.user?.uid);
+      alert('Account created. Check console for UID and add to Firestore rules + ALLOWED_ADMIN_UIDS.');
+    } catch (e) { alert(e.message); }
+  };
+  logoutBtn.onclick = () => auth.signOut();
+
+  // Sections
+  const siteSection = $('#site-section');
   const productSection = $('#product-section');
-  const listSection = document.getElementById('list-section');
+  const listSection = $('#list-section');
+
+  auth.onAuthStateChanged((user) => {
+    const ok = !!user && (ALLOWED_ADMIN_UIDS.size === 0 || ALLOWED_ADMIN_UIDS.has(user.uid));
+    authStatus.textContent = user ? (ok ? `Signed in as ${user.email}` : 'Signed in but not authorized.') : 'Not signed in';
+    logoutBtn.style.display = user ? 'inline-block' : 'none';
+
+    siteSection.style.display = ok ? 'block' : 'none';
+    productSection.style.display = ok ? 'block' : 'none';
+    listSection.style.display = ok ? 'block' : 'none';
+
+    if (ok) {
+      loadSite();
+      loadTable();
+    }
+  });
+
+  // -------------------------
+  // SITE SETTINGS (NEW)
+  // -------------------------
+  const siteDocRef = db.collection('site').doc('home');
+  const siteHeroTitle = $('#site-heroTitle');
+  const siteHeroSubtitle = $('#site-heroSubtitle');
+  const siteFeaturedCategory = $('#site-featuredCategory');
+  const siteShowFeatured = $('#site-showFeatured');
+  const siteBannerInput = $('#site-banner');
+  const siteBannerPreview = $('#site-banner-preview');
+  const siteGalleryInput = $('#site-gallery');
+  const siteGalleryPreview = $('#site-gallery-preview');
+  const siteSaveBtn = $('#site-save');
+  const siteReloadBtn = $('#site-reload');
+  const siteStatus = $('#site-status');
+
+  function previewImages(container, urls) {
+    container.innerHTML = '';
+    urls.forEach(u => {
+      const img = document.createElement('img');
+      img.src = u;
+      container.appendChild(img);
+    });
+  }
+
+  async function loadSite() {
+    siteStatus.textContent = 'Loading site settings…';
+    try {
+      const snap = await siteDocRef.get();
+      const data = snap.exists ? snap.data() : {};
+      siteHeroTitle.value = data.heroTitle || '';
+      siteHeroSubtitle.value = data.heroSubtitle || '';
+      siteFeaturedCategory.value = (data.featuredCategory || 'perfume');
+      siteShowFeatured.checked = !!data.showFeatured;
+
+      const banner = data.bannerImage ? [data.bannerImage] : [];
+      previewImages(siteBannerPreview, banner);
+      previewImages(siteGalleryPreview, Array.isArray(data.gallery) ? data.gallery : []);
+
+      siteStatus.textContent = 'Loaded ✓';
+    } catch (e) {
+      console.error(e);
+      siteStatus.textContent = 'Error loading settings: ' + e.message;
+    }
+  }
+
+  siteReloadBtn.onclick = loadSite;
+
+  siteSaveBtn.onclick = async () => {
+    siteStatus.textContent = 'Saving…';
+    try {
+      const payload = {
+        heroTitle: siteHeroTitle.value.trim(),
+        heroSubtitle: siteHeroSubtitle.value.trim(),
+        featuredCategory: siteFeaturedCategory.value,
+        showFeatured: !!siteShowFeatured.checked,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+
+      // Replace banner if a file chosen
+      if (siteBannerInput.files && siteBannerInput.files[0]) {
+        const url = await uploadToCloudinary(siteBannerInput.files[0]);
+        payload.bannerImage = url;
+      }
+
+      // Overwrite gallery if files chosen
+      if (siteGalleryInput.files && siteGalleryInput.files.length > 0) {
+        const urls = [];
+        for (const f of siteGalleryInput.files) {
+          const u = await uploadToCloudinary(f);
+          urls.push(u);
+        }
+        payload.gallery = urls;
+      }
+
+      await siteDocRef.set(payload, { merge: true });
+      siteStatus.textContent = 'Saved ✓';
+      // Refresh previews if updated
+      if (payload.bannerImage) previewImages(siteBannerPreview, [payload.bannerImage]);
+      if (payload.gallery) previewImages(siteGalleryPreview, payload.gallery);
+    } catch (e) {
+      console.error(e);
+      siteStatus.textContent = 'Save failed: ' + e.message;
+      alert('Save failed: ' + e.message);
+    }
+  };
+
+  // -------------------------
+  // PRODUCT CRUD (unchanged logic)
+  // -------------------------
   const nameEl = $('#name');
   const brandEl = $('#brand');
   const priceEl = $('#price');
   const sizesEl = $('#sizes');
   const descEl = $('#description');
   const categoryEl = $('#category');
-  const imgEl = $('#images'); // multiple
+  const imgEl = $('#images');
   const activeEl = $('#active');
   const saveBtn = $('#saveBtn');
   const resetBtn = $('#resetBtn');
@@ -76,46 +214,6 @@
     activeEl.checked = true;
   };
 
-  // Auth handlers
-  loginBtn.onclick = async () => {
-    try { await auth.signInWithEmailAndPassword(email.value, password.value); }
-    catch (e) { alert(e.message); }
-  };
-  signupBtn.onclick = async () => {
-    try {
-      const cred = await auth.createUserWithEmailAndPassword(email.value, password.value);
-      console.log('New UID:', cred.user?.uid);
-      alert('Account created. Check console for UID and add to Firestore rules + ALLOWED_ADMIN_UIDS.');
-    } catch (e) { alert(e.message); }
-  };
-  logoutBtn.onclick = () => auth.signOut();
-
-  auth.onAuthStateChanged((user) => {
-    const ok = !!user && (ALLOWED_ADMIN_UIDS.size === 0 || ALLOWED_ADMIN_UIDS.has(user.uid));
-    authStatus.textContent = user ? (ok ? `Signed in as ${user.email}` : 'Signed in but not authorized.') : 'Not signed in';
-    logoutBtn.style.display = user ? 'inline-block' : 'none';
-    productSection.style.display = ok ? 'block' : 'none';
-    listSection.style.display = ok ? 'block' : 'none';
-    if (ok) loadTable();
-  });
-
-  async function uploadToCloudinary(file) {
-    if (!file) return '';
-    if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error('Missing Cloudinary config');
-    const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
-    const form = new FormData();
-    form.append('file', file);
-    form.append('upload_preset', UPLOAD_PRESET);
-    const res = await fetch(url, { method: 'POST', body: form });
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error('Cloudinary upload failed: ' + txt);
-    }
-    const data = await res.json();
-    return data.secure_url;
-  }
-
-  // Save (create/update)
   saveBtn.onclick = async () => {
     const sizes = parseSizes(sizesEl.value);
     let data = {
