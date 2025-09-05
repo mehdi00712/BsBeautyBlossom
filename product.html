@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Product – B’s Beauty Blossom</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .pd-wrap{display:grid;grid-template-columns:1.1fr 1fr;gap:24px;align-items:start;max-width:1100px;margin:24px auto;padding:0 16px}
+    .pd-gallery{display:grid;grid-template-columns:1fr;gap:12px}
+    .pd-main{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:16px;border:1px solid #23232a;background:#0d0d12}
+    .pd-thumbs{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+    .pd-thumb{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;border:1px solid #23232a;cursor:pointer}
+    .pd-title{font-size:28px;margin:0}
+    .pd-brand{color:var(--muted,#a3a3a3);margin:4px 0 12px}
+    .pd-price{font-size:20px;margin:8px 0}
+    .pd-actions{display:flex;gap:10px;align-items:center;margin-top:10px}
+    @media(max-width:900px){.pd-wrap{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header>
+  <nav class="navbar">
+    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="perfume.html">Perfume</a></li>
+      <li><a href="body.html">Body</a></li>
+      <li><a href="skincare.html">Skincare</a></li>
+      <li><a href="cosmetics.html">Cosmetics</a></li>
+      <li><a href="jewellery.html">Jewellery</a></li>
+      <li><a href="gift.html">Gift</a></li>
+      <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
+      <li><a href="admin.html">Admin</a></li>
+    </ul>
+    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
+  </nav>
+</header>
+
+<main class="section">
+  <div id="pd" class="pd-wrap">
+    <div class="pd-gallery">
+      <img id="pd-main" class="pd-main" src="https://via.placeholder.com/800x800?text=Loading" alt="">
+      <div id="pd-thumbs" class="pd-thumbs"></div>
+    </div>
+
+    <div class="pd-info">
+      <h1 id="pd-title" class="pd-title">Loading…</h1>
+      <div id="pd-brand" class="pd-brand"></div>
+      <div id="pd-price" class="pd-price"></div>
+
+      <label>Choose size:</label>
+      <select id="pd-size" class="ml-select" style="max-width:260px;margin-bottom:10px"></select>
+
+      <p id="pd-desc" style="white-space:pre-wrap;margin-top:10px"></p>
+
+      <div class="pd-actions">
+        <div class="quantity-controls">
+          <button id="pd-minus" class="minus btn muted" type="button">–</button>
+          <span id="pd-qty" class="qty">1</span>
+          <button id="pd-plus" class="plus btn muted" type="button">+</button>
+        </div>
+        <button id="pd-add" class="btn">Add to Cart</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
+</footer>
+
+<!-- Firebase & app -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="script.js" defer></script>
+<script src="product-detail.js"></script>
+</body>
+</html>
