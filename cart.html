@@ -10,7 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
-// Inline Firebase (as requested)
+// Inline Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyBSA9iP3kjdYZM0eXt_KOXAgPT_z74cGJ8",
   authDomain: "beauty-blossom-5247d.firebaseapp.com",
@@ -26,7 +26,6 @@ const database = firebase.database();
 </script>
 
 <style>
-/* Tiny helper styles for cart rows with images */
 .cart-list { display: grid; gap: 10px; }
 .cart-row {
   display: grid;
@@ -38,10 +37,7 @@ const database = firebase.database();
   border-radius: 12px;
   background: var(--card, #15151a);
 }
-.cart-img {
-  width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid #23232a;
-  background: #0d0d12;
-}
+.cart-img { width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid #23232a; background: #0d0d12; }
 .cart-row .meta { line-height: 1.3 }
 .cart-row .meta .name { font-weight: 600 }
 .cart-row .meta .muted { color: var(--muted,#a3a3a3); font-size: 13px }
@@ -80,15 +76,9 @@ const database = firebase.database();
 
   <h2 style="margin-top:24px">Delivery Method</h2>
   <form id="delivery-form" class="card" style="padding:16px">
-    <label>
-      <input type="radio" name="delivery" value="Pick Up" required> Pick Up (Free)
-    </label><br>
-    <label>
-      <input type="radio" name="delivery" value="Postage"> Postage (+Rs125)
-    </label><br>
-    <label>
-      <input type="radio" name="delivery" value="Delivery"> Delivery (+Rs150)
-    </label><br><br>
+    <label><input type="radio" name="delivery" value="Pick Up" required> Pick Up (Free)</label><br>
+    <label><input type="radio" name="delivery" value="Postage"> Postage (+Rs125)</label><br>
+    <label><input type="radio" name="delivery" value="Delivery"> Delivery (+Rs150)</label><br><br>
 
     <div id="customer-info" style="display:none;">
       <h2>Customer Details</h2>
@@ -100,12 +90,8 @@ const database = firebase.database();
       </div>
 
       <h2>Payment Method</h2>
-      <label>
-        <input type="radio" name="payment" value="Juice" required> Juice Payment (via account transfer)
-      </label><br>
-      <label>
-        <input type="radio" name="payment" value="Pick Up Payment"> Payment at Pick Up
-      </label><br><br>
+      <label><input type="radio" name="payment" value="Juice" required> Juice Payment (via account transfer)</label><br>
+      <label><input type="radio" name="payment" value="Pick Up Payment"> Payment at Pick Up</label><br><br>
 
       <div id="juice-section" class="card" style="display:none; text-align:center; padding:16px">
         <h3>Juice Payment Instructions</h3>
@@ -122,17 +108,18 @@ const database = firebase.database();
 </section>
 
 <script>
-// === Navbar toggle ===
+// Navbar toggle
 const hamburger = document.querySelector(".hamburger");
 const navLinks = document.querySelector(".nav-links");
 if(hamburger) hamburger.addEventListener("click", ()=>navLinks.classList.toggle("show"));
 
-// === Cart helpers ===
-// Read from BOTH keys (new: bbb_cart_v2, old: cart) and preserve imageURL
-function readCart(){
+let baseTotal = 0;
+let extraCharge = 0;
+
+// --- Read/merge carts (new + old), sanitize to drop zero-price items ---
+function readCartRaw(){
   const a = JSON.parse(localStorage.getItem("bbb_cart_v2") || "[]");
   const b = JSON.parse(localStorage.getItem("cart") || "[]");
-  // Normalize objects (try to keep imageURL when present)
   const normA = a.map(i=>({
     name: i.name,
     unitPrice: Number(i.unitPrice ?? i.price ?? 0),
@@ -145,10 +132,11 @@ function readCart(){
     qty: Number(i.quantity ?? 1),
     imageURL: i.imageURL || i.image || ""
   }));
-  const merged = [...normA, ...normB];
-  // Collapse duplicates by (name|price); keep first non-empty image
+  return [...normA, ...normB];
+}
+function collapse(items){
   const map = new Map();
-  merged.forEach(i=>{
+  items.forEach(i=>{
     const key = `${i.name}|${i.unitPrice}`;
     const prev = map.get(key);
     if (prev){
@@ -160,8 +148,13 @@ function readCart(){
   });
   return Array.from(map.values());
 }
+function readCart(){
+  const merged = readCartRaw()
+    .map(i=>({ ...i, unitPrice: Number(i.unitPrice||0), qty: Number(i.qty||0) }))
+    .filter(i => i.unitPrice > 0 && i.qty > 0); // <-- drop zero-price or zero-qty
+  return collapse(merged);
+}
 function writeCart(items){
-  // Store under the new key only, including imageURL
   const payload = items.map(i=>({
     id: `${i.name}__${i.unitPrice}`,
     name: i.name,
@@ -178,10 +171,7 @@ function writeCartEmpty(){
 }
 function cartCount(items){ return items.reduce((n,i)=>n + (i.qty||0), 0); }
 
-let baseTotal = 0;
-let extraCharge = 0;
-
-// === Cart Display (with images) ===
+// --- Render cart (with images) ---
 function loadCart() {
   const cart = readCart();
   const container = document.getElementById("cart-items");
@@ -230,7 +220,7 @@ function updateTotal(){
 loadCart();
 document.getElementById("cart-count").textContent = cartCount(readCart());
 
-// === Delivery & Payment ===
+// --- Delivery & Payment ---
 const deliveryRadios = document.querySelectorAll('input[name="delivery"]');
 const paymentRadios = document.querySelectorAll('input[name="payment"]');
 const customerInfo = document.getElementById("customer-info");
@@ -273,7 +263,7 @@ paymentRadios.forEach(radio=>{
   });
 });
 
-// === Validate Form ===
+// --- Validate Form ---
 function validateForm(){
   const phone = document.getElementById("phone").value.trim();
   const email = document.getElementById("email").value.trim();
@@ -297,7 +287,7 @@ function validateForm(){
   return true;
 }
 
-// === Confirm Order -> Realtime DB (keeps imageURL in items) ===
+// --- Confirm Order -> RTDB (block zero-priced orders) ---
 document.getElementById("delivery-form").addEventListener("submit", async (e)=>{
   e.preventDefault();
 
@@ -305,6 +295,12 @@ document.getElementById("delivery-form").addEventListener("submit", async (e)=>{
 
   const cart = readCart();
   if(cart.length===0){ alert("Cart is empty."); return; }
+
+  // Guard: no zero-priced lines
+  if (cart.some(i => !i.unitPrice || i.unitPrice <= 0 || !i.qty || i.qty <= 0)) {
+    alert('One or more items have invalid price/quantity. Please remove and re-add.');
+    return;
+  }
 
   const selectedDelivery = document.querySelector('input[name="delivery"]:checked').value;
 
