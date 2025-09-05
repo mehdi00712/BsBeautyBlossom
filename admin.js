@@ -1,9 +1,10 @@
 // admin.js — Firebase Auth + Firestore products + Cloudinary uploads (unsigned)
 (function () {
   // EARLY GUARD: fail clearly if Firebase not initialized
-  if (!window.auth || !window.db) {
-    throw new Error("Firebase not initialized: ensure admin.html loads auth-compat + firestore-compat BEFORE firebase-config.js, and firebase-config.js BEFORE admin.js.");
-  }
+ if (!window.auth || !window.db) {
+   throw new Error("❌ Firebase not initialized: check that admin.html loads firebase-auth-compat.js and firebase-config.js in the right order.");
+ }
+
 
   const $ = (s) => document.querySelector(s);
 
