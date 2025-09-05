@@ -1,4 +1,4 @@
-// products.js — safe addToCart with data-name attribute
+// products.js — clickable cards -> product.html?id=DOC_ID, safe addToCart with data-name
 (function(){
   const grid = document.getElementById('product-grid');
   const search = document.getElementById('search-bar');
@@ -21,11 +21,12 @@
 
       const card = document.createElement('div');
       card.className = 'product';
-      card.setAttribute('data-brand', (p.brand||'').toLowerCase());
-      card.setAttribute('data-name', (p.name||''));
+      const id = p.id || p.docId; // ensure we kept doc id during mapping
       card.innerHTML = `
-        <img src="${p.imageURL||'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
-        <h3>${p.name||''}</h3>
+        <a class="img-wrap" href="product.html?id=${id}">
+          <img src="${p.imageURL||'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
+        </a>
+        <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
         <p class="price">${p.basePrice?`From Rs${p.basePrice}`:''}</p>
         <select class="size-select ml-select">${sel}</select>
         <div class="quantity-controls">
