@@ -1,4 +1,4 @@
-// admin.js (Cloudinary unsigned uploads, Firebase Auth + Firestore, live table)
+// admin.js (Cloudinary unsigned uploads, Firebase Auth + Firestore, live table, multiple images)
 (function(){
   const $ = (s)=>document.querySelector(s);
 
@@ -21,13 +21,14 @@
 
   const productSection = $('#product-section');
   const listSection = document.getElementById('list-section');
+
   const nameEl = $('#name');
   const brandEl = $('#brand');
   const priceEl = $('#price');
   const sizesEl = $('#sizes');
   const descEl = $('#description');
   const categoryEl = $('#category');
-  const imgEl = $('#image'); // file input
+  const imgEl = $('#images'); // multiple files
   const activeEl = $('#active');
   const saveBtn = $('#saveBtn');
   const resetBtn = $('#resetBtn');
@@ -49,7 +50,8 @@
   const resetForm = ()=>{
     docIdEl.value=''; nameEl.value=''; brandEl.value='';
     priceEl.value=''; sizesEl.value=''; descEl.value='';
-    categoryEl.value='perfume'; imgEl.value=''; activeEl.checked=true;
+    categoryEl.value='perfume'; if (imgEl) imgEl.value='';
+    activeEl.checked=true;
   };
 
   // Auth
@@ -75,7 +77,7 @@
     if (ok) loadTable();
   });
 
-  // Cloudinary upload (unsigned)
+  // Cloudinary upload (unsigned, multiple)
   async function uploadToCloudinary(file){
     if (!file) return '';
     if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error('Missing Cloudinary config in admin.html');
@@ -83,7 +85,6 @@
     const form = new FormData();
     form.append('file', file);
     form.append('upload_preset', UPLOAD_PRESET);
-    // Optional: form.append('folder', 'products');
     const res = await fetch(url, { method:'POST', body:form });
     if (!res.ok){
       const txt = await res.text();
@@ -104,6 +105,7 @@
       description: descEl.value.trim(),
       category: categoryEl.value,
       imageURL: undefined, // set after upload
+      images: undefined,   // gallery
       active: !!activeEl.checked,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -113,13 +115,21 @@
     try{
       const docId = docIdEl.value || db.collection('products').doc().id;
 
-      if (imgEl.files && imgEl.files[0]){
-        data.imageURL = await uploadToCloudinary(imgEl.files[0]);
+      // MULTI upload
+      if (imgEl && imgEl.files && imgEl.files.length > 0) {
+        const urls = [];
+        for (const f of imgEl.files) {
+          const u = await uploadToCloudinary(f);
+          urls.push(u);
+        }
+        data.imageURL = urls[0]; // main image
+        data.images   = urls;    // gallery
       }
 
       if (docIdEl.value){
         const toUpdate = {...data}; delete toUpdate.createdAt;
-        if (toUpdate.imageURL === undefined) delete toUpdate.imageURL; // keep old image if none selected
+        if (toUpdate.imageURL === undefined) delete toUpdate.imageURL;
+        if (toUpdate.images   === undefined) delete toUpdate.images;
         await db.collection('products').doc(docId).set(toUpdate, { merge:true });
       } else {
         await db.collection('products').doc(docId).set(data, { merge:true });
