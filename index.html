@@ -43,10 +43,22 @@
   </div>
 </section>
 
-<!-- Gallery -->
+<!-- Gallery (Carousel) -->
 <section id="gallery-section" class="section">
-  <h2>Our Collection</h2>
-  <div id="home-gallery" class="gallery-grid"></div>
+  <div class="section-head">
+    <h2>Our Collection</h2>
+    <div class="gallery-cta">
+      <button class="carousel-btn" id="gal-prev" aria-label="Previous">‹</button>
+      <button class="carousel-btn" id="gal-next" aria-label="Next">›</button>
+    </div>
+  </div>
+
+  <div class="carousel" id="gallery-carousel">
+    <div class="carousel-track" id="gallery-track">
+      <!-- JS will insert slides here -->
+    </div>
+  </div>
+  <div class="carousel-dots" id="gallery-dots"></div>
 </section>
 
 <footer class="site-footer">
@@ -61,32 +73,18 @@
 <!-- Navbar + Cart -->
 <script src="script.js"></script>
 
-<!-- Home Loader -->
+<!-- Home Loader + Carousel -->
 <script>
 (async function(){
   try {
+    // Load site settings
     const snap = await db.collection('site').doc('home').get();
     const h = snap.exists ? snap.data() : {};
 
-    // Hero text
+    // Hero content
     if (h.heroTitle) document.getElementById('hero-title').textContent = h.heroTitle;
     if (h.heroSubtitle) document.getElementById('hero-subtitle').textContent = h.heroSubtitle;
     if (h.bannerImage) document.getElementById('hero-banner').src = h.bannerImage;
-
-    // Gallery
-    const galleryEl = document.getElementById('home-gallery');
-    galleryEl.innerHTML = '';
-    if (Array.isArray(h.gallery) && h.gallery.length > 0) {
-      h.gallery.forEach(url => {
-        const img = document.createElement('img');
-        img.src = url;
-        img.alt = "Gallery image";
-        img.className = "gallery-img";
-        galleryEl.appendChild(img);
-      });
-    } else {
-      galleryEl.innerHTML = '<p>No gallery images yet.</p>';
-    }
 
     // Featured products
     if (h.showFeatured && h.featuredCategory) {
@@ -105,21 +103,87 @@
           const price = Array.isArray(p.sizes)&&p.sizes.length
             ? Math.min(...p.sizes.map(s=>Number(s.price||0)||0)) || Number(p.basePrice||0)||0
             : Number(p.basePrice||0)||0;
-          const card = document.createElement('div');
-          card.className = 'product';
-          card.innerHTML = `
-            <a href="product.html?id=${id}">
-              <img src="${p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
-            </a>
-            <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
-            <p class="price">${price>0 ? 'From Rs'+price : ''}</p>
-          `;
-          grid.appendChild(card);
+        const card = document.createElement('div');
+        card.className = 'product';
+        card.innerHTML = `
+          <a href="product.html?id=${id}">
+            <img src="${p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
+          </a>
+          <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
+          <p class="price">${price>0 ? 'From Rs'+price : ''}</p>
+        `;
+        grid.appendChild(card);
         });
       }
     } else {
       document.getElementById('featured-section').style.display = 'none';
     }
+
+    // Gallery → carousel slides
+    const track = document.getElementById('gallery-track');
+    const dots = document.getElementById('gallery-dots');
+    const prevBtn = document.getElementById('gal-prev');
+    const nextBtn = document.getElementById('gal-next');
+
+    const gallery = Array.isArray(h.gallery) ? h.gallery : [];
+    if (!gallery.length) {
+      track.innerHTML = '<div class="carousel-empty">No gallery images yet.</div>';
+      prevBtn.style.display = 'none';
+      nextBtn.style.display = 'none';
+      return;
+    }
+
+    // Build slides
+    gallery.forEach((url, i) => {
+      const slide = document.createElement('div');
+      slide.className = 'carousel-slide';
+      slide.innerHTML = `<img src="${url}" alt="Gallery image ${i+1}">`;
+      track.appendChild(slide);
+
+      const dot = document.createElement('button');
+      dot.className = 'dot';
+      dot.setAttribute('aria-label', 'Go to slide ' + (i+1));
+      dots.appendChild(dot);
+    });
+
+    // Carousel logic
+    const slides = Array.from(track.children);
+    const dotBtns = Array.from(dots.children);
+    const carouselEl = document.getElementById('gallery-carousel');
+
+    let curr = 0;
+    function update() {
+      slides.forEach((s, idx) => s.classList.toggle('is-active', idx === curr));
+      dotBtns.forEach((d, idx) => d.classList.toggle('is-active', idx === curr));
+      // Scroll to active slide
+      const left = slides[curr].offsetLeft;
+      track.scrollTo({ left, behavior: 'smooth' });
+    }
+    function go(n) {
+      curr = (n + slides.length) % slides.length;
+      update();
+    }
+    function next(){ go(curr + 1); }
+    function prev(){ go(curr - 1); }
+
+    nextBtn.addEventListener('click', next);
+    prevBtn.addEventListener('click', prev);
+    dotBtns.forEach((btn, i) => btn.addEventListener('click', () => go(i)));
+
+    // Resize sync (responsive slide widths)
+    window.addEventListener('resize', () => update());
+
+    // Swipe support
+    let startX = null;
+    carouselEl.addEventListener('pointerdown', (e) => { startX = e.clientX; });
+    carouselEl.addEventListener('pointerup', (e) => {
+      if (startX == null) return;
+      const dx = e.clientX - startX;
+      if (Math.abs(dx) > 40) (dx < 0 ? next() : prev());
+      startX = null;
+    });
+
+    update();
   } catch(e) {
     console.error("Home load error:", e);
   }
