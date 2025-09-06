@@ -457,3 +457,28 @@ hr { border: none; border-top: 1px solid #23232a; margin: 12px 0; }
   gap: 1rem;
 }
 
+.brand-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 1rem 0 2rem;
+  padding: 10px;
+  border: 1px solid #23232a;
+  border-radius: 8px;
+  background: #14141c;
+}
+
+.brand-index a {
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #23232a;
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.brand-index a:hover {
+  background: #3a3a44;
+}
+
