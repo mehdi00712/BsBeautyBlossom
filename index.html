@@ -22,73 +22,71 @@
       <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
       <li><a href="admin.html">Admin</a></li>
     </ul>
-    <button class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</button>
+    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
   </nav>
 </header>
 
 <!-- Hero Section -->
-<section id="hero" class="hero hero-split container">
-  <div class="hero-media">
-    <img id="hero-banner" src="https://placehold.co/1200x600/png?text=Banner" alt="Banner" class="hero-img">
-  </div>
-  <div class="hero-side">
+<section id="hero" class="hero">
+  <img id="hero-banner" src="https://via.placeholder.com/1200x400?text=Banner" alt="Banner" class="hero-img">
+  <div class="hero-overlay">
     <h1 id="hero-title">Welcome to B’s Beauty Blossom</h1>
     <p id="hero-subtitle">Curated beauty & fragrances</p>
-    <div class="hero-cta">
-      <a class="btn" href="perfume.html">Shop Perfume</a>
-      <a class="btn muted" href="skincare.html">Shop Skincare</a>
-    </div>
   </div>
 </section>
 
-<!-- Featured Products -->
-<section id="featured-section" class="section container">
-  <div class="section-head">
-    <h2>Featured Products</h2>
-  </div>
+<!-- Featured Products Section -->
+<section id="featured-section" class="section">
+  <h2>Featured Products</h2>
   <div id="home-featured" class="product-grid">
     <p>Loading featured products…</p>
   </div>
 </section>
 
 <!-- Gallery -->
-<section id="gallery-section" class="section container">
-  <div class="section-head">
-    <h2>Our Collection</h2>
-    <div class="gallery-cta">
-      <button class="carousel-btn" id="gal-prev" aria-label="Previous">‹</button>
-      <button class="carousel-btn" id="gal-next" aria-label="Next">›</button>
-    </div>
-  </div>
-  <div class="carousel" id="gallery-carousel">
-    <div class="carousel-track" id="gallery-track"></div>
-  </div>
-  <div class="carousel-dots" id="gallery-dots"></div>
+<section id="gallery-section" class="section">
+  <h2>Our Collection</h2>
+  <div id="home-gallery" class="gallery-grid"></div>
 </section>
 
-<footer class="site-footer container">
+<footer class="site-footer">
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
-<!-- Firebase -->
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Shared scripts -->
+<!-- Navbar + Cart -->
 <script src="script.js"></script>
 
-<!-- Dynamic homepage loader -->
+<!-- Home Loader -->
 <script>
 (async function(){
   try {
     const snap = await db.collection('site').doc('home').get();
     const h = snap.exists ? snap.data() : {};
 
-    // Hero
+    // Hero text
     if (h.heroTitle) document.getElementById('hero-title').textContent = h.heroTitle;
     if (h.heroSubtitle) document.getElementById('hero-subtitle').textContent = h.heroSubtitle;
     if (h.bannerImage) document.getElementById('hero-banner').src = h.bannerImage;
+
+    // Gallery
+    const galleryEl = document.getElementById('home-gallery');
+    galleryEl.innerHTML = '';
+    if (Array.isArray(h.gallery) && h.gallery.length > 0) {
+      h.gallery.forEach(url => {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = "Gallery image";
+        img.className = "gallery-img";
+        galleryEl.appendChild(img);
+      });
+    } else {
+      galleryEl.innerHTML = '<p>No gallery images yet.</p>';
+    }
 
     // Featured products
     if (h.showFeatured && h.featuredCategory) {
@@ -111,7 +109,7 @@
           card.className = 'product';
           card.innerHTML = `
             <a href="product.html?id=${id}">
-              <img src="${p.imageURL || 'https://placehold.co/600x600/png?text=No+Image'}" alt="${p.name||''}">
+              <img src="${p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
             </a>
             <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
             <p class="price">${price>0 ? 'From Rs'+price : ''}</p>
@@ -122,47 +120,9 @@
     } else {
       document.getElementById('featured-section').style.display = 'none';
     }
-
-    // Gallery
-    const track = document.getElementById('gallery-track');
-    const dots = document.getElementById('gallery-dots');
-    const prevBtn = document.getElementById('gal-prev');
-    const nextBtn = document.getElementById('gal-next');
-
-    const gallery = Array.isArray(h.gallery) ? h.gallery : [];
-    if (!gallery.length) {
-      track.innerHTML = '<div class="carousel-empty">No gallery images yet.</div>';
-      prevBtn.style.display = 'none';
-      nextBtn.style.display = 'none';
-      return;
-    }
-
-    gallery.forEach((url, i) => {
-      const slide = document.createElement('div');
-      slide.className = 'carousel-slide';
-      slide.innerHTML = `<img src="${url}" alt="Gallery image ${i+1}">`;
-      track.appendChild(slide);
-
-      const dot = document.createElement('button');
-      dot.className = 'dot';
-      dots.appendChild(dot);
-    });
-
-    const slides = Array.from(track.children);
-    const dotBtns = Array.from(dots.children);
-    let curr = 0;
-
-    function update() {
-      slides.forEach((s, i) => s.classList.toggle('is-active', i===curr));
-      dotBtns.forEach((d, i) => d.classList.toggle('is-active', i===curr));
-      track.scrollTo({ left: slides[curr].offsetLeft, behavior:'smooth' });
-    }
-    function go(n){ curr=(n+slides.length)%slides.length; update(); }
-    prevBtn.onclick=()=>go(curr-1);
-    nextBtn.onclick=()=>go(curr+1);
-    dotBtns.forEach((btn,i)=>btn.onclick=()=>go(i));
-    update();
-  } catch(e) { console.error("Home load error:", e); }
+  } catch(e) {
+    console.error("Home load error:", e);
+  }
 })();
 </script>
 </body>
