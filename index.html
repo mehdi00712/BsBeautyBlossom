@@ -26,16 +26,16 @@
   </nav>
 </header>
 
-<!-- Hero Section -->
+<!-- Hero -->
 <section id="hero" class="hero">
-  <img id="hero-banner" src="https://via.placeholder.com/1200x400?text=Banner" alt="Banner" class="hero-img">
+  <img id="hero-banner" src="https://via.placeholder.com/1600x900?text=Banner" alt="Banner" class="hero-img">
   <div class="hero-overlay">
     <h1 id="hero-title">Welcome to B’s Beauty Blossom</h1>
     <p id="hero-subtitle">Curated beauty & fragrances</p>
   </div>
 </section>
 
-<!-- Featured Products Section -->
+<!-- Featured -->
 <section id="featured-section" class="section">
   <h2>Featured Products</h2>
   <div id="home-featured" class="product-grid">
@@ -53,36 +53,49 @@
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
-<!-- Firebase SDKs -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Navbar + Cart -->
+<!-- Navbar + cart helpers -->
 <script src="script.js"></script>
 
-<!-- Home Loader -->
+<!-- Home loader + Cloudinary optimization -->
 <script>
-(async function(){
-  try {
-    const snap = await db.collection('site').doc('home').get();
-    const h = snap.exists ? snap.data() : {};
+(function(){
+  // If the hero image is from Cloudinary, request an optimized width for the current device
+  function optimizeCloudinary(url, width) {
+    try {
+      if (!url || !/res\.cloudinary\.com/.test(url)) return url;
+      return url.replace(/\/upload\/(?!.*\/)/, `/upload/f_auto,q_auto,w_${width}/`);
+    } catch { return url; }
+  }
 
-    // Hero text
-    if (h.heroTitle) document.getElementById('hero-title').textContent = h.heroTitle;
-    if (h.heroSubtitle) document.getElementById('hero-subtitle').textContent = h.heroSubtitle;
-    if (h.bannerImage) document.getElementById('hero-banner').src = h.bannerImage;
+  // Apply Firestore site/home doc to the page
+  window.applyHomeData = async function(h) {
+    const title = document.getElementById('hero-title');
+    const sub   = document.getElementById('hero-subtitle');
+    const img   = document.getElementById('hero-banner');
+
+    if (h.heroTitle)    title.textContent = h.heroTitle;
+    if (h.heroSubtitle) sub.textContent  = h.heroSubtitle;
+
+    if (h.bannerImage) {
+      const targetW = Math.min(window.innerWidth, 1600);
+      img.src = optimizeCloudinary(h.bannerImage, targetW);
+    }
 
     // Gallery
     const galleryEl = document.getElementById('home-gallery');
     galleryEl.innerHTML = '';
-    if (Array.isArray(h.gallery) && h.gallery.length > 0) {
+    if (Array.isArray(h.gallery) && h.gallery.length) {
       h.gallery.forEach(url => {
-        const img = document.createElement('img');
-        img.src = url;
-        img.alt = "Gallery image";
-        img.className = "gallery-img";
-        galleryEl.appendChild(img);
+        const g = document.createElement('img');
+        g.src = optimizeCloudinary(url, 600);
+        g.alt = "Gallery image";
+        g.className = "gallery-img";
+        galleryEl.appendChild(g);
       });
     } else {
       galleryEl.innerHTML = '<p>No gallery images yet.</p>';
@@ -91,20 +104,22 @@
     // Featured products
     if (h.showFeatured && h.featuredCategory) {
       const grid = document.getElementById('home-featured');
-      const snapP = await db.collection('products')
+      const snap = await db.collection('products')
         .where('category','==', String(h.featuredCategory).toLowerCase())
         .where('active','==', true)
         .limit(8).get();
       grid.innerHTML = '';
-      if (snapP.empty) {
+      if (snap.empty) {
         grid.innerHTML = '<p>No featured products yet.</p>';
       } else {
-        snapP.forEach(d => {
+        snap.forEach(d => {
           const p = d.data();
           const id = d.id;
-          const price = Array.isArray(p.sizes)&&p.sizes.length
-            ? Math.min(...p.sizes.map(s=>Number(s.price||0)||0)) || Number(p.basePrice||0)||0
-            : Number(p.basePrice||0)||0;
+          const base = Number(p.basePrice || 0) || 0;
+          const sizes = Array.isArray(p.sizes) ? p.sizes : [];
+          const prices = sizes.map(s => Number((s && s.price) || 0)).filter(n => n > 0);
+          const from = prices.length ? Math.min(...prices) : base;
+
           const card = document.createElement('div');
           card.className = 'product';
           card.innerHTML = `
@@ -112,7 +127,7 @@
               <img src="${p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
             </a>
             <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
-            <p class="price">${price>0 ? 'From Rs'+price : ''}</p>
+            <p class="price">${from>0 ? 'From Rs'+from : ''}</p>
           `;
           grid.appendChild(card);
         });
@@ -120,6 +135,16 @@
     } else {
       document.getElementById('featured-section').style.display = 'none';
     }
+  };
+})();
+</script>
+
+<script>
+(async function(){
+  try {
+    const snap = await db.collection('site').doc('home').get();
+    const h = snap.exists ? snap.data() : {};
+    await window.applyHomeData(h);
   } catch(e) {
     console.error("Home load error:", e);
   }
