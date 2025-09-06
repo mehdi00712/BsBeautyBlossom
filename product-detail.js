@@ -1,5 +1,9 @@
 // product-detail.js — loads one product, handles sizes/qty, adds to cart
 (function(){
+  // ✅ prevent double init if script is loaded twice
+  if (window.__PD_INIT__) return; 
+  window.__PD_INIT__ = true;
+
   if (!window.db) { console.error('product-detail: Firestore not available'); return; }
 
   const params = new URLSearchParams(location.search);
@@ -14,16 +18,14 @@
   function setPriceLabel(p) { priceEl.textContent = p>0 ? 'Rs ' + p : ''; }
   function updateCount() {
     const cart = JSON.parse(localStorage.getItem('cart')||'[]');
-    const c = cart.reduce((s,i)=>s + Number(i.quantity||i.qty||0), 0);
+    const c = cart.reduce((s,i)=>s + Number(i.qty||i.quantity||0), 0);
     const cc = document.getElementById('cart-count'); if (cc) cc.textContent = c;
   }
-
   function addToCart(item){
     const cart = JSON.parse(localStorage.getItem('cart')||'[]');
     cart.push(item);
     localStorage.setItem('cart', JSON.stringify(cart));
     updateCount();
-    alert('Added to cart');
   }
 
   function buildSelect(p){
@@ -47,7 +49,13 @@
   plus.onclick  = ()=>{ const q = Math.min(99, Number(qtyEl.textContent||'1')+1); qtyEl.textContent = q; };
   sizeEl.onchange = ()=>{ const sel = sizeEl.options[sizeEl.selectedIndex]; setPriceLabel(Number(sel?.dataset.price||0)); };
 
+  // ✅ debounce to avoid double-add if something triggers twice fast
+  let adding = false;
   add.onclick = ()=>{
+    if (adding) return;
+    adding = true;
+    setTimeout(()=> adding=false, 350);
+
     const sel = sizeEl.options[sizeEl.selectedIndex];
     const unitPrice = Number(sel?.dataset.price||0);
     const qty = Number(qtyEl.textContent||'1');
@@ -60,6 +68,7 @@
       imageURL: main?.src || ''
     };
     addToCart(item);
+    alert('Added to cart');
   };
 
   async function load(){
