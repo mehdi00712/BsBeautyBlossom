@@ -26,6 +26,12 @@
   </nav>
 </header>
 
+<!-- Global search -->
+<div class="search-container" style="max-width:1100px;margin:10px auto;padding:0 10px;">
+  <input type="text" id="search-bar" placeholder="Search by brand or product name…"
+         style="width:100%;padding:10px 12px;border:1px solid #23232a;border-radius:10px;background:#0d0d12;color:#fff;">
+</div>
+
 <!-- Hero -->
 <section id="hero" class="hero">
   <img id="hero-banner" src="https://via.placeholder.com/1600x900?text=Banner" alt="Banner" class="hero-img">
@@ -64,7 +70,6 @@
 <!-- Home loader + Cloudinary optimization -->
 <script>
 (function(){
-  // If the hero image is from Cloudinary, request an optimized width for the current device
   function optimizeCloudinary(url, width) {
     try {
       if (!url || !/res\.cloudinary\.com/.test(url)) return url;
@@ -72,7 +77,6 @@
     } catch { return url; }
   }
 
-  // Apply Firestore site/home doc to the page
   window.applyHomeData = async function(h) {
     const title = document.getElementById('hero-title');
     const sub   = document.getElementById('hero-subtitle');
@@ -109,32 +113,32 @@
         .where('active','==', true)
         .limit(8).get();
       grid.innerHTML = '';
-      if (snap.empty) {
-        grid.innerHTML = '<p>No featured products yet.</p>';
-      } else {
-        snap.forEach(d => {
-          const p = d.data();
-          const id = d.id;
-          const base = Number(p.basePrice || 0) || 0;
-          const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-          const prices = sizes.map(s => Number((s && s.price) || 0)).filter(n => n > 0);
-          const from = prices.length ? Math.min(...prices) : base;
+      if (snap.empty) grid.innerHTML = '<p>No featured products yet.</p>';
+      snap.forEach(d => {
+        const p = d.data(); const id = d.id;
+        const base = Number(p.basePrice || 0) || 0;
+        const sizes = Array.isArray(p.sizes) ? p.sizes : [];
+        const prices = sizes.map(s => Number((s && s.price) || 0)).filter(n => n > 0);
+        const from = prices.length ? Math.min(...prices) : base;
 
-          const card = document.createElement('div');
-          card.className = 'product';
-          card.innerHTML = `
-            <a href="product.html?id=${id}">
-              <img src="${p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
-            </a>
-            <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
-            <p class="price">${from>0 ? 'From Rs'+from : ''}</p>
-          `;
-          grid.appendChild(card);
-        });
-      }
+        const card = document.createElement('div');
+        card.className = 'product';
+        card.setAttribute('data-name', p.name || '');
+        card.setAttribute('data-brand', p.brand || '');
+        card.innerHTML = `
+          <a href="product.html?id=${id}">
+            <img src="${p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
+          </a>
+          <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
+          ${p.brand ? `<div class="muted">${p.brand}</div>` : ''}
+          <p class="price">${from>0 ? 'From Rs'+from : ''}</p>
+        `;
+        grid.appendChild(card);
+      });
     } else {
       document.getElementById('featured-section').style.display = 'none';
     }
+    if (window.applySearch) window.applySearch();
   };
 })();
 </script>
@@ -145,10 +149,11 @@
     const snap = await db.collection('site').doc('home').get();
     const h = snap.exists ? snap.data() : {};
     await window.applyHomeData(h);
-  } catch(e) {
-    console.error("Home load error:", e);
-  }
+  } catch(e) { console.error("Home load error:", e); }
 })();
 </script>
+
+<!-- Universal search -->
+<script src="search.js" defer></script>
 </body>
 </html>
