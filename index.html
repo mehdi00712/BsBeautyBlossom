@@ -22,29 +22,37 @@
       <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
       <li><a href="admin.html">Admin</a></li>
     </ul>
-    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
+    <button class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</button>
   </nav>
 </header>
 
-<!-- Hero Section -->
-<section id="hero" class="hero">
-  <img id="hero-banner" src="https://via.placeholder.com/1200x400?text=Banner" alt="Banner" class="hero-img">
-  <div class="hero-overlay">
+<!-- Hero Section (SPLIT: image left, text right) -->
+<section id="hero" class="hero hero-split container">
+  <div class="hero-media">
+    <img id="hero-banner" src="https://via.placeholder.com/1200x600?text=Banner" alt="Banner" class="hero-img">
+  </div>
+  <div class="hero-side">
     <h1 id="hero-title">Welcome to B’s Beauty Blossom</h1>
     <p id="hero-subtitle">Curated beauty & fragrances</p>
+    <div class="hero-cta">
+      <a class="btn" href="perfume.html">Shop Perfume</a>
+      <a class="btn muted" href="skincare.html">Shop Skincare</a>
+    </div>
   </div>
 </section>
 
 <!-- Featured Products Section -->
-<section id="featured-section" class="section">
-  <h2>Featured Products</h2>
+<section id="featured-section" class="section container">
+  <div class="section-head">
+    <h2>Featured Products</h2>
+  </div>
   <div id="home-featured" class="product-grid">
     <p>Loading featured products…</p>
   </div>
 </section>
 
 <!-- Gallery (Carousel) -->
-<section id="gallery-section" class="section">
+<section id="gallery-section" class="section container">
   <div class="section-head">
     <h2>Our Collection</h2>
     <div class="gallery-cta">
@@ -61,7 +69,7 @@
   <div class="carousel-dots" id="gallery-dots"></div>
 </section>
 
-<footer class="site-footer">
+<footer class="site-footer container">
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
@@ -70,7 +78,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Navbar + Cart -->
+<!-- Navbar + Cart (your shared helpers) -->
 <script src="script.js"></script>
 
 <!-- Home Loader + Carousel -->
@@ -103,16 +111,16 @@
           const price = Array.isArray(p.sizes)&&p.sizes.length
             ? Math.min(...p.sizes.map(s=>Number(s.price||0)||0)) || Number(p.basePrice||0)||0
             : Number(p.basePrice||0)||0;
-        const card = document.createElement('div');
-        card.className = 'product';
-        card.innerHTML = `
-          <a href="product.html?id=${id}">
-            <img src="${p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
-          </a>
-          <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
-          <p class="price">${price>0 ? 'From Rs'+price : ''}</p>
-        `;
-        grid.appendChild(card);
+          const card = document.createElement('div');
+          card.className = 'product';
+          card.innerHTML = `
+            <a href="product.html?id=${id}">
+              <img src="${p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
+            </a>
+            <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
+            <p class="price">${price>0 ? 'From Rs'+price : ''}</p>
+          `;
+          grid.appendChild(card);
         });
       }
     } else {
@@ -155,14 +163,10 @@
     function update() {
       slides.forEach((s, idx) => s.classList.toggle('is-active', idx === curr));
       dotBtns.forEach((d, idx) => d.classList.toggle('is-active', idx === curr));
-      // Scroll to active slide
       const left = slides[curr].offsetLeft;
       track.scrollTo({ left, behavior: 'smooth' });
     }
-    function go(n) {
-      curr = (n + slides.length) % slides.length;
-      update();
-    }
+    function go(n) { curr = (n + slides.length) % slides.length; update(); }
     function next(){ go(curr + 1); }
     function prev(){ go(curr - 1); }
 
@@ -170,8 +174,8 @@
     prevBtn.addEventListener('click', prev);
     dotBtns.forEach((btn, i) => btn.addEventListener('click', () => go(i)));
 
-    // Resize sync (responsive slide widths)
-    window.addEventListener('resize', () => update());
+    // Resize sync
+    window.addEventListener('resize', update);
 
     // Swipe support
     let startX = null;
