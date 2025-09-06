@@ -1,5 +1,8 @@
 // products.js — render category grid + enable search
 (async function(){
+  if (window.__PROD_LIST_INIT__) return;
+  window.__PROD_LIST_INIT__ = true;
+
   if (!window.db) { console.error('products.js: Firestore not available'); return; }
   const grid = document.getElementById('product-grid');
   if (!grid) return;
