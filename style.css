@@ -184,34 +184,48 @@ tbody td {
 tbody tr:hover { background: #10101a; }
 
 /* =========================
-   Hero
+   Hero (updated for consistent crop)
 ========================= */
 .hero {
   position: relative;
-  max-width: 1300px;
+  max-width: 1100px;
   margin: 14px auto 0;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid #23232a;
   background: #0f0f16;
 }
+
+/* Consistent aspect ratio (desktop) */
 .hero-img {
   width: 100%;
-  height: 360px;
+  aspect-ratio: 16 / 9;   /* same feel on laptops/desktops */
+  height: auto;
   object-fit: cover;
+  object-position: center;
+  display: block;
 }
+
 .hero-overlay {
   position: absolute;
   inset: 0;
+  pointer-events: none;
   background: linear-gradient(180deg, rgba(8,8,12,0.25), rgba(8,8,12,0.75));
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   justify-content: flex-end;
-  padding: 22px;
+  padding: 20px;
 }
-.hero-overlay h1 { font-size: 2.2rem; margin-bottom: 6px; }
-.hero-overlay p { font-size: 1.05rem; color: #e9e9ef; }
+.hero-overlay h1 { font-size: 2rem; margin: 0 0 6px; }
+.hero-overlay p  { font-size: 1rem; color: #e9e9ef; margin: 0; }
+
+/* Taller hero on phones (looks like your screenshot) */
+@media (max-width: 640px) {
+  .hero-img { aspect-ratio: 4 / 5; }
+  .hero-overlay { padding: 16px; }
+  .hero-overlay h1 { font-size: 1.6rem; }
+  .hero-overlay p  { font-size: .95rem; }
+}
 
 /* =========================
    Product Grid + Cards
