@@ -1,4 +1,4 @@
-// products.js — render products grouped by brand
+// products.js — render products grouped by brand, with brand index links
 (async function(){
   if (window.__PROD_LIST_INIT__) return;
   window.__PROD_LIST_INIT__ = true;
@@ -39,10 +39,22 @@
         groups[brand].push({id, ...p});
       });
 
-      // Render each brand group
+      // ---- Build brand index ----
+      const indexBar = document.createElement('div');
+      indexBar.className = 'brand-index';
+      Object.keys(groups).sort().forEach(brand=>{
+        const link = document.createElement('a');
+        link.href = `#brand-${brand.replace(/\s+/g,'-')}`;
+        link.textContent = brand;
+        indexBar.appendChild(link);
+      });
+      grid.appendChild(indexBar);
+
+      // ---- Render each brand group ----
       Object.keys(groups).sort().forEach(brand=>{
         const section = document.createElement('section');
         section.className = 'brand-group';
+        section.id = `brand-${brand.replace(/\s+/g,'-')}`;
 
         const h2 = document.createElement('h2');
         h2.textContent = brand;
