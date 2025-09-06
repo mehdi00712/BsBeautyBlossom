@@ -26,10 +26,10 @@
   </nav>
 </header>
 
-<!-- Hero Section (SPLIT: image left, text right) -->
+<!-- Hero Section -->
 <section id="hero" class="hero hero-split container">
   <div class="hero-media">
-    <img id="hero-banner" src="https://via.placeholder.com/1200x600?text=Banner" alt="Banner" class="hero-img">
+    <img id="hero-banner" src="https://placehold.co/1200x600/png?text=Banner" alt="Banner" class="hero-img">
   </div>
   <div class="hero-side">
     <h1 id="hero-title">Welcome to B’s Beauty Blossom</h1>
@@ -41,7 +41,7 @@
   </div>
 </section>
 
-<!-- Featured Products Section -->
+<!-- Featured Products -->
 <section id="featured-section" class="section container">
   <div class="section-head">
     <h2>Featured Products</h2>
@@ -51,7 +51,7 @@
   </div>
 </section>
 
-<!-- Gallery (Carousel) -->
+<!-- Gallery -->
 <section id="gallery-section" class="section container">
   <div class="section-head">
     <h2>Our Collection</h2>
@@ -60,11 +60,8 @@
       <button class="carousel-btn" id="gal-next" aria-label="Next">›</button>
     </div>
   </div>
-
   <div class="carousel" id="gallery-carousel">
-    <div class="carousel-track" id="gallery-track">
-      <!-- JS will insert slides here -->
-    </div>
+    <div class="carousel-track" id="gallery-track"></div>
   </div>
   <div class="carousel-dots" id="gallery-dots"></div>
 </section>
@@ -73,23 +70,22 @@
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
-<!-- Firebase SDKs -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Navbar + Cart (your shared helpers) -->
+<!-- Shared scripts -->
 <script src="script.js"></script>
 
-<!-- Home Loader + Carousel -->
+<!-- Dynamic homepage loader -->
 <script>
 (async function(){
   try {
-    // Load site settings
     const snap = await db.collection('site').doc('home').get();
     const h = snap.exists ? snap.data() : {};
 
-    // Hero content
+    // Hero
     if (h.heroTitle) document.getElementById('hero-title').textContent = h.heroTitle;
     if (h.heroSubtitle) document.getElementById('hero-subtitle').textContent = h.heroSubtitle;
     if (h.bannerImage) document.getElementById('hero-banner').src = h.bannerImage;
@@ -115,7 +111,7 @@
           card.className = 'product';
           card.innerHTML = `
             <a href="product.html?id=${id}">
-              <img src="${p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
+              <img src="${p.imageURL || 'https://placehold.co/600x600/png?text=No+Image'}" alt="${p.name||''}">
             </a>
             <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
             <p class="price">${price>0 ? 'From Rs'+price : ''}</p>
@@ -127,7 +123,7 @@
       document.getElementById('featured-section').style.display = 'none';
     }
 
-    // Gallery → carousel slides
+    // Gallery
     const track = document.getElementById('gallery-track');
     const dots = document.getElementById('gallery-dots');
     const prevBtn = document.getElementById('gal-prev');
@@ -141,7 +137,6 @@
       return;
     }
 
-    // Build slides
     gallery.forEach((url, i) => {
       const slide = document.createElement('div');
       slide.className = 'carousel-slide';
@@ -150,47 +145,24 @@
 
       const dot = document.createElement('button');
       dot.className = 'dot';
-      dot.setAttribute('aria-label', 'Go to slide ' + (i+1));
       dots.appendChild(dot);
     });
 
-    // Carousel logic
     const slides = Array.from(track.children);
     const dotBtns = Array.from(dots.children);
-    const carouselEl = document.getElementById('gallery-carousel');
-
     let curr = 0;
+
     function update() {
-      slides.forEach((s, idx) => s.classList.toggle('is-active', idx === curr));
-      dotBtns.forEach((d, idx) => d.classList.toggle('is-active', idx === curr));
-      const left = slides[curr].offsetLeft;
-      track.scrollTo({ left, behavior: 'smooth' });
+      slides.forEach((s, i) => s.classList.toggle('is-active', i===curr));
+      dotBtns.forEach((d, i) => d.classList.toggle('is-active', i===curr));
+      track.scrollTo({ left: slides[curr].offsetLeft, behavior:'smooth' });
     }
-    function go(n) { curr = (n + slides.length) % slides.length; update(); }
-    function next(){ go(curr + 1); }
-    function prev(){ go(curr - 1); }
-
-    nextBtn.addEventListener('click', next);
-    prevBtn.addEventListener('click', prev);
-    dotBtns.forEach((btn, i) => btn.addEventListener('click', () => go(i)));
-
-    // Resize sync
-    window.addEventListener('resize', update);
-
-    // Swipe support
-    let startX = null;
-    carouselEl.addEventListener('pointerdown', (e) => { startX = e.clientX; });
-    carouselEl.addEventListener('pointerup', (e) => {
-      if (startX == null) return;
-      const dx = e.clientX - startX;
-      if (Math.abs(dx) > 40) (dx < 0 ? next() : prev());
-      startX = null;
-    });
-
+    function go(n){ curr=(n+slides.length)%slides.length; update(); }
+    prevBtn.onclick=()=>go(curr-1);
+    nextBtn.onclick=()=>go(curr+1);
+    dotBtns.forEach((btn,i)=>btn.onclick=()=>go(i));
     update();
-  } catch(e) {
-    console.error("Home load error:", e);
-  }
+  } catch(e) { console.error("Home load error:", e); }
 })();
 </script>
 </body>
