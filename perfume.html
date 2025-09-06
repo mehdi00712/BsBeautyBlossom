@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Perfume – B’s Beauty Blossom</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
@@ -25,6 +26,11 @@
   </nav>
 </header>
 
+<div class="search-container" style="max-width:1100px;margin:10px auto;padding:0 10px;">
+  <input type="text" id="search-bar" placeholder="Search by brand or product name…"
+         style="width:100%;padding:10px 12px;border:1px solid #23232a;border-radius:10px;background:#0d0d12;color:#fff;">
+</div>
+
 <section class="section">
   <h1 class="page-title">Perfume</h1>
   <div id="product-grid" class="product-grid"></div>
@@ -34,16 +40,14 @@
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
-<!-- Firebase (ORDER MATTERS) -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-<!-- Your initializer (must create window.db) -->
 <script src="firebase-config.js"></script>
 
-<!-- Site scripts -->
-<script src="script.js"></script>
 <script>window.PRODUCT_CATEGORY='perfume';</script>
-<script src="products.js"></script>
+<script src="products.js" defer></script>
+<script src="script.js" defer></script>
+<script src="search.js" defer></script>
 </body>
 </html>
