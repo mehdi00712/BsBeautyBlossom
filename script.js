@@ -1,124 +1,136 @@
-// script.js — Navbar hamburger + cart badge (mobile-safe height/scroll)
+// script.js — Navbar toggle (open/close) + cart badge + safe behaviors
 (function () {
-  if (window.__NAV_INIT__) return;
-  window.__NAV_INIT__ = true;
+  if (window.__NAV_READY__) return; window.__NAV_READY__ = true;
 
-  function qs(s, r = document) { return r.querySelector(s); }
-  function qsa(s, r = document) { return Array.from(r.querySelectorAll(s)); }
+  const qs = (s, r=document) => r.querySelector(s);
+  const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
 
-  function wireNavbar() {
+  function ensureOverlay(){
+    let ov = qs('#nav-overlay');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'nav-overlay';
+      document.body.appendChild(ov);
+    }
+    return ov;
+  }
+
+  function wireNavbar(){
     const navbar    = qs('.navbar');
     const hamburger = qs('.hamburger');
     const navLinks  = qs('.nav-links');
+    const overlay   = ensureOverlay();
 
     if (!navbar || !hamburger || !navLinks) return;
 
-    // ARIA
-    hamburger.setAttribute('aria-label', 'menu');
-    hamburger.setAttribute('aria-expanded', 'false');
+    hamburger.setAttribute('aria-label','menu');
+    hamburger.setAttribute('aria-expanded','false');
 
-    // Compute panel size to fit below current navbar height
-    function applyMobilePanelSize() {
+    const openMenu = ()=>{
+      // size panel to sit under current navbar height
       const h = navbar.offsetHeight || 64;
-      // Inline styles make it robust even if CSS var isn't used
       navLinks.style.top = h + 'px';
       navLinks.style.maxHeight = `calc(100vh - ${h}px)`;
-    }
 
-    function openMenu() {
-      applyMobilePanelSize();
       navLinks.classList.add('show');
+      overlay.classList.add('show');
       document.body.classList.add('nav-open');
-      hamburger.setAttribute('aria-expanded', 'true');
-    }
-    function closeMenu() {
-      navLinks.classList.remove('show');
-      document.body.classList.remove('nav-open');
-      hamburger.setAttribute('aria-expanded', 'false');
-    }
-    function toggleMenu() {
-      navLinks.classList.contains('show') ? closeMenu() : openMenu();
-    }
+      hamburger.setAttribute('aria-expanded','true');
+      // Optional: change icon from ☰ to ✕
+      hamburger.dataset.icon = hamburger.innerHTML;
+      hamburger.innerHTML = '&#10005;'; // ×
+    };
 
+    const closeMenu = ()=>{
+      navLinks.classList.remove('show');
+      overlay.classList.remove('show');
+      document.body.classList.remove('nav-open');
+      hamburger.setAttribute('aria-expanded','false');
+      if (hamburger.dataset.icon) hamburger.innerHTML = hamburger.dataset.icon;
+    };
+
+    const toggleMenu = ()=>{
+      navLinks.classList.contains('show') ? closeMenu() : openMenu();
+    };
+
+    // Main toggle (tap again closes)
     if (!hamburger.__wired) {
       hamburger.__wired = true;
-      hamburger.addEventListener('click', toggleMenu, { passive: true });
-      // Touch support (prevents double-trigger on some mobiles)
-      hamburger.addEventListener('touchstart', (e)=>{ e.preventDefault(); toggleMenu(); }, { passive: false });
+      hamburger.addEventListener('click', toggleMenu);
+      hamburger.addEventListener('touchstart', e => { e.preventDefault(); toggleMenu(); }, { passive:false });
     }
 
-    // Auto-close after tapping a link (mobile)
-    qsa('a', navLinks).forEach(a => {
-      if (!a.__wiredClose) {
-        a.__wiredClose = true;
-        a.addEventListener('click', () => { if (window.innerWidth < 1024) closeMenu(); });
-      }
+    // Click outside (overlay) closes
+    if (!overlay.__wired) {
+      overlay.__wired = true;
+      overlay.addEventListener('click', closeMenu);
+      overlay.addEventListener('touchstart', closeMenu, { passive:true });
+    }
+
+    // Link click closes (on mobile) and navigates
+    qsa('a', navLinks).forEach(a=>{
+      if (a.__wiredClose) return;
+      a.__wiredClose = true;
+      a.addEventListener('click', ()=>{
+        if (window.innerWidth < 1024) closeMenu();
+      });
     });
 
-    // Click outside to close (mobile)
-    if (!document.__navOutside) {
-      document.__navOutside = true;
-      document.addEventListener('click', (e) => {
-        if (window.innerWidth >= 1024) return;
-        if (!qs('.navbar').contains(e.target)) closeMenu();
-      });
-    }
-
-    // ESC to close
+    // ESC closes
     if (!document.__navEsc) {
       document.__navEsc = true;
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+      document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
     }
 
-    // Resize: recalc panel size and reset on desktop
+    // Resize: reset on desktop, keep sizing on mobile
     if (!window.__navResize) {
       window.__navResize = true;
-      window.addEventListener('resize', () => {
+      window.addEventListener('resize', ()=>{
         if (window.innerWidth >= 1024) {
           closeMenu();
           navLinks.style.maxHeight = '';
           navLinks.style.top = '';
         } else if (navLinks.classList.contains('show')) {
-          applyMobilePanelSize();
+          const h = navbar.offsetHeight || 64;
+          navLinks.style.top = h + 'px';
+          navLinks.style.maxHeight = `calc(100vh - ${h}px)`;
         }
       });
     }
 
-    // Optional: close menu on scroll (prevents stuck-open feeling)
+    // Scroll closes (prevents stuck-open feel)
     if (!window.__navScrollClose) {
       window.__navScrollClose = true;
-      window.addEventListener('scroll', () => {
-        if (window.innerWidth < 1024 && navLinks.classList.contains('show')) {
-          closeMenu();
-        }
-      }, { passive: true });
+      window.addEventListener('scroll', ()=>{
+        if (window.innerWidth < 1024 && navLinks.classList.contains('show')) closeMenu();
+      }, { passive:true });
     }
   }
 
-  // ----- CART BADGE -----
-  function computeCartCount() {
-    try {
+  // ----- Cart badge -----
+  function cartCount(){
+    try{
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      // support both qty & quantity props
-      return cart.reduce((sum, it) => sum + Number(it.qty ?? it.quantity ?? 0), 0);
-    } catch { return 0; }
+      return cart.reduce((s,i)=> s + Number(i.qty ?? i.quantity ?? 0), 0);
+    }catch{ return 0; }
   }
-  function updateCartCount() {
+  function updateCartCount(){
     const el = document.getElementById('cart-count');
-    if (el) el.textContent = computeCartCount();
+    if (el) el.textContent = cartCount();
   }
   window.updateCartCount = updateCartCount;
 
-  // Init
-  const init = () => { wireNavbar(); updateCartCount(); };
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init, { once: true });
+  function init(){
+    wireNavbar();
+    updateCartCount();
+  }
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init, { once:true });
   } else {
     init();
   }
 
-  // Update when cart changes in another tab
-  window.addEventListener('storage', (e) => {
-    if (e.key === 'cart') updateCartCount();
-  });
+  // Sync badge if cart changes in other tabs
+  window.addEventListener('storage', (e)=>{ if (e.key==='cart') updateCartCount(); });
 })();
