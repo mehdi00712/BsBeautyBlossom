@@ -7,58 +7,52 @@
   function qsa(s, r = document) { return Array.from(r.querySelectorAll(s)); }
 
   function wireNavbar() {
-    const navbar   = qs('.navbar');
-    const hamburger= qs('.hamburger');
-    const navLinks = qs('.nav-links');
+    const navbar    = qs('.navbar');
+    const hamburger = qs('.hamburger');
+    const navLinks  = qs('.nav-links');
 
     if (!navbar || !hamburger || !navLinks) return;
 
-    // Ensure ARIA
-    hamburger.setAttribute('aria-expanded', 'false');
+    // ARIA
     hamburger.setAttribute('aria-label', 'menu');
+    hamburger.setAttribute('aria-expanded', 'false');
 
+    // Compute panel size to fit below current navbar height
     function applyMobilePanelSize() {
-      // Measure current navbar height (can change between desktop/mobile)
       const h = navbar.offsetHeight || 64;
-      // Position the dropdown immediately under the navbar
+      // If your CSS uses the --nav-top variable, JS isn't required,
+      // but we also set inline styles for robustness:
       navLinks.style.top = h + 'px';
-      // Make the dropdown panel fill the rest of the viewport and be scrollable
       navLinks.style.maxHeight = `calc(100vh - ${h}px)`;
     }
 
-    const openMenu = () => {
-      if (!navLinks.classList.contains('show')) {
-        applyMobilePanelSize();
-        navLinks.classList.add('show');
-        hamburger.setAttribute('aria-expanded', 'true');
-        document.body.classList.add('nav-open');
-      }
-    };
-    const closeMenu = () => {
-      if (navLinks.classList.contains('show')) {
-        navLinks.classList.remove('show');
-        hamburger.setAttribute('aria-expanded', 'false');
-        document.body.classList.remove('nav-open');
-      }
-    };
-    const toggleMenu = () => {
-      if (navLinks.classList.contains('show')) closeMenu(); else openMenu();
-    };
+    function openMenu() {
+      applyMobilePanelSize();
+      navLinks.classList.add('show');
+      document.body.classList.add('nav-open');
+      hamburger.setAttribute('aria-expanded', 'true');
+    }
+    function closeMenu() {
+      navLinks.classList.remove('show');
+      document.body.classList.remove('nav-open');
+      hamburger.setAttribute('aria-expanded', 'false');
+    }
+    function toggleMenu() {
+      navLinks.classList.contains('show') ? closeMenu() : openMenu();
+    }
 
     if (!hamburger.__wired) {
       hamburger.__wired = true;
       hamburger.addEventListener('click', toggleMenu, { passive: true });
-      // Touch support (prevents ghost double-tap on some mobiles)
+      // Touch support (prevents double-trigger on some mobiles)
       hamburger.addEventListener('touchstart', (e)=>{ e.preventDefault(); toggleMenu(); }, { passive: false });
     }
 
-    // Auto-close after tapping a link on mobile
+    // Auto-close after tapping a link (mobile)
     qsa('a', navLinks).forEach(a => {
       if (!a.__wiredClose) {
         a.__wiredClose = true;
-        a.addEventListener('click', () => {
-          if (window.innerWidth < 1024) closeMenu();
-        });
+        a.addEventListener('click', () => { if (window.innerWidth < 1024) closeMenu(); });
       }
     });
 
@@ -74,9 +68,7 @@
     // ESC to close
     if (!document.__navEsc) {
       document.__navEsc = true;
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeMenu();
-      });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
     }
 
     // Resize: recalc panel size and reset on desktop
@@ -84,9 +76,7 @@
       window.__navResize = true;
       window.addEventListener('resize', () => {
         if (window.innerWidth >= 1024) {
-          navLinks.classList.remove('show');
-          document.body.classList.remove('nav-open');
-          hamburger.setAttribute('aria-expanded', 'false');
+          closeMenu();
           navLinks.style.maxHeight = '';
           navLinks.style.top = '';
         } else if (navLinks.classList.contains('show')) {
@@ -100,7 +90,7 @@
   function computeCartCount() {
     try {
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      // Support both qty & quantity
+      // support both qty & quantity props
       return cart.reduce((sum, it) => sum + Number(it.qty ?? it.quantity ?? 0), 0);
     } catch { return 0; }
   }
@@ -111,14 +101,11 @@
   window.updateCartCount = updateCartCount;
 
   // Init
+  const init = () => { wireNavbar(); updateCartCount(); };
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      wireNavbar();
-      updateCartCount();
-    }, { once: true });
+    document.addEventListener('DOMContentLoaded', init, { once: true });
   } else {
-    wireNavbar();
-    updateCartCount();
+    init();
   }
 
   // Update when cart changes in another tab
