@@ -4,24 +4,21 @@
 
 /* ---------- Variables ---------- */
 :root{
-  /* Core palette */
   --bg:#ffffff;
   --surface:#fafbfc;
   --surface-2:#f3f4f6;
   --line:#e6e7eb;
-  --text:#1f2937;      /* neutral-800 */
-  --muted:#6b7280;     /* neutral-500 */
-  --brand:#00a4a6;     /* teal-ish brand accent (you can tweak) */
+  --text:#1f2937;
+  --muted:#6b7280;
+  --brand:#00a4a6;
   --brand-dark:#008a8c;
   --danger:#ef4444;
   --success:#16a34a;
 
-  /* Effects */
   --shadow-sm:0 1px 2px rgba(16,24,40,.06);
   --shadow-md:0 4px 12px rgba(16,24,40,.08);
   --shadow-lg:0 16px 36px rgba(16,24,40,.12);
 
-  /* Sizing */
   --container:1160px;
   --nav-h:68px;
   --radius:14px;
@@ -51,7 +48,7 @@ h3{font-size:18px;font-weight:600}
 .section{max-width:var(--container);margin:28px auto;padding:0 18px}
 
 /* ======================================================
-   TOP UTILITY BAR (optional) + NAVBAR
+   TOPBAR (optional) + NAVBAR
 ====================================================== */
 .topbar{
   background:var(--surface-2);border-bottom:1px solid var(--line);color:#0f172a;
