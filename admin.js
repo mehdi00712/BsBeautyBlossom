@@ -247,11 +247,18 @@
     const navLinks = document.querySelector(".nav-links");
     if (hamburger && navLinks && !hamburger.__wired) {
       hamburger.__wired = true;
-      hamburger.addEventListener("click", ()=>{
+      const toggle = () => {
         const expanded = hamburger.getAttribute('aria-expanded') === 'true';
         hamburger.setAttribute('aria-expanded', String(!expanded));
         navLinks.classList.toggle("show");
+        document.body.classList.toggle('nav-open', !expanded);
+      };
+      hamburger.addEventListener("click", toggle);
+      navLinks.querySelectorAll('a').forEach(a=>{
+        a.addEventListener('click', ()=>{ if (window.innerWidth < 1024) toggle(); });
       });
+      document.addEventListener('keydown', e=>{ if (e.key==='Escape') { navLinks.classList.remove('show'); hamburger.setAttribute('aria-expanded','false'); document.body.classList.remove('nav-open'); }});
+      document.addEventListener('click', e=>{ if (window.innerWidth<1024 && !document.querySelector('.navbar').contains(e.target)) { navLinks.classList.remove('show'); hamburger.setAttribute('aria-expanded','false'); document.body.classList.remove('nav-open'); }});
     }
   })();
 })();
