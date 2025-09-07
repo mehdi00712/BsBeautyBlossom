@@ -1,184 +1,222 @@
-// search.js — global autocomplete with mini-cart fallback
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>B’s Beauty Blossom</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
 
-(function () {
-  if (window.__SEARCH_READY__) return; window.__SEARCH_READY__ = true;
+<header>
+  <nav class="navbar">
+    <div class="logo">
+      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
+    </div>
+    <ul class="nav-links">
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="perfume.html">Perfume</a></li>
+      <li><a href="body.html">Body</a></li>
+      <li><a href="skincare.html">Skincare</a></li>
+      <li><a href="cosmetics.html">Cosmetics</a></li>
+      <li><a href="jewellery.html">Jewellery</a></li>
+      <li><a href="gift.html">Gift</a></li>
+      <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
+      <li><a href="admin.html">Admin</a></li>
+    </ul>
+    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
+  </nav>
+  <div id="nav-overlay"></div>
+</header>
 
-  const input = document.getElementById('search-bar');
-  const list  = document.getElementById('search-suggestions');
-  if (!input || !list) return;
+<!-- Search -->
+<div class="section">
+  <div class="search-container">
+    <input type="text" id="search-bar" placeholder="Search by brand or product name…">
+    <ul id="search-suggestions"></ul>
+  </div>
+</div>
 
-  let ALL = []; // cached products [{id, name, brand, category, imageURL, fromPrice}]
+<!-- Hero (editable via Admin → Site Settings) -->
+<section id="hero" class="hero">
+  <img id="hero-banner" src="https://via.placeholder.com/1600x900?text=B%27s+Beauty+Blossom" alt="Banner" class="hero-img">
+  <div class="hero-overlay">
+    <h1 id="hero-title">Discover Your Signature Scent</h1>
+    <p id="hero-subtitle">Curated beauty & fragrances</p>
+  </div>
+</section>
 
-  // Helpers
-  const qs  = (s, r=document) => r.querySelector(s);
-  const esc = (s='') => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+<!-- Simple USPs -->
+<section class="section">
+  <div class="product-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card center">
+      <h3>🚚 Free Delivery</h3>
+      <p class="muted">Orders over Rs 2,500</p>
+    </div>
+    <div class="card center">
+      <h3>✅ Authentic</h3>
+      <p class="muted">Trusted brands only</p>
+    </div>
+    <div class="card center">
+      <h3>💬 Support</h3>
+      <p class="muted">Friendly & fast</p>
+    </div>
+  </div>
+</section>
 
-  function computeFromPrice(p){
-    const base = Number(p.basePrice || 0) || 0;
-    const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-    const prices = sizes.map(s => Number((s && s.price) || 0)).filter(n => n > 0);
-    return prices.length ? Math.min(...prices) : base;
+<!-- Featured (optional; controlled in Admin → Site Settings) -->
+<section id="featured-section" class="section">
+  <h2>Featured</h2>
+  <div id="home-featured" class="product-grid">
+    <p class="muted">Loading…</p>
+  </div>
+</section>
+
+<!-- Shop by Category (simple) -->
+<section class="section">
+  <h2>Shop by Category</h2>
+  <div class="product-grid" style="grid-template-columns:repeat(6,1fr)">
+    <a class="product" href="perfume.html">
+      <img src="https://via.placeholder.com/800x800?text=Perfume" alt="Perfume">
+      <div class="pad center"><h3>Perfume</h3></div>
+    </a>
+    <a class="product" href="skincare.html">
+      <img src="https://via.placeholder.com/800x800?text=Skincare" alt="Skincare">
+      <div class="pad center"><h3>Skincare</h3></div>
+    </a>
+    <a class="product" href="cosmetics.html">
+      <img src="https://via.placeholder.com/800x800?text=Cosmetics" alt="Cosmetics">
+      <div class="pad center"><h3>Cosmetics</h3></div>
+    </a>
+    <a class="product" href="body.html">
+      <img src="https://via.placeholder.com/800x800?text=Body" alt="Body">
+      <div class="pad center"><h3>Body</h3></div>
+    </a>
+    <a class="product" href="jewellery.html">
+      <img src="https://via.placeholder.com/800x800?text=Jewellery" alt="Jewellery">
+      <div class="pad center"><h3>Jewellery</h3></div>
+    </a>
+    <a class="product" href="gift.html">
+      <img src="https://via.placeholder.com/800x800?text=Gift" alt="Gift">
+      <div class="pad center"><h3>Gift</h3></div>
+    </a>
+  </div>
+</section>
+
+<!-- Newsletter (simple) -->
+<section class="section">
+  <div class="card center">
+    <h2>Join Our Beauty Circle</h2>
+    <p class="muted">Exclusive offers & new drops.</p>
+    <form onsubmit="event.preventDefault(); alert('Thanks! You’re on the list.');" style="max-width:520px;margin:0 auto">
+      <div class="row-2">
+        <input type="text" placeholder="Your name" required>
+        <input type="email" placeholder="Your email" required>
+      </div>
+      <button class="btn btn-primary">Subscribe</button>
+    </form>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
+</footer>
+
+<!-- Firebase (Compat) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<!-- Navbar / cart / hamburger -->
+<script src="script.js" defer></script>
+
+<!-- Minimal home data loader -->
+<script>
+(function(){
+  function optimizeCloudinary(url, width) {
+    try {
+      if (!url || !/res\.cloudinary\.com/.test(url)) return url;
+      return url.replace(/\/upload\/(?!.*\/)/, `/upload/f_auto,q_auto,w_${width}/`);
+    } catch { return url; }
   }
 
-  function cartData(){
-    try{
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      // Normalize fields (support qty/quantity)
-      return cart.map(it => ({
-        name: it.name || '',
-        imageURL: it.imageURL || it.img || '',
-        price: Number(it.price || it.unitPrice || 0) || 0,
-        qty: Number(it.qty ?? it.quantity ?? 1) || 1
-      }));
-    }catch{ return []; }
-  }
+  // Fill hero + (optional) featured from Firestore: site/home
+  window.applyHomeData = async function(h){
+    const title = document.getElementById('hero-title');
+    const sub   = document.getElementById('hero-subtitle');
+    const img   = document.getElementById('hero-banner');
 
-  function money(n){ return 'Rs' + Number(n||0).toFixed(0); }
+    if (h.heroTitle) title.textContent = h.heroTitle;
+    if (h.heroSubtitle) sub.textContent = h.heroSubtitle;
 
-  function closeList(){
-    list.classList.remove('show');
-    list.innerHTML = '';
-  }
-
-  function openList(){
-    list.classList.add('show');
-  }
-
-  function renderResults(rows){
-    if (!rows.length){
-      return renderMiniCart();
+    if (h.bannerImage) {
+      const targetW = Math.min(window.innerWidth, 1600);
+      img.src = optimizeCloudinary(h.bannerImage, targetW);
     }
-    list.innerHTML = rows.map(r => `
-      <li class="sg-item" data-id="${esc(r.id)}">
-        <img src="${esc(r.imageURL || 'https://via.placeholder.com/80x80?text=No+Img')}" alt="">
-        <div>
-          <div class="sg-name">${esc(r.name)}</div>
-          <div class="meta">${esc(r.brand || r.category || '')}</div>
-        </div>
-        <div class="sg-price">${r.fromPrice ? money(r.fromPrice) : ''}</div>
-      </li>
-    `).join('');
-    // Click → go to product page
-    list.querySelectorAll('.sg-item').forEach(li=>{
-      li.addEventListener('click', ()=>{
-        const id = li.getAttribute('data-id');
-        if (id) window.location.href = `product.html?id=${encodeURIComponent(id)}`;
-      });
-    });
+
+    // Featured
+    const featuredWrap = document.getElementById('home-featured');
+    const featuredSec  = document.getElementById('featured-section');
+
+    if (h.showFeatured && h.featuredCategory) {
+      try{
+        const snap = await db.collection('products')
+          .where('category','==', String(h.featuredCategory).toLowerCase())
+          .where('active','==', true)
+          .limit(8).get();
+
+        featuredWrap.innerHTML = '';
+        if (snap.empty) {
+          featuredWrap.innerHTML = '<p class="muted">No featured products yet.</p>';
+        } else {
+          snap.forEach(d => {
+            const p = d.data(); const id = d.id;
+            const base = Number(p.basePrice || 0) || 0;
+            const sizes = Array.isArray(p.sizes) ? p.sizes : [];
+            const prices = sizes.map(s => Number((s && s.price) || 0)).filter(n => n > 0);
+            const from = prices.length ? Math.min(...prices) : base;
+
+            featuredWrap.insertAdjacentHTML('beforeend', `
+              <a class="product" href="product.html?id=${id}">
+                <img src="${p.imageURL || 'https://via.placeholder.com/600x750?text=No+Image'}" alt="${p.name||''}">
+                <div class="pad">
+                  <h3>${p.name||''}</h3>
+                  ${p.brand ? `<div class="brand">${p.brand}</div>` : ''}
+                  <div class="price">${from>0 ? 'From Rs'+from : ''}</div>
+                </div>
+              </a>
+            `);
+          });
+        }
+      }catch(e){
+        console.error(e);
+        featuredWrap.innerHTML = '<p class="muted">Couldn’t load featured products.</p>';
+      }
+    } else {
+      featuredSec.style.display = 'none';
+    }
+
+    if (window.applySearch) window.applySearch();
+  };
+
+  async function init(){
+    try {
+      const snap = await db.collection('site').doc('home').get();
+      const h = snap.exists ? snap.data() : {};
+      await window.applyHomeData(h);
+    } catch(e) { console.error("Home load error:", e); }
   }
 
-  function renderMiniCart(){
-    const cart = cartData();
-    if (!cart.length){
-      list.innerHTML = `
-        <li class="mini-empty">
-          <div class="mini-title">Your bag is empty</div>
-          <div class="mini-sub">Try searching another product or browse categories.</div>
-          <div class="mini-cta">
-            <a class="btn btn-primary" href="perfume.html">Shop Perfume</a>
-            <a class="btn" href="skincare.html">Shop Skincare</a>
-          </div>
-        </li>
-      `;
-      return;
-    }
-
-    let subtotal = 0;
-    const itemsHTML = cart.slice(0, 6).map(it=>{
-      const line = it.price * it.qty;
-      subtotal += line;
-      return `
-        <div class="mini-row">
-          <img class="mini-thumb" src="${esc(it.imageURL || 'https://via.placeholder.com/80x80?text=Img')}" alt="">
-          <div class="mini-info">
-            <div class="mini-name">${esc(it.name)}</div>
-            <div class="mini-meta">Qty ${it.qty} • ${money(it.price)}</div>
-          </div>
-          <div class="mini-line">${money(line)}</div>
-        </div>
-      `;
-    }).join('');
-
-    list.innerHTML = `
-      <li class="mini-cart">
-        <div class="mini-title">In your bag</div>
-        <div class="mini-items">${itemsHTML}</div>
-        <div class="mini-subtotal">
-          <span>Subtotal</span>
-          <strong>${money(subtotal)}</strong>
-        </div>
-        <div class="mini-cta">
-          <a class="btn" href="cart.html">View Cart</a>
-          <a class="btn btn-primary" href="cart.html">Checkout</a>
-        </div>
-        <div class="mini-note muted">Tip: keep typing to search the catalog.</div>
-      </li>
-    `;
-  }
-
-  function filter(query){
-    const q = query.trim().toLowerCase();
-    if (!q){
-      // Don’t show anything automatically; close dropdown
-      closeList();
-      return;
-    }
-    const rows = ALL.filter(p=>{
-      const n = (p.name||'').toLowerCase();
-      const b = (p.brand||'').toLowerCase();
-      return n.includes(q) || b.includes(q);
-    }).slice(0, 12);
-    renderResults(rows);
-    openList();
-  }
-
-  // Load products once
-  async function loadProducts(){
-    try{
-      const snap = await db.collection('products').where('active','==',true).limit(400).get();
-      ALL = snap.docs.map(d=>{
-        const p = d.data();
-        return {
-          id: d.id,
-          name: p.name || '',
-          brand: p.brand || '',
-          category: p.category || '',
-          imageURL: p.imageURL || '',
-          fromPrice: computeFromPrice(p)
-        };
-      });
-    }catch(e){
-      console.error('Search load error:', e);
-      ALL = [];
-    }
-  }
-
-  // Wire events
-  input.addEventListener('input', (e)=> filter(e.target.value));
-  input.addEventListener('focus', ()=>{
-    // If there’s text, filter; if not but user focuses, don’t auto-open.
-    if (input.value.trim()){
-      filter(input.value);
-    }
-  });
-
-  // Close on outside click / ESC / route change
-  document.addEventListener('click', (e)=>{
-    if (!list.contains(e.target) && e.target !== input) closeList();
-  });
-  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeList(); });
-
-  // Re-open with updated cart if currently showing mini-cart
-  window.addEventListener('storage', (e)=>{
-    if (e.key === 'cart' && list.classList.contains('show') && !input.value.trim()){
-      renderMiniCart();
-    }
-  });
-
-  // Init
   if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', loadProducts, { once:true });
+    document.addEventListener('DOMContentLoaded', init, { once:true });
   } else {
-    loadProducts();
+    init();
   }
 })();
+</script>
+
+<!-- Global search/autocomplete -->
+<script src="search.js" defer></script>
+</body>
+</html>
