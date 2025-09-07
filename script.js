@@ -1,10 +1,13 @@
-// script.js — Navbar toggle (open/close) + cart badge + safe behaviors
+// script.js — Premium navbar toggle (open/close) + cart badge + safety guards
 (function () {
-  if (window.__NAV_READY__) return; window.__NAV_READY__ = true;
+  // Prevent double wiring across pages
+  if (window.__NAV_READY__) return; 
+  window.__NAV_READY__ = true;
 
-  const qs = (s, r=document) => r.querySelector(s);
+  const qs  = (s, r=document) => r.querySelector(s);
   const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
 
+  // Create overlay if missing
   function ensureOverlay(){
     let ov = qs('#nav-overlay');
     if (!ov) {
@@ -23,11 +26,13 @@
 
     if (!navbar || !hamburger || !navLinks) return;
 
+    // ARIA
     hamburger.setAttribute('aria-label','menu');
     hamburger.setAttribute('aria-expanded','false');
 
+    // Open/close
     const openMenu = ()=>{
-      // size panel to sit under current navbar height
+      // dynamically align panel below current navbar height
       const h = navbar.offsetHeight || 64;
       navLinks.style.top = h + 'px';
       navLinks.style.maxHeight = `calc(100vh - ${h}px)`;
@@ -36,9 +41,10 @@
       overlay.classList.add('show');
       document.body.classList.add('nav-open');
       hamburger.setAttribute('aria-expanded','true');
-      // Optional: change icon from ☰ to ✕
-      hamburger.dataset.icon = hamburger.innerHTML;
-      hamburger.innerHTML = '&#10005;'; // ×
+
+      // Switch icon to "×"
+      if (!hamburger.dataset.icon) hamburger.dataset.icon = hamburger.innerHTML;
+      hamburger.innerHTML = '&#10005;';
     };
 
     const closeMenu = ()=>{
@@ -46,28 +52,34 @@
       overlay.classList.remove('show');
       document.body.classList.remove('nav-open');
       hamburger.setAttribute('aria-expanded','false');
+
       if (hamburger.dataset.icon) hamburger.innerHTML = hamburger.dataset.icon;
+      // cleanup inline sizing so desktop layout isn’t affected
+      navLinks.style.maxHeight = '';
+      navLinks.style.top = '';
     };
 
     const toggleMenu = ()=>{
-      navLinks.classList.contains('show') ? closeMenu() : openMenu();
+      if (navLinks.classList.contains('show')) closeMenu();
+      else openMenu();
     };
 
-    // Main toggle (tap again closes)
+    // Wire hamburger (tap/click)
     if (!hamburger.__wired) {
       hamburger.__wired = true;
-      hamburger.addEventListener('click', toggleMenu);
-      hamburger.addEventListener('touchstart', e => { e.preventDefault(); toggleMenu(); }, { passive:false });
+      hamburger.addEventListener('click', (e)=>{ e.stopPropagation(); toggleMenu(); });
+      // Mobile touch devices
+      hamburger.addEventListener('touchstart', (e)=>{ e.preventDefault(); toggleMenu(); }, { passive:false });
     }
 
-    // Click outside (overlay) closes
+    // Clicking overlay closes
     if (!overlay.__wired) {
       overlay.__wired = true;
       overlay.addEventListener('click', closeMenu);
       overlay.addEventListener('touchstart', closeMenu, { passive:true });
     }
 
-    // Link click closes (on mobile) and navigates
+    // Clicking any link inside menu closes (on mobile only)
     qsa('a', navLinks).forEach(a=>{
       if (a.__wiredClose) return;
       a.__wiredClose = true;
@@ -79,17 +91,15 @@
     // ESC closes
     if (!document.__navEsc) {
       document.__navEsc = true;
-      document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
+      document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeMenu(); });
     }
 
-    // Resize: reset on desktop, keep sizing on mobile
+    // Resize: reset on desktop, re-calc on mobile
     if (!window.__navResize) {
       window.__navResize = true;
       window.addEventListener('resize', ()=>{
         if (window.innerWidth >= 1024) {
           closeMenu();
-          navLinks.style.maxHeight = '';
-          navLinks.style.top = '';
         } else if (navLinks.classList.contains('show')) {
           const h = navbar.offsetHeight || 64;
           navLinks.style.top = h + 'px';
@@ -98,7 +108,7 @@
       });
     }
 
-    // Scroll closes (prevents stuck-open feel)
+    // Optional: close on scroll to avoid stuck-open
     if (!window.__navScrollClose) {
       window.__navScrollClose = true;
       window.addEventListener('scroll', ()=>{
@@ -121,7 +131,8 @@
   window.updateCartCount = updateCartCount;
 
   function init(){
-    wireNavbar();
+    // If any other script errors out, guard navbar wiring
+    try { wireNavbar(); } catch(e){ console.error('Navbar wiring error:', e); }
     updateCartCount();
   }
 
