@@ -4,13 +4,16 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Body – B’s Beauty Blossom</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
+
 <header>
   <nav class="navbar">
-    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
+    <div class="logo">
+      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
+    </div>
     <ul class="nav-links">
       <li><a href="index.html">Home</a></li>
       <li><a href="perfume.html">Perfume</a></li>
@@ -24,19 +27,35 @@
     </ul>
     <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
   </nav>
+  <div id="nav-overlay"></div>
 </header>
 
-<!-- Search with autocomplete -->
-<div class="search-container" style="max-width:1100px;margin:10px auto;padding:0 10px;">
-  <input type="text" id="search-bar" placeholder="Search by brand or product name…"
-         style="width:100%;padding:10px 12px;border:1px solid #23232a;border-radius:10px;background:#0d0d12;color:#fff;">
+<!-- Global search -->
+<div class="section" style="padding-top:16px">
+  <div class="search-container">
+    <input type="text" id="search-bar" placeholder="Search by brand or product name…">
+    <ul id="search-suggestions"></ul>
+  </div>
 </div>
 
 <section class="section">
-  <h1 class="page-title">Body</h1>
+  <h1>Body</h1>
 
-  <!-- Brand groups will be rendered into this container by products.js -->
-  <div id="product-grid" class="product-grid"></div>
+  <!-- Optional tiny toolbar (non-blocking if products.js ignores it) -->
+  <div class="card" style="display:flex;gap:10px;align-items:center;justify-content:flex-end">
+    <label class="muted" for="sort">Sort</label>
+    <select id="sort" style="max-width:180px">
+      <option value="default">Recommended</option>
+      <option value="price-asc">Price: Low to High</option>
+      <option value="price-desc">Price: High to Low</option>
+      <option value="name-asc">Name: A → Z</option>
+    </select>
+  </div>
+
+  <!-- Products will render here -->
+  <div id="product-grid" class="product-grid">
+    <p class="muted">Loading products…</p>
+  </div>
 </section>
 
 <footer class="site-footer">
@@ -48,12 +67,56 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Category flag + render -->
-<script>window.PRODUCT_CATEGORY='body';</script>
-<script src="products.js" defer></script>
-<script src="script.js" defer></script>
+<!-- Tell products.js which category to load -->
+<script>window.PRODUCT_CATEGORY = 'body';</script>
 
-<!-- Autocomplete + grid filtering -->
+<!-- Site scripts (order matters: products.js needs db from firebase-config.js) -->
+<script src="script.js" defer></script>
+<script src="products.js" defer></script>
 <script src="search.js" defer></script>
+
+<!-- Optional: simple client-side sort (works with cards rendered by products.js) -->
+<script>
+(function(){
+  const grid = document.getElementById('product-grid');
+  const sortSel = document.getElementById('sort');
+  if (!grid || !sortSel) return;
+
+  function getPriceFromCard(card){
+    const priceEl = card.querySelector('.price');
+    if (!priceEl) return Number.MAX_SAFE_INTEGER;
+    const m = priceEl.textContent.replace(/[^0-9.]/g,'');
+    const n = Number(m||0);
+    return isNaN(n) ? Number.MAX_SAFE_INTEGER : n;
+  }
+
+  function sortCards(mode){
+    const cards = Array.from(grid.querySelectorAll('.product'));
+    if (!cards.length) return;
+    let sorted = cards.slice();
+    if (mode === 'price-asc') {
+      sorted.sort((a,b)=>getPriceFromCard(a)-getPriceFromCard(b));
+    } else if (mode === 'price-desc') {
+      sorted.sort((a,b)=>getPriceFromCard(b)-getPriceFromCard(a));
+    } else if (mode === 'name-asc') {
+      sorted.sort((a,b)=>{
+        const an = (a.querySelector('h3')?.textContent || '').toLowerCase();
+        const bn = (b.querySelector('h3')?.textContent || '').toLowerCase();
+        return an.localeCompare(bn);
+      });
+    } else {
+      // default: do nothing (keep original order from Firestore)
+      return;
+    }
+    // Re-append in new order
+    sorted.forEach(c=>grid.appendChild(c));
+  }
+
+  sortSel.addEventListener('change', ()=> sortCards(sortSel.value));
+  // Run once after products.js populates (small delay)
+  document.addEventListener('DOMContentLoaded', ()=> setTimeout(()=>sortCards('default'), 800));
+})();
+</script>
+
 </body>
 </html>
