@@ -4,10 +4,16 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>B’s Beauty Blossom</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
+
+<!-- Optional topbar -->
+<div class="topbar">
+  <div class="inner">Free delivery over Rs 2,500 • 100% authentic products</div>
+</div>
+
 <header>
   <nav class="navbar">
     <div class="logo">
@@ -26,13 +32,16 @@
     </ul>
     <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
   </nav>
+  <!-- overlay used by the mobile menu -->
+  <div id="nav-overlay"></div>
 </header>
 
 <!-- Global search -->
-<div class="search-container" style="max-width:1100px;margin:10px auto;padding:0 10px;">
-  <input type="text" id="search-bar" placeholder="Search by brand or product name…"
-         style="width:100%;padding:10px 12px;border:1px solid #23232a;border-radius:10px;background:#0d0d12;color:#fff;">
-  <ul id="search-suggestions" class="search-suggestions"></ul>
+<div class="section">
+  <div class="search-container">
+    <input type="text" id="search-bar" placeholder="Search by brand or product name…">
+    <ul id="search-suggestions"></ul>
+  </div>
 </div>
 
 <!-- Hero -->
@@ -67,15 +76,17 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Navbar + cart badge -->
+<!-- Navbar / cart badge / hamburger toggle -->
 <script src="script.js" defer></script>
 
 <!-- Home loader -->
 <script>
 (function(){
   function optimizeCloudinary(url, width) {
-    if (!url || !/res\.cloudinary\.com/.test(url)) return url;
-    return url.replace(/\/upload\/(?!.*\/)/, `/upload/f_auto,q_auto,w_${width}/`);
+    try{
+      if (!url || !/res\.cloudinary\.com/.test(url)) return url;
+      return url.replace(/\/upload\/(?!.*\/)/, `/upload/f_auto,q_auto,w_${width}/`);
+    }catch{return url;}
   }
 
   window.applyHomeData = async function(h) {
@@ -103,7 +114,7 @@
         galleryEl.appendChild(g);
       });
     } else {
-      galleryEl.innerHTML = '<p>No gallery images yet.</p>';
+      galleryEl.innerHTML = '<p class="muted">No gallery images yet.</p>';
     }
 
     // Featured
@@ -115,7 +126,7 @@
         .limit(8).get();
       grid.innerHTML = '';
       if (snap.empty) {
-        grid.innerHTML = '<p>No featured products yet.</p>';
+        grid.innerHTML = '<p class="muted">No featured products yet.</p>';
       } else {
         snap.forEach(d => {
           const p = d.data(); const id = d.id;
@@ -132,9 +143,11 @@
             <a href="product.html?id=${id}">
               <img src="${p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
             </a>
-            <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
-            ${p.brand ? `<div class="muted">${p.brand}</div>` : ''}
-            <p class="price">${from>0 ? 'From Rs'+from : ''}</p>
+            <div class="pad">
+              <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
+              ${p.brand ? `<div class="brand">${p.brand}</div>` : ''}
+              <div class="price">${from>0 ? 'From Rs'+from : ''}</div>
+            </div>
           `;
           grid.appendChild(card);
         });
@@ -160,7 +173,7 @@
 })();
 </script>
 
-<!-- Search/autocomplete -->
+<!-- Global search/autocomplete -->
 <script src="search.js" defer></script>
 </body>
 </html>
