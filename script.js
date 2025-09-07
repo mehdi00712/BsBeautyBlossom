@@ -1,5 +1,4 @@
-// script.js — Navbar hamburger + cart badge (global)
-// Safe-guard against double init
+// script.js — Navbar hamburger + cart badge (mobile-safe height/scroll)
 (function () {
   if (window.__NAV_INIT__) return;
   window.__NAV_INIT__ = true;
@@ -7,21 +6,29 @@
   function qs(s, r = document) { return r.querySelector(s); }
   function qsa(s, r = document) { return Array.from(r.querySelectorAll(s)); }
 
-  // ----- NAVBAR / HAMBURGER -----
   function wireNavbar() {
-    const navbar = qs('.navbar');
-    const hamburger = qs('.hamburger');
+    const navbar   = qs('.navbar');
+    const hamburger= qs('.hamburger');
     const navLinks = qs('.nav-links');
 
     if (!navbar || !hamburger || !navLinks) return;
 
-    // Make sure ARIA is set
+    // Ensure ARIA
     hamburger.setAttribute('aria-expanded', 'false');
     hamburger.setAttribute('aria-label', 'menu');
 
-    // Open / close
+    function applyMobilePanelSize() {
+      // Measure current navbar height (can change between desktop/mobile)
+      const h = navbar.offsetHeight || 64;
+      // Position the dropdown immediately under the navbar
+      navLinks.style.top = h + 'px';
+      // Make the dropdown panel fill the rest of the viewport and be scrollable
+      navLinks.style.maxHeight = `calc(100vh - ${h}px)`;
+    }
+
     const openMenu = () => {
       if (!navLinks.classList.contains('show')) {
+        applyMobilePanelSize();
         navLinks.classList.add('show');
         hamburger.setAttribute('aria-expanded', 'true');
         document.body.classList.add('nav-open');
@@ -38,15 +45,14 @@
       if (navLinks.classList.contains('show')) closeMenu(); else openMenu();
     };
 
-    // Click hamburger
     if (!hamburger.__wired) {
       hamburger.__wired = true;
       hamburger.addEventListener('click', toggleMenu, { passive: true });
-      // Touch support
+      // Touch support (prevents ghost double-tap on some mobiles)
       hamburger.addEventListener('touchstart', (e)=>{ e.preventDefault(); toggleMenu(); }, { passive: false });
     }
 
-    // Close when clicking a link (mobile only)
+    // Auto-close after tapping a link on mobile
     qsa('a', navLinks).forEach(a => {
       if (!a.__wiredClose) {
         a.__wiredClose = true;
@@ -56,16 +62,16 @@
       }
     });
 
-    // Close when clicking outside (mobile)
+    // Click outside to close (mobile)
     if (!document.__navOutside) {
       document.__navOutside = true;
       document.addEventListener('click', (e) => {
         if (window.innerWidth >= 1024) return;
-        if (!navbar.contains(e.target)) closeMenu();
+        if (!qs('.navbar').contains(e.target)) closeMenu();
       });
     }
 
-    // ESC closes menu
+    // ESC to close
     if (!document.__navEsc) {
       document.__navEsc = true;
       document.addEventListener('keydown', (e) => {
@@ -73,7 +79,7 @@
       });
     }
 
-    // On resize: reset if switching to desktop
+    // Resize: recalc panel size and reset on desktop
     if (!window.__navResize) {
       window.__navResize = true;
       window.addEventListener('resize', () => {
@@ -81,6 +87,10 @@
           navLinks.classList.remove('show');
           document.body.classList.remove('nav-open');
           hamburger.setAttribute('aria-expanded', 'false');
+          navLinks.style.maxHeight = '';
+          navLinks.style.top = '';
+        } else if (navLinks.classList.contains('show')) {
+          applyMobilePanelSize();
         }
       });
     }
@@ -90,6 +100,7 @@
   function computeCartCount() {
     try {
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      // Support both qty & quantity
       return cart.reduce((sum, it) => sum + Number(it.qty ?? it.quantity ?? 0), 0);
     } catch { return 0; }
   }
@@ -99,7 +110,7 @@
   }
   window.updateCartCount = updateCartCount;
 
-  // Init on DOM ready
+  // Init
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       wireNavbar();
@@ -110,7 +121,7 @@
     updateCartCount();
   }
 
-  // Also update on storage changes (if another tab updates cart)
+  // Update when cart changes in another tab
   window.addEventListener('storage', (e) => {
     if (e.key === 'cart') updateCartCount();
   });
