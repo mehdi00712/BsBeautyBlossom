@@ -25,9 +25,10 @@
   </nav>
 </header>
 
+<!-- Per-page search -->
 <div class="search-container section" style="margin-top:16px;">
   <input type="text" id="search-bar" placeholder="Search perfumes by name or brand…">
-  <ul id="search-suggestions" class="search-suggestions"></ul>
+  <ul id="search-suggestions"></ul>
 </div>
 
 <section class="section">
@@ -40,7 +41,7 @@
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
-<!-- Firebase -->
+<!-- Firebase (Compat) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -48,10 +49,10 @@
 <!-- Page flags -->
 <script>
   window.PRODUCT_CATEGORY = 'perfume';
-  window.GROUP_BY_BRAND = true; // set false to disable brand grouping
+  window.GROUP_BY_BRAND = true; // set to false if you want a flat grid
 </script>
 
-<!-- JS -->
+<!-- Site JS -->
 <script src="script.js" defer></script>
 <script src="products.js" defer></script>
 <script src="search.js" defer></script>
