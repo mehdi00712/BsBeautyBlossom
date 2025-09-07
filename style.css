@@ -97,30 +97,57 @@ p { margin: 0.2rem 0 1rem; color: #d9d9e0; }
 .nav-links a:hover { background: #171720; text-decoration: none; }
 .nav-links a.active { background: #1f1f2a; border: 1px solid #2b2b36; }
 
+/* Hamburger visibility */
 .hamburger {
   display: none;
+  font-size: 26px;
+  line-height: 1;
   cursor: pointer;
-  font-size: 1.6rem;
+  user-select: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
 }
-
-/* Mobile menu */
-@media (max-width: 860px) {
-  .nav-links {
-    position: absolute;
-    right: 10px;
-    top: 58px;
-    flex-direction: column;
-    align-items: stretch;
-    background: #101018;
-    border: 1px solid #23232a;
-    border-radius: 12px;
-    padding: 8px;
-    display: none;
-    min-width: 220px;
-  }
-  .nav-links.show { display: flex; }
+.hamburger:focus { outline: none; }
+@media (max-width: 1023px) {
   .hamburger { display: block; }
 }
+
+/* Desktop nav */
+.nav-links {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+/* Mobile nav — collapsed by default */
+@media (max-width: 1023px) {
+  .nav-links {
+    position: absolute;
+    top: 64px;              /* adjust if your navbar height differs */
+    left: 0; right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: #0d0d12;
+    border-top: 1px solid #23232a;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .25s ease;
+    z-index: 999;           /* keep it above content */
+  }
+  .nav-links.show {
+    max-height: 80vh;       /* reveals menu */
+  }
+  .nav-links a, .nav-links .active, .nav-links li {
+    width: 100%;
+    display: block;
+    padding: 14px 16px;
+    border-bottom: 1px solid #1b1b22;
+  }
+  body.nav-open { overflow: hidden; } /* lock scroll when menu open */
+}
+
 
 /* =========================
    Buttons / Inputs
