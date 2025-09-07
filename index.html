@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>B’s Beauty Blossom</title>
+  <title>B’s Beauty Blossom — Beauty & Fragrance Boutique</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
@@ -11,7 +11,7 @@
 
 <!-- Optional topbar -->
 <div class="topbar">
-  <div class="inner">Free delivery over Rs 2,500 • 100% authentic products</div>
+  <div class="inner">Free delivery over Rs 2,500 • 100% authentic products • Secure payments</div>
 </div>
 
 <header>
@@ -32,7 +32,6 @@
     </ul>
     <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
   </nav>
-  <!-- overlay used by the mobile menu -->
   <div id="nav-overlay"></div>
 </header>
 
@@ -44,27 +43,160 @@
   </div>
 </div>
 
-<!-- Hero -->
+<!-- Hero: editable from Admin 'Site Settings' -->
 <section id="hero" class="hero">
-  <img id="hero-banner" src="https://via.placeholder.com/1600x900?text=Banner" alt="Banner" class="hero-img">
+  <img id="hero-banner" src="https://via.placeholder.com/1600x900?text=Welcome+to+B%27s+Beauty+Blossom" alt="Banner" class="hero-img">
   <div class="hero-overlay">
-    <h1 id="hero-title">Welcome to B’s Beauty Blossom</h1>
-    <p id="hero-subtitle">Curated beauty & fragrances</p>
+    <h1 id="hero-title">Discover Your Signature Scent</h1>
+    <p id="hero-subtitle">Curated beauty & fragrances — just for you</p>
   </div>
 </section>
 
-<!-- Featured -->
-<section id="featured-section" class="section">
-  <h2>Featured Products</h2>
-  <div id="home-featured" class="product-grid">
-    <p>Loading featured products…</p>
+<!-- USPs / Trust badges -->
+<section class="section">
+  <div class="product-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="card center">
+      <h3>🚚 Free Delivery</h3>
+      <p class="muted">Orders over Rs 2,500</p>
+    </div>
+    <div class="card center">
+      <h3>✅ 100% Authentic</h3>
+      <p class="muted">Trusted brands only</p>
+    </div>
+    <div class="card center">
+      <h3>🔒 Secure Payments</h3>
+      <p class="muted">Juice & more options</p>
+    </div>
+    <div class="card center">
+      <h3>💬 Friendly Support</h3>
+      <p class="muted">We’re here to help</p>
+    </div>
   </div>
 </section>
 
-<!-- Gallery -->
+<!-- Promo tiles -->
+<section class="section">
+  <div class="product-grid" style="grid-template-columns:repeat(3,1fr)">
+    <a class="product" href="perfume.html">
+      <img src="https://via.placeholder.com/1200x1200?text=Perfume+Edit" alt="Perfume Edit">
+      <div class="pad">
+        <h3>Perfume Edit</h3>
+        <div class="brand">Find your forever fragrance</div>
+      </div>
+    </a>
+    <a class="product" href="skincare.html">
+      <img src="https://via.placeholder.com/1200x1200?text=Skincare+Glow" alt="Skincare Glow">
+      <div class="pad">
+        <h3>Skincare Glow</h3>
+        <div class="brand">Hydrate, brighten, protect</div>
+      </div>
+    </a>
+    <a class="product" href="cosmetics.html">
+      <img src="https://via.placeholder.com/1200x1200?text=Makeup+Must-Haves" alt="Makeup Must-Haves">
+      <div class="pad">
+        <h3>Makeup Must-Haves</h3>
+        <div class="brand">Everyday staples to wow</div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- New In -->
+<section class="section">
+  <h2>New In</h2>
+  <div id="row-new" class="product-grid">
+    <p class="muted">Loading new arrivals…</p>
+  </div>
+</section>
+
+<!-- Best Sellers -->
+<section class="section">
+  <h2>Best Sellers</h2>
+  <div id="row-best" class="product-grid">
+    <p class="muted">Loading best sellers…</p>
+  </div>
+</section>
+
+<!-- Shop by Category -->
+<section class="section">
+  <h2>Shop by Category</h2>
+  <div class="product-grid" style="grid-template-columns:repeat(6,1fr)">
+    <a class="product" href="perfume.html">
+      <img src="https://via.placeholder.com/800x800?text=Perfume" alt="Perfume">
+      <div class="pad center"><h3>Perfume</h3></div>
+    </a>
+    <a class="product" href="skincare.html">
+      <img src="https://via.placeholder.com/800x800?text=Skincare" alt="Skincare">
+      <div class="pad center"><h3>Skincare</h3></div>
+    </a>
+    <a class="product" href="cosmetics.html">
+      <img src="https://via.placeholder.com/800x800?text=Cosmetics" alt="Cosmetics">
+      <div class="pad center"><h3>Cosmetics</h3></div>
+    </a>
+    <a class="product" href="body.html">
+      <img src="https://via.placeholder.com/800x800?text=Body" alt="Body">
+      <div class="pad center"><h3>Body</h3></div>
+    </a>
+    <a class="product" href="jewellery.html">
+      <img src="https://via.placeholder.com/800x800?text=Jewellery" alt="Jewellery">
+      <div class="pad center"><h3>Jewellery</h3></div>
+    </a>
+    <a class="product" href="gift.html">
+      <img src="https://via.placeholder.com/800x800?text=Gift" alt="Gift">
+      <div class="pad center"><h3>Gift</h3></div>
+    </a>
+  </div>
+</section>
+
+<!-- Shop by Brand (live from products) -->
+<section class="section">
+  <h2>Shop by Brand</h2>
+  <div id="brand-chips" class="brand-index">
+    <span class="muted">Loading brands…</span>
+  </div>
+</section>
+
+<!-- Lifestyle / Gallery (editable in admin) -->
 <section id="gallery-section" class="section">
-  <h2>Our Collection</h2>
+  <h2>Our World</h2>
   <div id="home-gallery" class="gallery-grid"></div>
+</section>
+
+<!-- Testimonials -->
+<section class="section">
+  <h2>Loved by Our Customers</h2>
+  <div class="product-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card">
+      <h3>“Amazing curation!”</h3>
+      <p class="muted">Found my perfect scent and skincare routine in one place. Fast delivery too.</p>
+      <p><strong>— Sarah M.</strong></p>
+    </div>
+    <div class="card">
+      <h3>“Authentic products”</h3>
+      <p class="muted">Everything is genuine and fresh. The team is super helpful with recommendations.</p>
+      <p><strong>— Nilesh R.</strong></p>
+    </div>
+    <div class="card">
+      <h3>“Will shop again”</h3>
+      <p class="muted">Great prices and a beautiful selection. Checkout was easy.</p>
+      <p><strong>— Aisha K.</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- Newsletter -->
+<section class="section">
+  <div class="card">
+    <h2>Join Our Beauty Circle</h2>
+    <p class="muted">Exclusive offers, early access & beauty tips — straight to your inbox.</p>
+    <form onsubmit="event.preventDefault(); alert('Thanks! You’re on the list.');">
+      <div class="row-2">
+        <input type="text" placeholder="Your name" required>
+        <input type="email" placeholder="Your email address" required>
+      </div>
+      <button class="btn btn-primary">Subscribe</button>
+    </form>
+  </div>
 </section>
 
 <footer class="site-footer">
@@ -76,20 +208,125 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Navbar / cart badge / hamburger toggle -->
+<!-- Navbar / cart / hamburger -->
 <script src="script.js" defer></script>
 
-<!-- Home loader -->
+<!-- Home data loader + dynamic rows -->
 <script>
 (function(){
+  // Optimize Cloudinary delivered images on the fly
   function optimizeCloudinary(url, width) {
-    try{
+    try {
       if (!url || !/res\.cloudinary\.com/.test(url)) return url;
       return url.replace(/\/upload\/(?!.*\/)/, `/upload/f_auto,q_auto,w_${width}/`);
-    }catch{return url;}
+    } catch { return url; }
   }
 
-  window.applyHomeData = async function(h) {
+  // Render product card
+  function productCard(docId, p){
+    const base = Number(p.basePrice || 0) || 0;
+    const sizes = Array.isArray(p.sizes) ? p.sizes : [];
+    const prices = sizes.map(s => Number((s && s.price) || 0)).filter(n => n > 0);
+    const from = prices.length ? Math.min(...prices) : base;
+    return `
+      <a class="product" href="product.html?id=${docId}">
+        <img src="${p.imageURL || 'https://via.placeholder.com/600x750?text=No+Image'}" alt="${p.name||''}">
+        <div class="pad">
+          <h3>${p.name||''}</h3>
+          ${p.brand ? `<div class="brand">${p.brand}</div>` : ''}
+          <div class="price">${from>0 ? 'From Rs'+from : ''}</div>
+        </div>
+      </a>
+    `;
+  }
+
+  // Load "New In" (expects product docs with boolean field `isNew`)
+  async function loadNew(){
+    const grid = document.getElementById('row-new');
+    try{
+      const snap = await db.collection('products')
+        .where('active','==',true)
+        .orderBy('createdAt','desc')
+        .limit(8).get();
+      grid.innerHTML = '';
+      if (snap.empty){ grid.innerHTML = '<p class="muted">No new products yet.</p>'; return; }
+      snap.forEach(d=> grid.insertAdjacentHTML('beforeend', productCard(d.id, d.data())));
+    }catch(e){
+      console.error(e);
+      grid.innerHTML = '<p class="muted">Couldn’t load new products.</p>';
+    }
+  }
+
+  // Load "Best Sellers" (expects boolean field `isBest` or fallback to most updated)
+  async function loadBest(){
+    const grid = document.getElementById('row-best');
+    try{
+      // Try explicit flag first
+      let snap = await db.collection('products')
+        .where('active','==',true)
+        .where('isBest','==',true)
+        .limit(8).get();
+
+      if (snap.empty){
+        // Fallback: most recently updated as pseudo best-sellers
+        snap = await db.collection('products')
+          .where('active','==',true)
+          .orderBy('updatedAt','desc')
+          .limit(8).get();
+      }
+
+      grid.innerHTML = '';
+      if (snap.empty){ grid.innerHTML = '<p class="muted">No best sellers yet.</p>'; return; }
+      snap.forEach(d=> grid.insertAdjacentHTML('beforeend', productCard(d.id, d.data())));
+    }catch(e){
+      console.error(e);
+      grid.innerHTML = '<p class="muted">Couldn’t load best sellers.</p>';
+    }
+  }
+
+  // Load brands as chips from product docs
+  async function loadBrands(){
+    const wrap = document.getElementById('brand-chips');
+    try{
+      const snap = await db.collection('products').where('active','==',true).limit(200).get();
+      const set = new Set();
+      snap.forEach(d => { const b = (d.data().brand||'').trim(); if (b) set.add(b); });
+      wrap.innerHTML = '';
+      if (!set.size){ wrap.innerHTML = '<span class="muted">No brands yet.</span>'; return; }
+      Array.from(set).slice(0, 18).sort((a,b)=>a.localeCompare(b)).forEach(brand=>{
+        const url = 'search.html?brand=' + encodeURIComponent(brand); // if you build a brand page later
+        const chip = document.createElement('a');
+        chip.href = '#'; // filter on homepage for now
+        chip.textContent = brand;
+        chip.onclick = (e)=>{ e.preventDefault(); filterByBrand(brand); };
+        wrap.appendChild(chip);
+      });
+    }catch(e){
+      console.error(e);
+      wrap.innerHTML = '<span class="muted">Couldn’t load brands.</span>';
+    }
+  }
+
+  // Simple on-page filter: scroll to New In and filter cards by brand
+  function filterByBrand(brand){
+    const newSection = document.getElementById('row-new');
+    const bestSection = document.getElementById('row-best');
+    [newSection, bestSection].forEach(grid=>{
+      if (!grid) return;
+      const cards = grid.querySelectorAll('.product');
+      cards.forEach(card=>{
+        const name = (card.querySelector('h3')?.textContent || '').toLowerCase();
+        const brandEl = (card.querySelector('.brand')?.textContent || '').toLowerCase();
+        const match = brandEl.includes(brand.toLowerCase()) || name.includes(brand.toLowerCase());
+        card.style.display = match ? '' : 'none';
+      });
+    });
+    // smooth scroll to first row
+    newSection?.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  // Site settings: hero + gallery + featured selection
+  window.applyHomeData = async function(h){
     const title = document.getElementById('hero-title');
     const sub   = document.getElementById('hero-subtitle');
     const img   = document.getElementById('hero-banner');
@@ -102,7 +339,6 @@
       img.src = optimizeCloudinary(h.bannerImage, targetW);
     }
 
-    // Gallery
     const galleryEl = document.getElementById('home-gallery');
     galleryEl.innerHTML = '';
     if (Array.isArray(h.gallery) && h.gallery.length) {
@@ -114,62 +350,55 @@
         galleryEl.appendChild(g);
       });
     } else {
-      galleryEl.innerHTML = '<p class="muted">No gallery images yet.</p>';
+      galleryEl.innerHTML = '<p class="muted">Add lifestyle photos from Admin → Site Settings.</p>';
     }
 
-    // Featured
+    // Optional: featured category row (show on top of New In)
     if (h.showFeatured && h.featuredCategory) {
-      const grid = document.getElementById('home-featured');
-      const snap = await db.collection('products')
-        .where('category','==', String(h.featuredCategory).toLowerCase())
-        .where('active','==', true)
-        .limit(8).get();
-      grid.innerHTML = '';
-      if (snap.empty) {
-        grid.innerHTML = '<p class="muted">No featured products yet.</p>';
-      } else {
-        snap.forEach(d => {
-          const p = d.data(); const id = d.id;
-          const base = Number(p.basePrice || 0) || 0;
-          const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-          const prices = sizes.map(s => Number((s && s.price) || 0)).filter(n => n > 0);
-          const from = prices.length ? Math.min(...prices) : base;
-
-          const card = document.createElement('div');
-          card.className = 'product';
-          card.setAttribute('data-name', p.name || '');
-          card.setAttribute('data-brand', p.brand || '');
-          card.innerHTML = `
-            <a href="product.html?id=${id}">
-              <img src="${p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
-            </a>
-            <div class="pad">
-              <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
-              ${p.brand ? `<div class="brand">${p.brand}</div>` : ''}
-              <div class="price">${from>0 ? 'From Rs'+from : ''}</div>
-            </div>
-          `;
-          grid.appendChild(card);
-        });
+      const container = document.getElementById('home-featured');
+      if (container) {
+        try{
+          const snap = await db.collection('products')
+            .where('category','==', String(h.featuredCategory).toLowerCase())
+            .where('active','==', true).limit(8).get();
+          container.innerHTML = '';
+          if (snap.empty) {
+            container.innerHTML = '<p class="muted">No featured products yet.</p>';
+          } else {
+            snap.forEach(d => container.insertAdjacentHTML('beforeend', productCard(d.id, d.data())));
+          }
+        }catch(e){
+          console.error(e);
+        }
       }
-    } else {
-      document.getElementById('featured-section').style.display = 'none';
+    }
+  };
+
+  // Boot
+  async function initHome(){
+    try{
+      // Pull site settings
+      const snap = await db.collection('site').doc('home').get();
+      const h = snap.exists ? snap.data() : {};
+      await window.applyHomeData(h);
+    }catch(e){
+      console.error("Home load error:", e);
     }
 
-    if (window.applySearch) window.applySearch();
-  };
-})();
-</script>
-
-<script>
-(async function(){
-  try {
-    const snap = await db.collection('site').doc('home').get();
-    const h = snap.exists ? snap.data() : {};
-    await window.applyHomeData(h);
-  } catch(e) {
-    console.error("Home load error:", e);
+    // Dynamic rows
+    loadNew();
+    loadBest();
+    loadBrands();
   }
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', initHome, { once:true });
+  } else {
+    initHome();
+  }
+
+  // expose for brand chips
+  window.filterByBrand = filterByBrand;
 })();
 </script>
 
