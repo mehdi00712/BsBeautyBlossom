@@ -29,11 +29,27 @@ ul{margin:0;padding:0;list-style:none}
 
 /* ======================================================
    NAVBAR / HAMBURGER
+   (navbar stays above dropdown so it can close)
 ====================================================== */
-header{background:var(--panel);position:sticky;top:0;z-index:1000;border-bottom:1px solid var(--line)}
-.navbar{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;position:relative;z-index:10000}
+header{
+  background:var(--panel);
+  position:sticky; top:0;
+  z-index:100000;               /* ⬅ stays above menu panel */
+  border-bottom:1px solid var(--line)
+}
+.navbar{
+  max-width:1100px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;
+  position:relative;z-index:100000; /* ⬅ above panel */
+}
 .logo a{display:flex;align-items:center;gap:10px;font-weight:700}
-.logo-mark{display:inline-block;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent;font-family:"Playfair Display",serif;font-size:22px}
+.logo-mark{
+  display:inline-block;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  font-family:"Playfair Display",serif;font-size:22px
+}
 
 .nav-links{display:flex;gap:16px;align-items:center}
 .nav-links a,.nav-links .active{padding:8px 12px;border-radius:10px;border:1px solid transparent}
@@ -44,13 +60,13 @@ header{background:var(--panel);position:sticky;top:0;z-index:1000;border-bottom:
 
 /* ---------- Mobile dropdown (scroll-safe) ---------- */
 @media (max-width:1023px){
-  /* If your navbar is taller than 64px, increase this (e.g. 72/80) */
+  /* If your navbar is taller than 64px, increase this (72/80…) */
   :root { --nav-top: 64px; }
 
   .hamburger{display:block}
 
   .nav-links{
-    position:fixed;              /* overlay panel */
+    position:fixed;              /* overlay panel BELOW navbar */
     left:0; right:0;
     top:var(--nav-top);          /* sits under navbar */
     display:flex; flex-direction:column; gap:0;
@@ -59,7 +75,7 @@ header{background:var(--panel);position:sticky;top:0;z-index:1000;border-bottom:
     max-height:0;                /* collapsed by default */
     overflow:hidden;             /* hidden until opened */
     transition:max-height .25s ease;
-    z-index:99999;
+    z-index:9999;                /* ⬅ below navbar */
   }
   .nav-links.show{
     max-height:calc(100vh - var(--nav-top));
