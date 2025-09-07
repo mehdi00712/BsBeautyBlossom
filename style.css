@@ -1,6 +1,6 @@
-/* ------------------------------------------------------
+/* ======================================================
    THEME & GLOBAL
------------------------------------------------------- */
+====================================================== */
 :root{
   --bg:#0b0b10;
   --panel:#0f0f15;
@@ -20,51 +20,60 @@
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:Roboto,system-ui,-apple-system,Segoe UI,Arial,sans-serif}
 img{max-width:100%;display:block}
 a{color:#fff;text-decoration:none}
-a:hover{opacity:.9}
+a:hover{opacity:.92}
+ul{margin:0;padding:0;list-style:none}
 .muted{color:var(--muted)}
 .hidden{display:none !important}
 
 .section{max-width:1100px;margin:32px auto;padding:0 16px}
 
-/* ------------------------------------------------------
+/* ======================================================
    NAVBAR / HAMBURGER
------------------------------------------------------- */
+====================================================== */
 header{background:var(--panel);position:sticky;top:0;z-index:1000;border-bottom:1px solid var(--line)}
-.navbar{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;position:relative;z-index:1000}
+.navbar{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;position:relative;z-index:10000}
 .logo a{display:flex;align-items:center;gap:10px;font-weight:700}
 .logo-mark{display:inline-block;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent;font-family:"Playfair Display",serif;font-size:22px}
 
-.nav-links{display:flex;gap:16px;align-items:center;list-style:none;margin:0;padding:0}
+.nav-links{display:flex;gap:16px;align-items:center}
 .nav-links a,.nav-links .active{padding:8px 12px;border-radius:10px;border:1px solid transparent}
 .nav-links a.active,.nav-links a:hover{border-color:var(--line);background:var(--panel-2)}
 
 .hamburger{display:none;font-size:26px;line-height:1;cursor:pointer;user-select:none;padding:6px 10px;border-radius:10px;border:1px solid transparent}
 .hamburger:focus{outline:none}
 
+/* ---------- Mobile dropdown (scroll-safe) ---------- */
 @media (max-width:1023px){
+  /* If your navbar is taller than 64px, increase this (e.g. 72/80) */
+  :root { --nav-top: 64px; }
+
   .hamburger{display:block}
+
   .nav-links{
-    position:fixed; /* sits above content */
-    left:0;right:0;
-    top:64px; /* JS recalculates exact height */
-    display:flex;flex-direction:column;gap:0;
-    background:#0d0d12;border-top:1px solid var(--line);
-    max-height:0;overflow:hidden;
+    position:fixed;              /* overlay panel */
+    left:0; right:0;
+    top:var(--nav-top);          /* sits under navbar */
+    display:flex; flex-direction:column; gap:0;
+    background:#0d0d12;
+    border-top:1px solid var(--line);
+    max-height:0;                /* collapsed by default */
+    overflow:hidden;             /* hidden until opened */
     transition:max-height .25s ease;
-    z-index:9999;
+    z-index:99999;
   }
-  .nav-links.show{ /* JS also sets max-height; keep scrollable */
-    overflow-y:auto;
+  .nav-links.show{
+    max-height:calc(100vh - var(--nav-top));
+    overflow-y:auto;             /* scroll to see Cart/Admin */
   }
-  .nav-links a,.nav-links .active,.nav-links li{
-    width:100%;display:block;padding:14px 16px;border-bottom:1px solid #1b1b22;
+  .nav-links a, .nav-links .active, .nav-links li{
+    width:100%; display:block; padding:14px 16px; border-bottom:1px solid #1b1b22;
   }
-  body.nav-open{overflow:hidden} /* lock background scroll */
+  body.nav-open{overflow:hidden}  /* lock background scroll */
 }
 
-/* ------------------------------------------------------
-   SEARCH (bar + suggestions)
------------------------------------------------------- */
+/* ======================================================
+   SEARCH (bar + autocomplete dropdown)
+====================================================== */
 .search-container{position:relative}
 #search-bar{
   width:100%;padding:10px 12px;border:1px solid var(--line);
@@ -84,9 +93,9 @@ header{background:var(--panel);position:sticky;top:0;z-index:1000;border-bottom:
 #search-suggestions img{width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
 #search-suggestions .meta{font-size:.85rem;color:var(--muted)}
 
-/* ------------------------------------------------------
+/* ======================================================
    HERO
------------------------------------------------------- */
+====================================================== */
 .hero{position:relative;max-width:1200px;margin:16px auto;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line)}
 .hero-img{width:100%;height:44vh;object-fit:cover;filter:saturate(1.05)}
 .hero-overlay{
@@ -96,9 +105,9 @@ header{background:var(--panel);position:sticky;top:0;z-index:1000;border-bottom:
 .hero-overlay h1{margin:0 0 6px 0;font-family:"Playfair Display",serif;font-size:clamp(22px,4vw,42px)}
 .hero-overlay p{margin:0;color:var(--muted);font-size:clamp(14px,2.4vw,18px)}
 
-/* ------------------------------------------------------
+/* ======================================================
    PRODUCTS / GRID / CARDS
------------------------------------------------------- */
+====================================================== */
 .product-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
 @media (max-width:1023px){.product-grid{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:520px){.product-grid{grid-template-columns:1fr}}
@@ -113,6 +122,8 @@ header{background:var(--panel);position:sticky;top:0;z-index:1000;border-bottom:
 .product .price{margin:0 12px 14px 12px;color:#c3ffd2}
 .product .actions{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
 .product .actions .qty{display:flex;align-items:center;gap:8px}
+.product .actions .qty button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:#1a1a22;color:#fff}
+.product .actions .qty input{width:48px;text-align:center;border:1px solid var(--line);border-radius:8px;background:#0d0d12;color:#fff;padding:8px}
 
 /* Brand index & grouped rows */
 .brand-index{
@@ -130,9 +141,9 @@ header{background:var(--panel);position:sticky;top:0;z-index:1000;border-bottom:
 @media (max-width:1023px){.product-row{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:520px){.product-row{grid-template-columns:1fr}}
 
-/* ------------------------------------------------------
+/* ======================================================
    GALLERY
------------------------------------------------------- */
+====================================================== */
 .gallery-grid{
   display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
 }
@@ -140,9 +151,9 @@ header{background:var(--panel);position:sticky;top:0;z-index:1000;border-bottom:
 @media (max-width:820px){.gallery-grid{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:540px){.gallery-grid{grid-template-columns:1fr}}
 
-/* ------------------------------------------------------
+/* ======================================================
    BUTTONS
------------------------------------------------------- */
+====================================================== */
 .btn{
   padding:10px 14px;border-radius:10px;border:1px solid var(--line);
   background:linear-gradient(180deg,#1b1b26,#14141c);color:#fff;cursor:pointer;
@@ -152,9 +163,9 @@ header{background:var(--panel);position:sticky;top:0;z-index:1000;border-bottom:
 .btn.danger{background:#2b1113;border-color:#4a1b1f;color:#ffb3b3}
 .btn:disabled{opacity:.6;cursor:not-allowed}
 
-/* ------------------------------------------------------
+/* ======================================================
    FORMS
------------------------------------------------------- */
+====================================================== */
 input[type="text"],input[type="email"],input[type="password"],input[type="number"],input[type="tel"],select,textarea{
   width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);
   background:#0d0d12;color:#fff;
@@ -165,18 +176,21 @@ label small{color:var(--muted)}
 .row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media (max-width:720px){.row-2{grid-template-columns:1fr}}
 
-/* ------------------------------------------------------
+/* File input alignment */
+input[type="file"]{color:var(--muted)}
+
+/* ======================================================
    TABLES (Admin list)
------------------------------------------------------- */
+====================================================== */
 .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
 table{width:100%;border-collapse:collapse;background:var(--panel)}
 th,td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
 th{background:var(--panel-2);text-align:left}
 tbody tr:hover{background:#14141c}
 
-/* ------------------------------------------------------
+/* ======================================================
    CARDS / LAYOUT (Admin)
------------------------------------------------------- */
+====================================================== */
 .admin-wrap{max-width:1100px;margin:24px auto;padding:0 16px}
 .card{
   background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
@@ -189,25 +203,29 @@ tbody tr:hover{background:#14141c}
 .preview{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
 .preview img{width:120px;height:120px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
 
-/* ------------------------------------------------------
+/* ======================================================
+   CART (simple styles)
+====================================================== */
+.cart{max-width:900px;margin:24px auto;padding:0 16px}
+.cart h1{margin:8px 0 16px}
+.cart .cart-item{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:12px;margin:8px 0;
+}
+.cart .cart-item img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+
+/* ======================================================
    FOOTER
------------------------------------------------------- */
+====================================================== */
 .site-footer{
   border-top:1px solid var(--line);margin-top:28px;background:var(--panel);
   text-align:center;padding:16px;color:var(--muted)
 }
 
-/* ------------------------------------------------------
-   CART (simple styles)
------------------------------------------------------- */
-.cart .cart-item{
-  display:flex;justify-content:space-between;align-items:center;
-  background:var(--panel);border:1px solid var(--line);border-radius:12px;
-  padding:12px;margin:8px 0;
-}
-
-/* ------------------------------------------------------
-   MISC
------------------------------------------------------- */
+/* ======================================================
+   UTILITIES
+====================================================== */
 .price{font-weight:600}
-ul{margin:0;padding:0;list-style:none}
+.center{text-align:center}
+.maxw{max-width:1100px;margin:0 auto}
