@@ -4,12 +4,16 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gift – B’s Beauty Blossom</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
+
 <header>
   <nav class="navbar">
-    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
+    <div class="logo">
+      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
+    </div>
     <ul class="nav-links">
       <li><a href="index.html">Home</a></li>
       <li><a href="perfume.html">Perfume</a></li>
@@ -23,37 +27,77 @@
     </ul>
     <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
   </nav>
+  <div id="nav-overlay"></div>
 </header>
 
-<div class="search-container section" style="margin-top:16px;">
-  <input type="text" id="search-bar" placeholder="Search gift items by name or brand…">
-  <ul id="search-suggestions" class="search-suggestions"></ul>
+<div class="section" style="padding-top:16px">
+  <div class="search-container">
+    <input type="text" id="search-bar" placeholder="Search by brand or product name…">
+    <ul id="search-suggestions"></ul>
+  </div>
 </div>
 
 <section class="section">
-  <h1 class="page-title">Gift</h1>
-  <div id="brand-index" class="brand-index"></div>
-  <div id="product-grid" class="product-grid"></div>
+  <h1>Gift</h1>
+
+  <div class="card" style="display:flex;gap:10px;align-items:center;justify-content:flex-end">
+    <label class="muted" for="sort">Sort</label>
+    <select id="sort" style="max-width:180px">
+      <option value="default">Recommended</option>
+      <option value="price-asc">Price: Low to High</option>
+      <option value="price-desc">Price: High to Low</option>
+      <option value="name-asc">Name: A → Z</option>
+    </select>
+  </div>
+
+  <div id="product-grid" class="product-grid">
+    <p class="muted">Loading products…</p>
+  </div>
 </section>
 
 <footer class="site-footer">
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Page flags -->
-<script>
-  window.PRODUCT_CATEGORY = 'gift';
-  window.GROUP_BY_BRAND = true;
-</script>
+<script>window.PRODUCT_CATEGORY = 'gift';</script>
 
-<!-- JS -->
 <script src="script.js" defer></script>
 <script src="products.js" defer></script>
 <script src="search.js" defer></script>
+
+<script>
+(function(){
+  const grid = document.getElementById('product-grid');
+  const sortSel = document.getElementById('sort');
+  if (!grid || !sortSel) return;
+
+  function getPriceFromCard(card){
+    const priceEl = card.querySelector('.price');
+    const m = priceEl ? priceEl.textContent.replace(/[^0-9.]/g,'') : '';
+    const n = Number(m||0);
+    return isNaN(n) ? Number.MAX_SAFE_INTEGER : n;
+  }
+  function sortCards(mode){
+    const cards = Array.from(grid.querySelectorAll('.product'));
+    if (!cards.length) return;
+    let sorted = cards.slice();
+    if (mode === 'price-asc') sorted.sort((a,b)=>getPriceFromCard(a)-getPriceFromCard(b));
+    else if (mode === 'price-desc') sorted.sort((a,b)=>getPriceFromCard(b)-getPriceFromCard(a));
+    else if (mode === 'name-asc') sorted.sort((a,b)=>{
+      const an = (a.querySelector('h3')?.textContent || '').toLowerCase();
+      const bn = (b.querySelector('h3')?.textContent || '').toLowerCase();
+      return an.localeCompare(bn);
+    });
+    sorted.forEach(c=>grid.appendChild(c));
+  }
+  sortSel.addEventListener('change', ()=> sortCards(sortSel.value));
+  document.addEventListener('DOMContentLoaded', ()=> setTimeout(()=>sortCards('default'), 800));
+})();
+</script>
+
 </body>
 </html>
