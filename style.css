@@ -233,3 +233,21 @@ label { font-weight: 600; font-size: .9rem; display:block; margin: 6px 0; }
   padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-weight:600;color:#0f172a
 }
 
+/* Brand sections */
+.brand-section { margin: 28px 0; }
+.brand-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.4rem;
+  margin: 6px 0 14px;
+  border-left: 4px solid var(--brand);
+  padding-left: 10px;
+}
+.brand-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+/* Optional: consistent inner padding area used in cards */
+.pad { padding: 8px 6px 2px; }
+
