@@ -1,98 +1,127 @@
-// product-detail.js — loads one product, handles sizes/qty, adds to cart
+// product-detail.js — single main image + unique thumbnails
 (function(){
-  // ✅ prevent double init if script is loaded twice
-  if (window.__PD_INIT__) return; 
-  window.__PD_INIT__ = true;
+  const $ = (s, r=document)=>r.querySelector(s);
+  const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
 
-  if (!window.db) { console.error('product-detail: Firestore not available'); return; }
-
-  const params = new URLSearchParams(location.search);
-  const id = params.get('id');
-  if (!id) { alert('No product id'); location.href = 'index.html'; return; }
-
-  const el = (id) => document.getElementById(id);
-  const main = el('pd-main'), thumbs = el('pd-thumbs');
-  const nameEl = el('pd-name'), brandEl = el('pd-brand'), priceEl = el('pd-price'), descEl = el('pd-desc');
-  const sizeEl = el('pd-size'), qtyEl = el('pd-qty'), plus = el('pd-plus'), minus = el('pd-minus'), add = el('pd-add');
-
-  function setPriceLabel(p) { priceEl.textContent = p>0 ? 'Rs ' + p : ''; }
-  function updateCount() {
-    const cart = JSON.parse(localStorage.getItem('cart')||'[]');
-    const c = cart.reduce((s,i)=>s + Number(i.qty||i.quantity||0), 0);
-    const cc = document.getElementById('cart-count'); if (cc) cc.textContent = c;
-  }
-  function addToCart(item){
-    const cart = JSON.parse(localStorage.getItem('cart')||'[]');
-    cart.push(item);
-    localStorage.setItem('cart', JSON.stringify(cart));
-    updateCount();
+  function getParam(name){
+    const u = new URL(location.href);
+    return u.searchParams.get(name);
   }
 
-  function buildSelect(p){
-    sizeEl.innerHTML = '';
-    const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-    if (sizes.length){
-      sizes.forEach(s=>{
-        const opt = document.createElement('option');
-        opt.value = s.label; opt.textContent = `${s.label} - Rs${s.price}`; opt.dataset.price = Number(s.price||0);
-        sizeEl.appendChild(opt);
-      });
-    } else {
-      const opt = document.createElement('option');
-      opt.value = 'default'; opt.textContent = `Rs${Number(p.basePrice||0)}`; opt.dataset.price = Number(p.basePrice||0);
-      sizeEl.appendChild(opt);
-    }
-    const sel = sizeEl.options[sizeEl.selectedIndex]; setPriceLabel(Number(sel?.dataset.price||0));
+  // Cloudinary on-the-fly optimization (safe no-op for non-Cloudinary)
+  function cOpt(url, w){
+    try{
+      if(!url || !/res\.cloudinary\.com/.test(url)) return url;
+      return url.replace(/\/upload\/(?!.*\/)/, `/upload/f_auto,q_auto,w_${w}/`);
+    }catch{return url;}
   }
 
-  minus.onclick = ()=>{ const q = Math.max(1, Number(qtyEl.textContent||'1')-1); qtyEl.textContent = q; };
-  plus.onclick  = ()=>{ const q = Math.min(99, Number(qtyEl.textContent||'1')+1); qtyEl.textContent = q; };
-  sizeEl.onchange = ()=>{ const sel = sizeEl.options[sizeEl.selectedIndex]; setPriceLabel(Number(sel?.dataset.price||0)); };
-
-  // ✅ debounce to avoid double-add if something triggers twice fast
-  let adding = false;
-  add.onclick = ()=>{
-    if (adding) return;
-    adding = true;
-    setTimeout(()=> adding=false, 350);
-
-    const sel = sizeEl.options[sizeEl.selectedIndex];
-    const unitPrice = Number(sel?.dataset.price||0);
-    const qty = Number(qtyEl.textContent||'1');
-    const label = sel ? sel.value : 'default';
-    const n = nameEl.textContent || 'Item';
-    const item = {
-      name: label && label!=='default' ? `${n} (${label})` : n,
-      unitPrice,
-      qty,
-      imageURL: main?.src || ''
-    };
-    addToCart(item);
-    alert('Added to cart');
-  };
+  function number(val){ const n = Number(val); return Number.isFinite(n) ? n : 0; }
 
   async function load(){
-    try{
-      const snap = await db.collection('products').doc(id).get();
-      if (!snap.exists) { alert('Product not found'); location.href='index.html'; return; }
-      const p = snap.data();
-      nameEl.textContent = p.name || 'Product';
-      brandEl.textContent = p.brand ? p.brand : '';
-      descEl.textContent = p.description || '';
-      buildSelect(p);
+    const id = getParam('id');
+    if(!id){ $('#pd-name').textContent='Product not found'; return; }
 
-      const images = Array.isArray(p.images) && p.images.length ? p.images : (p.imageURL ? [p.imageURL] : []);
-      const first = images[0] || 'https://via.placeholder.com/900x600?text=Image';
-      main.src = first;
-      thumbs.innerHTML = '';
-      images.forEach(u=>{
+    const doc = await db.collection('products').doc(id).get();
+    if(!doc.exists){ $('#pd-name').textContent='Product not found'; return; }
+    const p = doc.data();
+
+    // ----- Build images list (unique, truthy) -----
+    const arr = Array.isArray(p.images) ? p.images.slice() : [];
+    if(p.imageURL) arr.unshift(p.imageURL);
+    // Keep only first occurrence of each URL
+    const seen = new Set();
+    const allImages = arr.filter(u => u && !seen.has(u) && seen.add(u));
+    const mainImage = allImages[0] || 'https://via.placeholder.com/800x800?text=No+Image';
+    const thumbImages = allImages.slice(1); // exclude main
+
+    // ----- Fill DOM -----
+    $('#pd-name').textContent = p.name || '';
+    $('#pd-brand').textContent = p.brand || '';
+    $('#pd-desc').textContent = p.description || '';
+
+    // sizes & pricing
+    const sizes = Array.isArray(p.sizes) ? p.sizes : [];
+    const sizeSel = $('#pd-size');
+    sizeSel.innerHTML = '';
+    if(sizes.length){
+      sizes.forEach(s=>{
+        const opt = document.createElement('option');
+        opt.value = s.label;
+        opt.textContent = `${s.label} — Rs${number(s.price).toFixed(0)}`;
+        opt.dataset.price = number(s.price);
+        sizeSel.appendChild(opt);
+      });
+    }else{
+      const opt = document.createElement('option');
+      opt.value = 'default';
+      const base = number(p.basePrice);
+      opt.textContent = `Default — Rs${base.toFixed(0)}`;
+      opt.dataset.price = base;
+      sizeSel.appendChild(opt);
+    }
+
+    const setPrice = ()=>{
+      const sel = sizeSel.options[sizeSel.selectedIndex];
+      const price = number(sel?.dataset?.price || 0);
+      $('#pd-price-text').textContent = `Rs${price.toFixed(0)}`;
+    };
+    setPrice();
+    sizeSel.onchange = setPrice;
+
+    // gallery
+    const mainEl = $('#pd-main');
+    mainEl.src = cOpt(mainImage, 900);
+    mainEl.alt = p.name || 'Product image';
+
+    const thumbs = $('#pd-thumbs');
+    thumbs.innerHTML = '';
+    if(thumbImages.length){
+      thumbImages.forEach(u=>{
         const t = document.createElement('img');
-        t.src = u; t.className = 'pd-thumb'; t.alt='thumb';
-        t.onclick = ()=>{ main.src = u; };
+        t.src = cOpt(u, 160);
+        t.alt = 'Thumbnail';
+        t.className = 'pd-thumb';
+        t.addEventListener('click', ()=>{
+          // swap main image with clicked one
+          mainEl.src = cOpt(u, 900);
+        });
         thumbs.appendChild(t);
       });
-      updateCount();
-    }catch(e){ console.error(e); alert('Load error: '+e.message); }
+    }
+
+    // qty controls
+    const qtyInput = $('#qty-input');
+    $('#qty-minus').onclick = ()=>{ const v = Math.max(1, Number(qtyInput.value||1)-1); qtyInput.value = v; };
+    $('#qty-plus').onclick  = ()=>{ const v = Math.max(1, Number(qtyInput.value||1)+1); qtyInput.value = v; };
+
+    // add to cart
+    $('#pd-add').onclick = ()=>{
+      const sel = sizeSel.options[sizeSel.selectedIndex];
+      const price = number(sel?.dataset?.price || 0);
+      const sizeLabel = sel?.value || 'default';
+      const qty = Math.max(1, Number(qtyInput.value||1));
+
+      const item = {
+        id,
+        name: p.name + (sizeLabel && sizeLabel!=='default' ? ` (${sizeLabel})` : ''),
+        price,
+        quantity: qty,
+        imageURL: mainImage,
+        brand: p.brand || '',
+      };
+
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      cart.push(item);
+      localStorage.setItem('cart', JSON.stringify(cart));
+      if(window.updateCartCount) window.updateCartCount();
+      alert('Added to cart!');
+    };
   }
-  load();
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', load, { once:true });
+  } else {
+    load();
+  }
 })();
