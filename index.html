@@ -30,7 +30,7 @@
   <div id="nav-overlay"></div>
 </header>
 
-<!-- Search -->
+<!-- Global search -->
 <div class="section">
   <div class="search-container">
     <input type="text" id="search-bar" placeholder="Search by brand or product name…">
@@ -38,7 +38,7 @@
   </div>
 </div>
 
-<!-- Hero (editable via Admin → Site Settings) -->
+<!-- Hero (editable from Admin → Site Settings) -->
 <section id="hero" class="hero">
   <img id="hero-banner" src="https://via.placeholder.com/1600x900?text=B%27s+Beauty+Blossom" alt="Banner" class="hero-img">
   <div class="hero-overlay">
@@ -47,25 +47,7 @@
   </div>
 </section>
 
-<!-- Simple USPs -->
-<section class="section">
-  <div class="product-grid" style="grid-template-columns:repeat(3,1fr)">
-    <div class="card center">
-      <h3>🚚 Free Delivery</h3>
-      <p class="muted">Orders over Rs 2,500</p>
-    </div>
-    <div class="card center">
-      <h3>✅ Authentic</h3>
-      <p class="muted">Trusted brands only</p>
-    </div>
-    <div class="card center">
-      <h3>💬 Support</h3>
-      <p class="muted">Friendly & fast</p>
-    </div>
-  </div>
-</section>
-
-<!-- Featured (optional; controlled in Admin → Site Settings) -->
+<!-- Featured (optional; toggle in Admin → Site Settings) -->
 <section id="featured-section" class="section">
   <h2>Featured</h2>
   <div id="home-featured" class="product-grid">
@@ -73,7 +55,7 @@
   </div>
 </section>
 
-<!-- Shop by Category (simple) -->
+<!-- Shop by Category -->
 <section class="section">
   <h2>Shop by Category</h2>
   <div class="product-grid" style="grid-template-columns:repeat(6,1fr)">
@@ -104,21 +86,6 @@
   </div>
 </section>
 
-<!-- Newsletter (simple) -->
-<section class="section">
-  <div class="card center">
-    <h2>Join Our Beauty Circle</h2>
-    <p class="muted">Exclusive offers & new drops.</p>
-    <form onsubmit="event.preventDefault(); alert('Thanks! You’re on the list.');" style="max-width:520px;margin:0 auto">
-      <div class="row-2">
-        <input type="text" placeholder="Your name" required>
-        <input type="email" placeholder="Your email" required>
-      </div>
-      <button class="btn btn-primary">Subscribe</button>
-    </form>
-  </div>
-</section>
-
 <footer class="site-footer">
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
@@ -131,7 +98,7 @@
 <!-- Navbar / cart / hamburger -->
 <script src="script.js" defer></script>
 
-<!-- Minimal home data loader -->
+<!-- Minimal home loader -->
 <script>
 (function(){
   function optimizeCloudinary(url, width) {
@@ -141,7 +108,7 @@
     } catch { return url; }
   }
 
-  // Fill hero + (optional) featured from Firestore: site/home
+  // Apply hero + (optional) featured from Firestore: site/home
   window.applyHomeData = async function(h){
     const title = document.getElementById('hero-title');
     const sub   = document.getElementById('hero-subtitle');
@@ -155,7 +122,6 @@
       img.src = optimizeCloudinary(h.bannerImage, targetW);
     }
 
-    // Featured
     const featuredWrap = document.getElementById('home-featured');
     const featuredSec  = document.getElementById('featured-section');
 
