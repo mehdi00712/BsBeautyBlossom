@@ -3,23 +3,16 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Product • B’s Beauty Blossom</title>
+  <title>Perfume – B’s Beauty Blossom</title>
   <link rel="stylesheet" href="style.css"/>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="firebase-config.js"></script>
 </head>
 <body>
 <header>
   <nav class="navbar">
-    <div class="logo">
-      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
-    </div>
+    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
     <ul class="nav-links">
       <li><a href="index.html">Home</a></li>
-      <li><a href="perfume.html">Perfume</a></li>
+      <li><a class="active" href="perfume.html">Perfume</a></li>
       <li><a href="body.html">Body</a></li>
       <li><a href="skincare.html">Skincare</a></li>
       <li><a href="cosmetics.html">Cosmetics</a></li>
@@ -32,44 +25,35 @@
   </nav>
 </header>
 
-<main class="section">
-  <div id="product-detail" class="pd-wrap">
-    <!-- JS fills -->
-    <div class="pd-gallery">
-      <img id="pd-main" alt="Product image">
-      <div id="pd-thumbs" class="pd-thumbs"></div>
-    </div>
+<div class="search-container section" style="margin-top:16px;">
+  <input type="text" id="search-bar" placeholder="Search perfumes by name or brand…">
+  <ul id="search-suggestions" class="search-suggestions"></ul>
+</div>
 
-    <div class="pd-info">
-      <h1 id="pd-name">Loading…</h1>
-      <div id="pd-brand" class="muted"></div>
-      <p id="pd-desc" class="pd-desc"></p>
-
-      <div class="pd-price">
-        <label for="pd-size">Choose size</label>
-        <select id="pd-size"></select>
-        <div class="pd-amount">
-          <span id="pd-price-text" class="price">Rs0</span>
-        </div>
-      </div>
-
-      <div class="pd-actions">
-        <div class="qty">
-          <button id="qty-minus">–</button>
-          <input id="qty-input" type="number" min="1" value="1">
-          <button id="qty-plus">+</button>
-        </div>
-        <button id="pd-add" class="btn">Add to Cart</button>
-      </div>
-    </div>
-  </div>
-</main>
+<section class="section">
+  <h1 class="page-title">Perfume</h1>
+  <div id="brand-index" class="brand-index"></div>
+  <div id="product-grid" class="product-grid"></div>
+</section>
 
 <footer class="site-footer">
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<!-- Page flags -->
+<script>
+  window.PRODUCT_CATEGORY = 'perfume';
+  window.GROUP_BY_BRAND = true; // set false to disable brand grouping
+</script>
+
+<!-- JS -->
 <script src="script.js" defer></script>
-<script src="product-detail.js" defer></script>
+<script src="products.js" defer></script>
+<script src="search.js" defer></script>
 </body>
 </html>
