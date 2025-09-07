@@ -20,8 +20,7 @@
     // Compute panel size to fit below current navbar height
     function applyMobilePanelSize() {
       const h = navbar.offsetHeight || 64;
-      // If your CSS uses the --nav-top variable, JS isn't required,
-      // but we also set inline styles for robustness:
+      // Inline styles make it robust even if CSS var isn't used
       navLinks.style.top = h + 'px';
       navLinks.style.maxHeight = `calc(100vh - ${h}px)`;
     }
@@ -83,6 +82,16 @@
           applyMobilePanelSize();
         }
       });
+    }
+
+    // Optional: close menu on scroll (prevents stuck-open feeling)
+    if (!window.__navScrollClose) {
+      window.__navScrollClose = true;
+      window.addEventListener('scroll', () => {
+        if (window.innerWidth < 1024 && navLinks.classList.contains('show')) {
+          closeMenu();
+        }
+      }, { passive: true });
     }
   }
 
