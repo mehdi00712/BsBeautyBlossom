@@ -30,7 +30,6 @@
   <div id="nav-overlay"></div>
 </header>
 
-<!-- Global search -->
 <div class="section" style="padding-top:16px">
   <div class="search-container">
     <input type="text" id="search-bar" placeholder="Search by brand or product name…">
@@ -41,7 +40,6 @@
 <section class="section">
   <h1>Body</h1>
 
-  <!-- Optional tiny toolbar (non-blocking if products.js ignores it) -->
   <div class="card" style="display:flex;gap:10px;align-items:center;justify-content:flex-end">
     <label class="muted" for="sort">Sort</label>
     <select id="sort" style="max-width:180px">
@@ -52,7 +50,6 @@
     </select>
   </div>
 
-  <!-- Products will render here -->
   <div id="product-grid" class="product-grid">
     <p class="muted">Loading products…</p>
   </div>
@@ -62,20 +59,16 @@
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
-<!-- Firebase (Compat) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Tell products.js which category to load -->
 <script>window.PRODUCT_CATEGORY = 'body';</script>
 
-<!-- Site scripts (order matters: products.js needs db from firebase-config.js) -->
 <script src="script.js" defer></script>
 <script src="products.js" defer></script>
 <script src="search.js" defer></script>
 
-<!-- Optional: simple client-side sort (works with cards rendered by products.js) -->
 <script>
 (function(){
   const grid = document.getElementById('product-grid');
@@ -84,36 +77,24 @@
 
   function getPriceFromCard(card){
     const priceEl = card.querySelector('.price');
-    if (!priceEl) return Number.MAX_SAFE_INTEGER;
-    const m = priceEl.textContent.replace(/[^0-9.]/g,'');
+    const m = priceEl ? priceEl.textContent.replace(/[^0-9.]/g,'') : '';
     const n = Number(m||0);
     return isNaN(n) ? Number.MAX_SAFE_INTEGER : n;
   }
-
   function sortCards(mode){
     const cards = Array.from(grid.querySelectorAll('.product'));
     if (!cards.length) return;
     let sorted = cards.slice();
-    if (mode === 'price-asc') {
-      sorted.sort((a,b)=>getPriceFromCard(a)-getPriceFromCard(b));
-    } else if (mode === 'price-desc') {
-      sorted.sort((a,b)=>getPriceFromCard(b)-getPriceFromCard(a));
-    } else if (mode === 'name-asc') {
-      sorted.sort((a,b)=>{
-        const an = (a.querySelector('h3')?.textContent || '').toLowerCase();
-        const bn = (b.querySelector('h3')?.textContent || '').toLowerCase();
-        return an.localeCompare(bn);
-      });
-    } else {
-      // default: do nothing (keep original order from Firestore)
-      return;
-    }
-    // Re-append in new order
+    if (mode === 'price-asc') sorted.sort((a,b)=>getPriceFromCard(a)-getPriceFromCard(b));
+    else if (mode === 'price-desc') sorted.sort((a,b)=>getPriceFromCard(b)-getPriceFromCard(a));
+    else if (mode === 'name-asc') sorted.sort((a,b)=>{
+      const an = (a.querySelector('h3')?.textContent || '').toLowerCase();
+      const bn = (b.querySelector('h3')?.textContent || '').toLowerCase();
+      return an.localeCompare(bn);
+    });
     sorted.forEach(c=>grid.appendChild(c));
   }
-
   sortSel.addEventListener('change', ()=> sortCards(sortSel.value));
-  // Run once after products.js populates (small delay)
   document.addEventListener('DOMContentLoaded', ()=> setTimeout(()=>sortCards('default'), 800));
 })();
 </script>
