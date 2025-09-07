@@ -12,10 +12,10 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
 
-  <!-- Cloudinary config -->
+  <!-- Cloudinary config (unsigned upload) -->
   <script>
-    window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";      // ✅ replace with your cloud name
-    window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb"; // ✅ replace with your upload preset
+    window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
+    window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
   </script>
 
   <script src="admin.js" defer></script>
@@ -37,7 +37,7 @@
 <main class="admin-wrap">
   <h1>Admin Dashboard</h1>
 
-  <!-- Auth Section -->
+  <!-- Auth -->
   <section id="auth-section">
     <h2>Login</h2>
     <input id="email" type="email" placeholder="Admin email">
@@ -48,7 +48,66 @@
     <p id="auth-status"></p>
   </section>
 
-  <!-- Product Section -->
+  <!-- ================== SITE SETTINGS ================== -->
+  <section id="site-section" style="display:none">
+    <h2>Site Settings (Homepage)</h2>
+
+    <div class="card">
+      <label>Hero Title</label>
+      <input id="site-heroTitle" placeholder="Welcome to B’s Beauty Blossom">
+
+      <label>Hero Subtitle</label>
+      <input id="site-heroSubtitle" placeholder="Curated beauty & fragrances">
+
+      <div class="grid-2">
+        <div>
+          <label>Banner Image (Home)</label>
+          <input id="site-bannerFile" type="file" accept="image/*">
+          <button id="site-bannerUploadBtn">Upload Banner</button>
+          <p class="muted">After upload, click “Save Site” below.</p>
+        </div>
+        <div>
+          <label>Current Banner</label>
+          <img id="site-bannerPreview" src="https://via.placeholder.com/800x400?text=Banner" alt="banner" style="max-width:100%;border-radius:10px;border:1px solid #23232a">
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <label><input type="checkbox" id="site-showFeatured"> Show Featured on Home</label>
+        </div>
+        <div>
+          <label>Featured Category</label>
+          <select id="site-featuredCategory">
+            <option value="perfume">Perfume</option>
+            <option value="body">Body</option>
+            <option value="skincare">Skincare</option>
+            <option value="cosmetics">Cosmetics</option>
+            <option value="jewellery">Jewellery</option>
+            <option value="gift">Gift</option>
+          </select>
+        </div>
+      </div>
+
+      <h3>Gallery Images</h3>
+      <div class="grid-2">
+        <div>
+          <input id="site-galleryFiles" type="file" accept="image/*" multiple>
+          <button id="site-galleryUploadBtn">Upload to Gallery</button>
+        </div>
+        <div class="muted">Tip: you can upload several images at once.</div>
+      </div>
+      <div id="site-gallery" class="gallery-grid" style="margin-top:10px;"></div>
+
+      <div style="margin-top:12px">
+        <button id="site-saveBtn">Save Site</button>
+        <button id="site-resetBtn">Reset</button>
+        <span id="site-msg" class="muted"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================== PRODUCTS ================== -->
   <section id="product-section" style="display:none">
     <h2>Add / Edit Product</h2>
     <select id="category">
@@ -71,25 +130,21 @@
     <input type="hidden" id="docId">
 
     <h3>Products</h3>
-    <select id="filterCategory">
-      <option value="perfume">Perfume</option>
-      <option value="body">Body</option>
-      <option value="skincare">Skincare</option>
-      <option value="cosmetics">Cosmetics</option>
-      <option value="jewellery">Jewellery</option>
-      <option value="gift">Gift</option>
-    </select>
-    <button id="refreshBtn">Refresh</button>
+    <div class="row">
+      <select id="filterCategory">
+        <option value="perfume">Perfume</option>
+        <option value="body">Body</option>
+        <option value="skincare">Skincare</option>
+        <option value="cosmetics">Cosmetics</option>
+        <option value="jewellery">Jewellery</option>
+        <option value="gift">Gift</option>
+      </select>
+      <button id="refreshBtn">Refresh</button>
+    </div>
     <table>
       <thead>
         <tr>
-          <th>Image</th>
-          <th>Name</th>
-          <th>Brand</th>
-          <th>Sizes</th>
-          <th>Base</th>
-          <th>Active</th>
-          <th>Actions</th>
+          <th>Image</th><th>Name</th><th>Brand</th><th>Sizes</th><th>Base</th><th>Active</th><th>Actions</th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
@@ -100,7 +155,7 @@
 <!-- Navbar/cart script -->
 <script src="script.js"></script>
 
-<!-- ✅ Fallback hamburger toggle if script.js is missing -->
+<!-- Fallback hamburger toggle -->
 <script>
 (function(){
   const burger = document.querySelector('.hamburger');
