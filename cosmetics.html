@@ -4,7 +4,6 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cosmetics – B’s Beauty Blossom</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
@@ -26,16 +25,14 @@
   </nav>
 </header>
 
-<!-- Search with autocomplete -->
-<div class="search-container" style="max-width:1100px;margin:10px auto;padding:0 10px;">
-  <input type="text" id="search-bar" placeholder="Search by brand or product name…"
-         style="width:100%;padding:10px 12px;border:1px solid #23232a;border-radius:10px;background:#0d0d12;color:#fff;">
+<div class="search-container section" style="margin-top:16px;">
+  <input type="text" id="search-bar" placeholder="Search cosmetics by name or brand…">
+  <ul id="search-suggestions" class="search-suggestions"></ul>
 </div>
 
 <section class="section">
   <h1 class="page-title">Cosmetics</h1>
-
-  <!-- Brand groups will be rendered into this container by products.js -->
+  <div id="brand-index" class="brand-index"></div>
   <div id="product-grid" class="product-grid"></div>
 </section>
 
@@ -43,17 +40,20 @@
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
-<!-- Firebase (Compat) -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Category flag + render -->
-<script>window.PRODUCT_CATEGORY='cosmetics';</script>
-<script src="products.js" defer></script>
-<script src="script.js" defer></script>
+<!-- Page flags -->
+<script>
+  window.PRODUCT_CATEGORY = 'cosmetics';
+  window.GROUP_BY_BRAND = true;
+</script>
 
-<!-- Autocomplete + grid filtering -->
+<!-- JS -->
+<script src="script.js" defer></script>
+<script src="products.js" defer></script>
 <script src="search.js" defer></script>
 </body>
 </html>
