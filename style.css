@@ -32,7 +32,7 @@ button{cursor:pointer}
 .pad{padding:8px 6px 2px}
 
 /* =========================================================
-   NAVBAR (slide-in from RIGHT on mobile)
+   NAVBAR (slide-in from RIGHT on mobile; NO OVERLAY)
 ========================================================= */
 header{position:sticky;top:0;z-index:10000;background:#fff;border-bottom:1px solid var(--line)}
 .navbar{
@@ -48,11 +48,6 @@ header{position:sticky;top:0;z-index:10000;background:#fff;border-bottom:1px sol
 .nav-links a:hover,.nav-links a.active{color:#fff;background:var(--brand)}
 
 .hamburger{display:none;font-size:1.6rem;user-select:none}
-#nav-overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.4);
-  opacity:0;visibility:hidden;transition:.25s;z-index:9998
-}
-#nav-overlay.show{opacity:1;visibility:visible}
 
 /* Mobile: slide panel from RIGHT */
 @media (max-width:1023px){
@@ -61,7 +56,7 @@ header{position:sticky;top:0;z-index:10000;background:#fff;border-bottom:1px sol
     position:fixed;top:0;right:0;height:100vh;width:min(84vw,320px);
     background:#fff;border-left:1px solid var(--line);box-shadow:var(--shadow);
     flex-direction:column;align-items:flex-start;gap:0;padding:80px 18px 18px;
-    transform:translateX(100%);transition:transform .28s ease;z-index:9999;
+    transform:translateX(100%);transition:transform .28s ease;z-index:9999; /* ABOVE everything */
     overflow:auto;
   }
   .nav-links.show{transform:translateX(0)}
@@ -148,7 +143,7 @@ textarea{resize:vertical}
 .btn.muted{color:#444}
 
 /* =========================================================
-   GRID FOR CATEGORY PRODUCT CARDS (unchanged card styles on product page will still work)
+   GRID FOR CATEGORY PRODUCT CARDS (product card visuals)
 ========================================================= */
 .product-grid{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px
@@ -172,8 +167,7 @@ textarea{resize:vertical}
 .brand-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px}
 
 /* =========================================================
-   PRODUCT PAGE STYLES — LEFT AS-IS (do not change)
-   (These selectors match your working product detail UI)
+   PRODUCT PAGE STYLES (kept as you liked)
 ========================================================= */
 .product-detail{
   display:grid;grid-template-columns:1.1fr .9fr;gap:24px;max-width:1200px;margin:0 auto;padding:0 16px
