@@ -1,5 +1,4 @@
-// product-detail.js — large image + thumbnail gallery, sizes, qty, add to cart
-
+// product-detail.js
 (function(){
   const $ = (s)=>document.querySelector(s);
   const params = new URLSearchParams(location.search);
@@ -32,7 +31,7 @@
       sizes.forEach(s=>{
         const opt = document.createElement('option');
         opt.value = s.label;
-        opt.textContent = ${s.label} — ${money(s.price)};
+        opt.textContent = `${s.label} — ${money(s.price)}`;
         opt.dataset.price = Number(s.price||0);
         sizeSel.appendChild(opt);
       });
@@ -49,8 +48,7 @@
 
   function renderGallery(imgs){
     if (!imgs.length) {
-      const ph = 'https://via.placeholder.com/900x900?text=No+Image';
-      hero.src = ph;
+      hero.src = 'https://via.placeholder.com/900x900?text=No+Image';
       thumbs.innerHTML = '';
       return;
     }
@@ -70,13 +68,10 @@
   }
 
   function setQty(n){
-    const v = Math.max(1, Number(n||1));
-    qtyVal.textContent = v;
+    qtyVal.textContent = Math.max(1, Number(n||1));
   }
-
   btnDec.addEventListener('click', ()=>setQty(Number(qtyVal.textContent)-1));
   btnInc.addEventListener('click', ()=>setQty(Number(qtyVal.textContent)+1));
-
   sizeSel.addEventListener('change', ()=>{
     const p = Number(sizeSel.selectedOptions[0]?.dataset.price||0);
     priceEl.textContent = money(p);
@@ -89,7 +84,7 @@
 
     const item = {
       id,
-      name: ${nameEl.textContent}${label && label!=='default' ? ' ('+label+')' : ''},
+      name: `${nameEl.textContent}${label && label!=='default' ? ' ('+label+')' : ''}`,
       price: unitPrice,
       qty,
       imageURL: hero.src
@@ -97,7 +92,7 @@
     const cart = JSON.parse(localStorage.getItem('cart')||'[]');
     cart.push(item);
     localStorage.setItem('cart', JSON.stringify(cart));
-    const count = cart.reduce((s,i)=>s+(Number(i.qty || i.quantity || 1)||1),0);
+    const count = cart.reduce((s,i)=>s+(Number(i.qty||i.quantity||1)||1),0);
     const badge = document.getElementById('cart-count');
     if (badge) badge.textContent = count;
     alert('Added to cart!');
@@ -112,15 +107,14 @@
         return;
       }
       const p = doc.data();
-
       nameEl.textContent = p.name || 'Product';
       brandEl.textContent = p.brand ? p.brand : '';
       descEl.textContent = p.description || '—';
       renderSizes(p);
 
       const gallery = [];
-      if (Array.isArray(p.images))  p.images.filter(Boolean).forEach(u=>gallery.push(u));
-      if (p.imageURL && !gallery.includes(p.imageURL)) gallery.unshift(p.imageURL);
+      if (Array.isArray(p.images)) p.images.filter(Boolean).forEach(u=>gallery.push(u));
+      if (p.imageURL && (!gallery.length || gallery[0]!==p.imageURL)) gallery.unshift(p.imageURL);
       renderGallery(gallery);
     } catch (e) {
       console.error('Load product error:', e);
@@ -128,10 +122,6 @@
       hero.src = 'https://via.placeholder.com/800x800?text=Error';
     }
   }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', load, {once:true});
-  } else {
-    load();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', load, {once:true});
+  else load();
 })();
