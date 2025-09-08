@@ -44,15 +44,13 @@
     <label class="muted" for="sort">Sort</label>
     <select id="sort" style="max-width:180px">
       <option value="default">Recommended</option>
+      <option value="name-asc">Name: A → Z</option>
       <option value="price-asc">Price: Low to High</option>
       <option value="price-desc">Price: High to Low</option>
-      <option value="name-asc">Name: A → Z</option>
     </select>
   </div>
 
-  <div id="product-grid" class="product-grid">
-    <p class="muted">Loading products…</p>
-  </div>
+  <div id="product-grid"></div>
 </section>
 
 <footer class="site-footer">
@@ -63,7 +61,10 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<script>window.PRODUCT_CATEGORY = 'skincare';</script>
+<script>
+  window.PRODUCT_CATEGORY = 'skincare';
+  window.GROUP_BY_BRAND = true;
+</script>
 
 <script src="script.js" defer></script>
 <script src="products.js" defer></script>
@@ -71,31 +72,30 @@
 
 <script>
 (function(){
-  const grid = document.getElementById('product-grid');
-  const sortSel = document.getElementById('sort');
-  if (!grid || !sortSel) return;
-
-  function getPriceFromCard(card){
-    const priceEl = card.querySelector('.price');
-    const m = priceEl ? priceEl.textContent.replace(/[^0-9.]/g,'') : '';
-    const n = Number(m||0);
-    return isNaN(n) ? Number.MAX_SAFE_INTEGER : n;
+  const host = document.getElementById('product-grid');
+  const sel  = document.getElementById('sort');
+  if (!host || !sel) return;
+  function getPrice(card){
+    const el = card.querySelector('.price');
+    const n = Number((el?.textContent || '').replace(/[^0-9.]/g, '')) || 0;
+    return n || Number.MAX_SAFE_INTEGER;
   }
-  function sortCards(mode){
-    const cards = Array.from(grid.querySelectorAll('.product'));
+  function sortGrid(mode){
+    const flatGrid = host.querySelector('.product-grid');
+    if (!flatGrid) return;
+    const cards = Array.from(flatGrid.querySelectorAll('.product'));
     if (!cards.length) return;
-    let sorted = cards.slice();
-    if (mode === 'price-asc') sorted.sort((a,b)=>getPriceFromCard(a)-getPriceFromCard(b));
-    else if (mode === 'price-desc') sorted.sort((a,b)=>getPriceFromCard(b)-getPriceFromCard(a));
-    else if (mode === 'name-asc') sorted.sort((a,b)=>{
-      const an = (a.querySelector('h3')?.textContent || '').toLowerCase();
-      const bn = (b.querySelector('h3')?.textContent || '').toLowerCase();
-      return an.localeCompare(bn);
-    });
-    sorted.forEach(c=>grid.appendChild(c));
+    const sorted = cards.slice();
+    if (mode === 'name-asc') {
+      sorted.sort((a,b)=>(a.querySelector('h3')?.textContent||'').localeCompare((b.querySelector('h3')?.textContent||'')));
+    } else if (mode === 'price-asc') {
+      sorted.sort((a,b)=>getPrice(a)-getPrice(b));
+    } else if (mode === 'price-desc') {
+      sorted.sort((a,b)=>getPrice(b)-getPrice(a));
+    } else return;
+    sorted.forEach(c=>flatGrid.appendChild(c));
   }
-  sortSel.addEventListener('change', ()=> sortCards(sortSel.value));
-  document.addEventListener('DOMContentLoaded', ()=> setTimeout(()=>sortCards('default'), 800));
+  sel.addEventListener('change', ()=>sortGrid(sel.value));
 })();
 </script>
 
