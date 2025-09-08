@@ -1,9 +1,10 @@
-// admin.js — Auth + Site Settings + Cloudinary + Product CRUD (variants only: ml/flavour)
+// admin.js — Auth + Site Settings + Cloudinary + Product CRUD + Stock + client-side sort
 (function () {
   if (!window.firebase || !window.db) {
-    throw new Error("❌ Firebase not initialized: load compat SDKs BEFORE firebase-config.js.");
+    throw new Error("❌ Firebase not initialized: ensure admin.html loads compat SDKs then firebase-config.js.");
   }
 
+  // ===== Basic shorthands =====
   const $ = (s) => document.querySelector(s);
   const auth = firebase.auth();
   const dbRef = db;
@@ -11,88 +12,75 @@
   const CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME;
   const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET;
 
-  // ✅ Allowed admin UIDs
+  // Restrict access (add your UID here to lock down the admin; empty = allow any signed-in user)
   const ALLOWED_ADMIN_UIDS = new Set([
-    "w5jtigflSVezQwUvnsgM7AY4ZK73",
-    "nyQYzolZI2fLFqIkAPNHHbcSJ2p1",
+    "w5jtigflSVezQwUvnsgM7AY4ZK73", // your UID
   ]);
 
-  const money = (n) => 'Rs' + Number(n || 0).toFixed(0);
+  // ===== Auth elements =====
+  const authStatus = $('#auth-status'), loginBtn = $('#loginBtn'), signupBtn = $('#signupBtn'), logoutBtn = $('#logoutBtn');
+  const email = $('#email'), password = $('#password');
 
-  // ---- Auth DOM
-  const authStatus = $('#auth-status');
-  const loginBtn   = $('#loginBtn');
-  const signupBtn  = $('#signupBtn');
-  const logoutBtn  = $('#logoutBtn');
-  const email      = $('#email');
-  const password   = $('#password');
-
-  // ---- Sections DOM
+  // Sections
   const siteSection    = $('#site-section');
   const productSection = $('#product-section');
   const listSection    = $('#list-section');
 
-  // ---- Site Settings DOM
-  const siteHeroTitle    = $('#site-heroTitle');
-  const siteHeroSubtitle = $('#site-heroSubtitle');
-  const siteFeatCat      = $('#site-featuredCategory');
-  const siteShowFeat     = $('#site-showFeatured');
-  const siteBannerInput  = $('#site-banner');
-  const siteBannerPrev   = $('#site-banner-preview');
-  const siteGalleryInput = $('#site-gallery');
-  const siteGalleryPrev  = $('#site-gallery-preview');
-  const siteSaveBtn      = $('#site-save');
-  const siteReloadBtn    = $('#site-reload');
-  const siteStatus       = $('#site-status');
+  // ===== Site Settings elements =====
+  const siteHeroTitle   = $('#site-heroTitle');
+  const siteHeroSubtitle= $('#site-heroSubtitle');
+  const siteFeatCat     = $('#site-featuredCategory');
+  const siteShowFeat    = $('#site-showFeatured');
+  const siteBannerInput = $('#site-banner');
+  const siteBannerPrev  = $('#site-banner-preview');
+  const siteGalleryInput= $('#site-gallery');
+  const siteGalleryPrev = $('#site-gallery-preview');
+  const siteSaveBtn     = $('#site-save');
+  const siteReloadBtn   = $('#site-reload');
+  const siteStatus      = $('#site-status');
 
   const HOME_DOC_REF = dbRef.collection('site').doc('home');
 
-  // ---- Product form DOM
-  const nameEl   = $('#name');
-  const priceEl  = $('#price');
-  const sizesEl  = $('#sizes'); // "Label | Price"
-  const descEl   = $('#description');
-  const brandEl  = $('#brand');
-  const categoryEl = $('#category');
-  const activeEl = $('#active');
-  const imagesEl = $('#images');
-  const docIdEl  = $('#docId');
+  // ===== Product elements =====
+  const nameEl = $('#name'), priceEl = $('#price'), sizesEl = $('#sizes'), descEl = $('#description');
+  const brandEl = $('#brand'), categoryEl = $('#category'), activeEl = $('#active'), imagesEl = $('#images'), docIdEl = $('#docId');
+  const globalStockEl = $('#stock');
+  const filterCategory = $('#filterCategory'), refreshBtn = $('#refreshBtn'), tableBody = $('#tableBody');
 
-  // ---- Product list DOM
-  const filterCategory = $('#filterCategory');
-  const refreshBtn     = $('#refreshBtn');
-  const tableBody      = $('#tableBody');
+  const money = (n) => 'Rs' + Number(n || 0).toFixed(0);
 
   // ===== Helpers =====
   function parseSizes(text) {
-    return String(text || '')
-      .split('\n')
+    return text.split('\n')
       .map(l => l.trim())
       .filter(Boolean)
       .map(l => {
         const parts = l.split('|').map(x => x.trim());
         const label = parts[0] || '';
         const price = Number(parts[1] || 0);
-        return { label, price: isNaN(price) ? 0 : price };
+        const stock = parts[2] !== undefined && parts[2] !== '' ? Number(parts[2]) : null;
+        return { label, price, ...(stock !== null ? { stock } : {}) };
       });
   }
-
   function renderSizesText(sizes) {
     if (!Array.isArray(sizes) || !sizes.length) return '—';
-    return sizes.map(s => ${s.label} – ${money(Number(s.price||0))}).join(', ');
+    return sizes.map(s => {
+      const price = Number(s.price || 0);
+      const hasStock = typeof s.stock === 'number';
+      return `${s.label} ${hasStock ? (${s.stock} pcs) : ''} – ${isNaN(price) ? 'Rs0' : money(price)}`;
+    }).join(', ');
   }
-
-  function sizesToTextarea(sizes) {
+  function sizesToTextarea(sizes){
     if (!Array.isArray(sizes) || !sizes.length) return '';
-    return sizes.map(s => ${s.label} | ${s.price}).join('\n');
+    return sizes.map(s => `${s.label} | ${s.price}${typeof s.stock==='number' ? ` | ${s.stock}:''}).join('\n');
   }
-
   function resetForm() {
     docIdEl.value = '';
     nameEl.value = '';
     priceEl.value = '';
     brandEl.value = '';
     sizesEl.value = '';
+    globalStockEl.value = '';
     descEl.value = '';
     categoryEl.value = 'perfume';
     imagesEl.value = '';
@@ -114,25 +102,21 @@
   }
 
   // ===== Auth =====
-  loginBtn && (loginBtn.onclick = () =>
-    auth.signInWithEmailAndPassword(email.value, password.value).catch(e => alert(e.message)));
-
-  signupBtn && (signupBtn.onclick = () =>
-    auth.createUserWithEmailAndPassword(email.value, password.value)
-      .then(cred => alert(Account created. UID:\n${cred.user.uid}))
-      .catch(e => alert(e.message)));
-
+  loginBtn && (loginBtn.onclick = () => auth.signInWithEmailAndPassword(email.value, password.value).catch(e => alert(e.message)));
+  signupBtn && (signupBtn.onclick = () => auth.createUserWithEmailAndPassword(email.value, password.value)
+    .then(cred => alert(Account created. UID:\n${cred.user.uid}))
+    .catch(e => alert(e.message)));
   logoutBtn && (logoutBtn.onclick = () => auth.signOut());
 
   auth.onAuthStateChanged(async (u) => {
     const ok = u && (ALLOWED_ADMIN_UIDS.size === 0 || ALLOWED_ADMIN_UIDS.has(u.uid));
-    if (authStatus) authStatus.textContent = u ? (ok ? Signed in as ${u.email} : 'Unauthorized') : 'Not signed in';
-    if (logoutBtn) logoutBtn.style.display = u ? 'inline-block' : 'none';
+    authStatus.textContent = u ? (ok ? Signed in as ${u.email} : 'Unauthorized') : 'Not signed in';
+    logoutBtn.style.display = u ? 'inline-block' : 'none';
 
     const show = !!ok;
-    if (siteSection)    siteSection.style.display    = show ? 'block' : 'none';
-    if (productSection) productSection.style.display = show ? 'block' : 'none';
-    if (listSection)    listSection.style.display    = show ? 'block' : 'none';
+    siteSection.style.display    = show ? 'block' : 'none';
+    productSection.style.display = show ? 'block' : 'none';
+    listSection.style.display    = show ? 'block' : 'none';
 
     if (show) {
       await loadSiteSettings();
@@ -140,10 +124,10 @@
     }
   });
 
-  // ===== Site Settings =====
+  // ===== Site Settings logic =====
   async function loadSiteSettings() {
     try {
-      if (siteStatus) siteStatus.textContent = 'Loading…';
+      siteStatus.textContent = 'Loading…';
       const snap = await HOME_DOC_REF.get();
       const h = snap.exists ? snap.data() : {};
       siteHeroTitle.value    = h.heroTitle || '';
@@ -151,33 +135,33 @@
       siteFeatCat.value      = (h.featuredCategory || 'perfume');
       siteShowFeat.checked   = !!h.showFeatured;
 
-      siteBannerPrev.innerHTML = h.bannerImage
-        ? <img src="${h.bannerImage}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">
-        : '';
-
+      // previews
+      siteBannerPrev.innerHTML  = h.bannerImage ? <img src="${h.bannerImage}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5"> : '';
       siteGalleryPrev.innerHTML = Array.isArray(h.gallery) && h.gallery.length
         ? h.gallery.map(u => <img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">).join('')
         : '';
 
-      if (siteStatus) siteStatus.textContent = 'Ready';
+      siteStatus.textContent = 'Ready';
     } catch (e) {
       console.error(e);
-      if (siteStatus) siteStatus.textContent = 'Error loading site settings';
+      siteStatus.textContent = 'Error loading site settings';
     }
   }
 
-  siteReloadBtn && siteReloadBtn.addEventListener('click', loadSiteSettings);
+  siteReloadBtn.addEventListener('click', loadSiteSettings);
 
-  siteSaveBtn && siteSaveBtn.addEventListener('click', async () => {
+  siteSaveBtn.addEventListener('click', async () => {
     try {
-      if (siteStatus) siteStatus.textContent = 'Saving…';
+      siteStatus.textContent = 'Saving…';
 
+      // Upload banner (replace)
       let bannerURL = null;
       if (siteBannerInput.files && siteBannerInput.files[0]) {
         const [url] = await uploadImages(siteBannerInput.files);
         bannerURL = url || null;
       }
 
+      // Upload gallery (overwrite with chosen)
       let galleryURLs = null;
       if (siteGalleryInput.files && siteGalleryInput.files.length) {
         galleryURLs = await uploadImages(siteGalleryInput.files);
@@ -195,73 +179,91 @@
 
       await HOME_DOC_REF.set(payload, { merge: true });
 
-      if (siteStatus) siteStatus.textContent = '✅ Saved';
-      if (bannerURL) siteBannerPrev.innerHTML = `<img src="${bannerURL}" style="width:180px;`height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">;
+      siteStatus.textContent = '✅ Saved';
+      // refresh previews
+      if (bannerURL) siteBannerPrev.innerHTML = <img src="${bannerURL}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">;
       if (galleryURLs) siteGalleryPrev.innerHTML = galleryURLs.map(u => <img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">).join('');
       siteBannerInput.value = '';
       siteGalleryInput.value = '';
     } catch (e) {
       console.error(e);
-      if (siteStatus) siteStatus.textContent = '❌ Save error: ' + e.message;
+      siteStatus.textContent = '❌ Save error: ' + e.message;
     }
   });
 
-  // ===== Product Save =====
-  $('#saveBtn') && ($('#saveBtn').onclick = async () => {
+  // ===== Product CRUD =====
+  $('#saveBtn').onclick = async () => {
     try {
       const sizes = parseSizes(sizesEl.value);
-
       const data = {
-        name: (nameEl.value || '').trim(),
+        name: nameEl.value.trim(),
         basePrice: Number(priceEl.value || 0),
-        brand: (brandEl.value || '').trim() || null,
+        brand: brandEl.value.trim() || null,
         sizes,
-        description: (descEl.value || '').trim(),
+        description: descEl.value.trim() || '',
         category: String(categoryEl.value || '').toLowerCase(),
         active: !!activeEl.checked,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       };
+
+      // global stock if no sizes
+      const globalStockVal = globalStockEl.value !== '' ? Number(globalStockEl.value) : null;
+      if (!sizes.length && globalStockVal !== null && !Number.isNaN(globalStockVal)) {
+        data.stock = globalStockVal;
+      } else {
+        data.stock = firebase.firestore.FieldValue.delete();
+      }
 
       const id = docIdEl.value || dbRef.collection('products').doc().id;
 
-      // images
+      // Upload images
       if (imagesEl.files && imagesEl.files.length) {
         const uploaded = await uploadImages(imagesEl.files);
         if (uploaded.length) {
-          const snap = await dbRef.collection('products').doc(id).get();
-          const old  = snap.exists ? snap.data() : {};
-          const oldList = Array.isArray(old.images) ? old.images : [];
-          if (!old.imageURL) data.imageURL = uploaded[0];
-          data.images = [...oldList, ...uploaded];
+          if (!docIdEl.value) {
+            data.imageURL = uploaded[0];
+            data.images = uploaded.slice(1);
+          } else {
+            const snap = await dbRef.collection('products').doc(id).get();
+            const old = snap.exists ? snap.data() : {};
+            const oldList = Array.isArray(old.images) ? old.images : [];
+            data.images = [...oldList, ...uploaded];
+            if (!old.imageURL) data.imageURL = uploaded[0];
+          }
         }
       }
 
-      if (!docIdEl.value) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-
-      await dbRef.collection('products').doc(id).set(data, { merge: true });
+      if (docIdEl.value) {
+        delete data.createdAt;
+        await dbRef.collection('products').doc(id).set(data, { merge: true });
+      } else {
+        await dbRef.collection('products').doc(id).set(data);
+      }
 
       alert('✅ Product saved');
       resetForm();
-      await loadList();
+      loadList();
     } catch (e) {
       console.error(e);
       alert('Save error: ' + e.message);
     }
-  });
+  };
 
-  $('#resetBtn') && ($('#resetBtn').onclick = resetForm);
+  $('#resetBtn').onclick = resetForm;
 
-  // ===== Product list =====
+  // ===== Product List (NO index required; sort on client) =====
   async function loadList() {
     try {
-      tableBody.innerHTML = `<tr><td colspan="6">Loading…</td></tr>`;
+      tableBody.innerHTML = <tr><td colspan="6">Loading…</td></tr>;
 
+      // No orderBy -> avoid composite index. We sort client-side.
       const snap = await dbRef.collection('products')
         .where('category', '==', filterCategory.value)
         .get();
 
       if (snap.empty) {
-        tableBody.innerHTML = `<tr><td colspan="6">No products</td></tr>`;
+        tableBody.innerHTML = <tr><td colspan="6">No products</td></tr>;
         return;
       }
 
@@ -272,12 +274,21 @@
       tableBody.innerHTML = '';
       docs.forEach(p => {
         const sizesTxt = renderSizesText(p.sizes);
+        const totalStock = Array.isArray(p.sizes) && p.sizes.length
+          ? p.sizes.reduce((sum, s) => sum + (typeof s.stock === 'number' ? s.stock : 0), 0)
+          : (typeof p.stock === 'number' ? p.stock : null);
+
+        const stockTxt = Array.isArray(p.sizes) && p.sizes.length
+          ? (totalStock !== null ? ${totalStock} pcs total : '(sizes; stock unspecified)')
+          : (typeof p.stock === 'number' ? ${p.stock} pcs : '—');
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${p.imageURL ? <img src="${p.imageURL}" width="60" height="60" style="object-fit:cover;border-radius:6px;border:1px solid #e5e5e5"> : ''}</td>
           <td>
             <div style="font-weight:600">${p.name || ''}</div>
             ${p.brand ? <div class="muted">${p.brand}</div> : ''}
+            <div class="muted">Stock: ${stockTxt}</div>
           </td>
           <td>${sizesTxt}</td>
           <td>${money(p.basePrice)}</td>
@@ -290,16 +301,19 @@
         tableBody.appendChild(tr);
       });
 
+      // Wire actions
       tableBody.querySelectorAll('.edit').forEach(btn => {
         btn.onclick = async () => {
           const d = await dbRef.collection('products').doc(btn.dataset.id).get();
           if (!d.exists) return;
           const p = d.data();
+
           docIdEl.value = d.id;
           nameEl.value = p.name || '';
           priceEl.value = Number(p.basePrice || 0);
           brandEl.value = p.brand || '';
           sizesEl.value = sizesToTextarea(p.sizes || []);
+          globalStockEl.value = typeof p.stock === 'number' ? String(p.stock) : '';
           descEl.value = p.description || '';
           categoryEl.value = p.category || 'perfume';
           activeEl.checked = !!p.active;
@@ -314,12 +328,13 @@
           loadList();
         };
       });
+
     } catch (err) {
       console.error('loadList error:', err);
-      tableBody.innerHTML = `<tr><td colspan="6" style="color:#b00020">Error loading products. Check Console.</td></tr>`;
+      tableBody.innerHTML = <tr><td colspan="6" style="color:#b00020">Error loading products. Open the Console for details.</td></tr>;
     }
   }
 
-  refreshBtn && (refreshBtn.onclick = loadList);
-  filterCategory && (filterCategory.onchange = loadList);
+  refreshBtn.onclick = loadList;
+  filterCategory.onchange = loadList;
 })();
