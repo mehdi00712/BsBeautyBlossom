@@ -1,10 +1,11 @@
-// admin.js — Auth + Site Settings + Cloudinary + Product CRUD + Stock (with 2 admin UIDs)
+// admin.js — Auth + Site Settings + Cloudinary + Product CRUD + Stock (merge:true fix)
 (function () {
+  // ---------- Guards ----------
   if (!window.firebase || !window.db) {
-    throw new Error("❌ Firebase not initialized: ensure admin.html loads compat SDKs then firebase-config.js.");
+    throw new Error("❌ Firebase not initialized: make sure admin.html loads compat SDKs then firebase-config.js.");
   }
 
-  // ===== Basic shorthands =====
+  // ---------- Shorthands ----------
   const $ = (s) => document.querySelector(s);
   const auth = firebase.auth();
   const dbRef = db;
@@ -12,80 +13,98 @@
   const CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME;
   const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET;
 
-  // ✅ Allowed admin UIDs
+  // ✅ Only these UIDs are allowed to use the admin
   const ALLOWED_ADMIN_UIDS = new Set([
     "w5jtigflSVezQwUvnsgM7AY4ZK73", // first admin
-    "nyQYzolZI2fLFqIkAPNHHbcSJ2p1", // NEW admin
+    "nyQYzolZI2fLFqIkAPNHHbcSJ2p1", // second admin
   ]);
 
-  // ===== Auth elements =====
-  const authStatus = $('#auth-status'), loginBtn = $('#loginBtn'), signupBtn = $('#signupBtn'), logoutBtn = $('#logoutBtn');
-  const email = $('#email'), password = $('#password');
+  // ---------- Auth UI ----------
+  const authStatus = $('#auth-status');
+  const loginBtn = $('#loginBtn');
+  const signupBtn = $('#signupBtn');
+  const logoutBtn = $('#logoutBtn');
+  const email = $('#email');
+  const password = $('#password');
 
   // Sections
   const siteSection    = $('#site-section');
   const productSection = $('#product-section');
   const listSection    = $('#list-section');
 
-  // ===== Site Settings elements =====
-  const siteHeroTitle   = $('#site-heroTitle');
-  const siteHeroSubtitle= $('#site-heroSubtitle');
-  const siteFeatCat     = $('#site-featuredCategory');
-  const siteShowFeat    = $('#site-showFeatured');
-  const siteBannerInput = $('#site-banner');
-  const siteBannerPrev  = $('#site-banner-preview');
-  const siteGalleryInput= $('#site-gallery');
-  const siteGalleryPrev = $('#site-gallery-preview');
-  const siteSaveBtn     = $('#site-save');
-  const siteReloadBtn   = $('#site-reload');
-  const siteStatus      = $('#site-status');
+  // ---------- Site Settings UI ----------
+  const siteHeroTitle    = $('#site-heroTitle');
+  const siteHeroSubtitle = $('#site-heroSubtitle');
+  const siteFeatCat      = $('#site-featuredCategory');
+  const siteShowFeat     = $('#site-showFeatured');
+  const siteBannerInput  = $('#site-banner');
+  const siteBannerPrev   = $('#site-banner-preview');
+  const siteGalleryInput = $('#site-gallery');
+  const siteGalleryPrev  = $('#site-gallery-preview');
+  const siteSaveBtn      = $('#site-save');
+  const siteReloadBtn    = $('#site-reload');
+  const siteStatus       = $('#site-status');
 
   const HOME_DOC_REF = dbRef.collection('site').doc('home');
 
-  // ===== Product elements =====
-  const nameEl = $('#name'), priceEl = $('#price'), sizesEl = $('#sizes'), descEl = $('#description');
-  const brandEl = $('#brand'), categoryEl = $('#category'), activeEl = $('#active'), imagesEl = $('#images'), docIdEl = $('#docId');
+  // ---------- Product Form UI ----------
+  const nameEl   = $('#name');
+  const priceEl  = $('#price');
+  const sizesEl  = $('#sizes');
+  const descEl   = $('#description');
+  const brandEl  = $('#brand');
+  const categoryEl = $('#category');
+  const activeEl = $('#active');
+  const imagesEl = $('#images');
+  const docIdEl  = $('#docId');
   const globalStockEl = $('#stock');
-  const filterCategory = $('#filterCategory'), refreshBtn = $('#refreshBtn'), tableBody = $('#tableBody');
 
-  const money = (n) => 'Rs' + Number(n || 0).toFixed(0);
+  const filterCategory = $('#filterCategory');
+  const refreshBtn = $('#refreshBtn');
+  const tableBody = $('#tableBody');
 
-  // ===== Helpers =====
+  const currency = (n) => 'Rs' + Number(n || 0).toFixed(0);
+
+  // ---------- Helpers ----------
   function parseSizes(text) {
     return text.split('\n')
       .map(l => l.trim())
       .filter(Boolean)
       .map(l => {
-        const parts = l.split('|').map(x => x.trim());
-        const label = parts[0] || '';
-        const price = Number(parts[1] || 0);
-        const stock = parts[2] !== undefined && parts[2] !== '' ? Number(parts[2]) : null;
-        return { label, price, ...(stock !== null ? { stock } : {}) };
+        // "Label | price | stock"  (stock optional)
+        const [labelRaw, priceRaw, stockRaw] = l.split('|').map(x => (x || '').trim());
+        const out = { label: labelRaw || '' };
+        out.price = Number(priceRaw || 0);
+        if (stockRaw !== undefined && stockRaw !== '') out.stock = Number(stockRaw);
+        return out;
       });
   }
+
   function renderSizesText(sizes) {
     if (!Array.isArray(sizes) || !sizes.length) return '—';
     return sizes.map(s => {
-      const price = Number(s.price || 0);
+      const p = Number(s.price || 0);
       const hasStock = typeof s.stock === 'number';
-      return `${s.label} ${hasStock ? `(${s.stock} pcs)` : ''} – ${isNaN(price) ? 'Rs0' : money(price)}`;
+      return `${s.label} ${hasStock ? `(${s.stock} pcs)` : ''} – ${isNaN(p) ? 'Rs0' : currency(p)}`;
     }).join(', ');
   }
-  function sizesToTextarea(sizes){
+
+  function sizesToTextarea(sizes) {
     if (!Array.isArray(sizes) || !sizes.length) return '';
-    return sizes.map(s => `${s.label} | ${s.price}${typeof s.stock==='number' ? ` | ${s.stock}`:''}`).join('\n');
+    return sizes.map(s => `${s.label} | ${s.price}${typeof s.stock === 'number' ? ` | ${s.stock}` : ''}`).join('\n');
   }
+
   function resetForm() {
     docIdEl.value = '';
     nameEl.value = '';
     priceEl.value = '';
-    brandEl.value = '';
     sizesEl.value = '';
-    globalStockEl.value = '';
     descEl.value = '';
+    brandEl.value = '';
     categoryEl.value = 'perfume';
-    imagesEl.value = '';
     activeEl.checked = true;
+    imagesEl.value = '';
+    globalStockEl.value = '';
   }
 
   async function uploadImages(files) {
@@ -96,17 +115,21 @@
       fd.append('file', f);
       fd.append('upload_preset', UPLOAD_PRESET);
       const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.secure_url) urls.push(data.secure_url);
+      const j = await res.json();
+      if (j.secure_url) urls.push(j.secure_url);
     }
     return urls;
   }
 
-  // ===== Auth =====
-  loginBtn && (loginBtn.onclick = () => auth.signInWithEmailAndPassword(email.value, password.value).catch(e => alert(e.message)));
-  signupBtn && (signupBtn.onclick = () => auth.createUserWithEmailAndPassword(email.value, password.value)
-    .then(cred => alert(`Account created. UID:\n${cred.user.uid}`))
-    .catch(e => alert(e.message)));
+  // ---------- Auth ----------
+  loginBtn && (loginBtn.onclick = () =>
+    auth.signInWithEmailAndPassword(email.value, password.value).catch(e => alert(e.message)));
+
+  signupBtn && (signupBtn.onclick = () =>
+    auth.createUserWithEmailAndPassword(email.value, password.value)
+      .then(cred => alert(`Account created. UID:\n${cred.user.uid}`))
+      .catch(e => alert(e.message)));
+
   logoutBtn && (logoutBtn.onclick = () => auth.signOut());
 
   auth.onAuthStateChanged(async (u) => {
@@ -125,7 +148,7 @@
     }
   });
 
-  // ===== Site Settings logic =====
+  // ---------- Site Settings ----------
   async function loadSiteSettings() {
     try {
       siteStatus.textContent = 'Loading…';
@@ -136,7 +159,6 @@
       siteFeatCat.value      = (h.featuredCategory || 'perfume');
       siteShowFeat.checked   = !!h.showFeatured;
 
-      // previews
       siteBannerPrev.innerHTML  = h.bannerImage ? `<img src="${h.bannerImage}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">` : '';
       siteGalleryPrev.innerHTML = Array.isArray(h.gallery) && h.gallery.length
         ? h.gallery.map(u => `<img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`).join('')
@@ -149,20 +171,18 @@
     }
   }
 
-  siteReloadBtn.addEventListener('click', loadSiteSettings);
+  siteReloadBtn && siteReloadBtn.addEventListener('click', loadSiteSettings);
 
-  siteSaveBtn.addEventListener('click', async () => {
+  siteSaveBtn && siteSaveBtn.addEventListener('click', async () => {
     try {
       siteStatus.textContent = 'Saving…';
 
-      // Upload banner (replace)
       let bannerURL = null;
       if (siteBannerInput.files && siteBannerInput.files[0]) {
         const [url] = await uploadImages(siteBannerInput.files);
         bannerURL = url || null;
       }
 
-      // Upload gallery (overwrite with chosen)
       let galleryURLs = null;
       if (siteGalleryInput.files && siteGalleryInput.files.length) {
         galleryURLs = await uploadImages(siteGalleryInput.files);
@@ -178,10 +198,10 @@
       if (bannerURL !== null) payload.bannerImage = bannerURL;
       if (galleryURLs !== null) payload.gallery = galleryURLs;
 
+      // ✅ merge:true always
       await HOME_DOC_REF.set(payload, { merge: true });
 
       siteStatus.textContent = '✅ Saved';
-      // refresh previews
       if (bannerURL) siteBannerPrev.innerHTML = `<img src="${bannerURL}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`;
       if (galleryURLs) siteGalleryPrev.innerHTML = galleryURLs.map(u => `<img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`).join('');
       siteBannerInput.value = '';
@@ -192,73 +212,74 @@
     }
   });
 
-  // ===== Product CRUD =====
-  $('#saveBtn').onclick = async () => {
+  // ---------- Product CRUD ----------
+  $('#saveBtn') && ($('#saveBtn').onclick = async () => {
     try {
       const sizes = parseSizes(sizesEl.value);
-      const data = {
-        name: nameEl.value.trim(),
+      const payload = {
+        name: (nameEl.value || '').trim(),
         basePrice: Number(priceEl.value || 0),
-        brand: brandEl.value.trim() || null,
+        brand: (brandEl.value || '').trim() || null,
         sizes,
-        description: descEl.value.trim() || '',
+        description: (descEl.value || '').trim(),
         category: String(categoryEl.value || '').toLowerCase(),
         active: !!activeEl.checked,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       };
 
-      // global stock if no sizes
-      const globalStockVal = globalStockEl.value !== '' ? Number(globalStockEl.value) : null;
-      if (!sizes.length && globalStockVal !== null && !Number.isNaN(globalStockVal)) {
-        data.stock = globalStockVal;
+      // Global stock only applies when there are no size rows
+      const globalStockVal = globalStockEl && globalStockEl.value !== '' ? Number(globalStockEl.value) : null;
+      if (!sizes.length) {
+        if (globalStockVal !== null && !Number.isNaN(globalStockVal)) {
+          payload.stock = globalStockVal;
+        } else {
+          // ✅ OK because we always use merge:true below
+          payload.stock = firebase.firestore.FieldValue.delete();
+        }
       } else {
-        data.stock = firebase.firestore.FieldValue.delete();
+        // when sizes exist, remove global stock if present
+        payload.stock = firebase.firestore.FieldValue.delete();
       }
 
       const id = docIdEl.value || dbRef.collection('products').doc().id;
 
-      // Upload images
+      // Upload images (first becomes imageURL, rest to images[])
       if (imagesEl.files && imagesEl.files.length) {
         const uploaded = await uploadImages(imagesEl.files);
         if (uploaded.length) {
-          if (!docIdEl.value) {
-            data.imageURL = uploaded[0];
-            data.images = uploaded.slice(1);
-          } else {
-            const snap = await dbRef.collection('products').doc(id).get();
-            const old = snap.exists ? snap.data() : {};
-            const oldList = Array.isArray(old.images) ? old.images : [];
-            data.images = [...oldList, ...uploaded];
-            if (!old.imageURL) data.imageURL = uploaded[0];
-          }
+          const snap = await dbRef.collection('products').doc(id).get();
+          const old = snap.exists ? snap.data() : {};
+          const oldImages = Array.isArray(old.images) ? old.images : [];
+          if (!old.imageURL) payload.imageURL = uploaded[0];
+          payload.images = [...oldImages, ...uploaded.slice(old.imageURL ? 0 : 1)];
         }
       }
 
-      if (docIdEl.value) {
-        delete data.createdAt;
-        await dbRef.collection('products').doc(id).set(data, { merge: true });
-      } else {
-        await dbRef.collection('products').doc(id).set(data);
+      // CreatedAt only if doc doesn't exist yet
+      const existing = await dbRef.collection('products').doc(id).get();
+      if (!existing.exists) {
+        payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
       }
+
+      // ✅ Always merge so FieldValue.delete() is allowed
+      await dbRef.collection('products').doc(id).set(payload, { merge: true });
 
       alert('✅ Product saved');
       resetForm();
-      loadList();
+      await loadList();
     } catch (e) {
       console.error(e);
       alert('Save error: ' + e.message);
     }
-  };
+  });
 
-  $('#resetBtn').onclick = resetForm;
+  $('#resetBtn') && ($('#resetBtn').onclick = resetForm);
 
-  // ===== Products table (NO INDEX NEEDED) =====
+  // ---------- Product List (no orderBy → no composite index) ----------
   async function loadList() {
     try {
       tableBody.innerHTML = `<tr><td colspan="6">Loading…</td></tr>`;
 
-      // no orderBy -> no composite index required
       const snap = await dbRef.collection('products')
         .where('category', '==', filterCategory.value)
         .get();
@@ -268,13 +289,12 @@
         return;
       }
 
-      // sort client-side by name
-      const docs = snap.docs
+      const items = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 
       tableBody.innerHTML = '';
-      docs.forEach((p) => {
+      items.forEach(p => {
         const sizesTxt = renderSizesText(p.sizes);
         const totalStock = Array.isArray(p.sizes) && p.sizes.length
           ? p.sizes.reduce((sum, s) => sum + (typeof s.stock === 'number' ? s.stock : 0), 0)
@@ -293,7 +313,7 @@
             <div class="muted">Stock: ${stockTxt}</div>
           </td>
           <td>${sizesTxt}</td>
-          <td>${money(p.basePrice)}</td>
+          <td>${currency(p.basePrice)}</td>
           <td>${p.active ? 'Yes' : 'No'}</td>
           <td>
             <button class="btn edit" data-id="${p.id}">Edit</button>
@@ -319,6 +339,7 @@
           descEl.value = p.description || '';
           categoryEl.value = p.category || 'perfume';
           activeEl.checked = !!p.active;
+
           window.scrollTo({ top: 0, behavior: 'smooth' });
         };
       });
@@ -337,6 +358,6 @@
     }
   }
 
-  refreshBtn.onclick = loadList;
-  filterCategory.onchange = loadList;
+  refreshBtn && (refreshBtn.onclick = loadList);
+  filterCategory && (filterCategory.onchange = loadList);
 })();
