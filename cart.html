@@ -1,258 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Checkout – B’s Beauty Blossom</title>
-  <link rel="stylesheet" href="style.css"/>
-
-  <!-- Firebase (Compat) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="firebase-config.js"></script>
-
-  <style>
-    .cart-page { max-width: 980px; margin: 20px auto; padding: 12px; }
-    .cart-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-    .card { background:#fff; border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,.08); padding:16px; }
-    .cart-item { display:grid; grid-template-columns: 84px 1fr auto; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid #eee; }
-    .cart-item:last-child { border-bottom:0; }
-    .qty { display:flex; gap:6px; align-items:center; }
-    .qty input { width:56px; text-align:center; padding:6px 8px; border-radius:8px; border:1px solid #ddd; }
-    .remove-btn { border:none; background:#f4f4f4; padding:6px 10px; border-radius:8px; cursor:pointer; }
-    .totals table { width:100%; }
-    .totals td { padding:6px 0; }
-    .totals td:last-child { text-align:right; }
-    .muted { color:#666; font-size:.95rem; }
-    .actions { display:flex; gap:10px; flex-wrap:wrap; }
-    .btn { background:#222; color:#fff; padding:10px 14px; border-radius:10px; border:none; cursor:pointer; }
-    .btn.secondary { background:#f2f2f2; color:#111; }
-    .empty { text-align:center; padding:40px 10px; color:#666; }
-    .badge { background:#111; color:#fff; padding:2px 8px; border-radius:999px; font-size:.85rem; }
-    .method { display:flex; gap:12px; margin:8px 0 0; }
-    .method label { display:flex; align-items:center; gap:6px; }
-    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .form-grid input, .form-grid textarea, select { width:100%; padding:10px 12px; border-radius:10px; border:1px solid #ddd; }
-    @media (max-width: 900px){ .cart-grid{ grid-template-columns: 1fr; } }
-  </style>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Checkout - B's Beauty Blossom</title>
+<link rel="stylesheet" href="style.css">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
 </head>
 <body>
-<header class="site-header">
+<header>
   <nav class="navbar">
-    <div class="logo"><a href="index.html">B’s Beauty Blossom</a></div>
+    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
     <ul class="nav-links">
       <li><a href="index.html">Home</a></li>
-      <li><a href="product.html">Shop</a></li>
-      <li><a href="cart.html">Cart <span id="cart-count" class="badge">0</span></a></li>
+      <li><a href="perfume.html">Perfume</a></li>
+      <li><a href="body.html">Body</a></li>
+      <li><a href="skincare.html">Skincare</a></li>
+      <li><a href="cosmetics.html">Cosmetics</a></li>
+      <li><a href="jewellery.html">Jewellery</a></li>
+      <li><a href="gift.html">Gift</a></li>
+      <li><a href="cart.html" class="active">🛒 Cart (<span id="cart-count">0</span>)</a></li>
+      <li><a href="admin.html">Admin</a></li>
     </ul>
-    <button class="hamburger" aria-label="Menu" aria-expanded="false">☰</button>
+    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
   </nav>
+  <div id="nav-overlay"></div>
 </header>
 
-<main class="cart-page">
-  <h1>Your Cart</h1>
-  <div id="cart-empty" class="card empty" style="display:none">Your cart is empty.</div>
+<section class="section">
+  <h1>Checkout</h1>
 
-  <div class="cart-grid" id="cart-sections" style="display:none">
-    <!-- Items -->
-    <section class="card">
-      <div id="cart-items"></div>
-      <div class="actions" style="margin-top:10px">
-        <button class="btn secondary" id="clear-cart">Clear Cart</button>
-        <a class="btn secondary" href="product.html">Continue Shopping</a>
-      </div>
-    </section>
-
-    <!-- Summary + Checkout -->
-    <aside class="card">
-      <h3>Order Summary</h3>
-      <div class="totals">
-        <table>
-          <tr><td>Subtotal</td><td id="t-subtotal">Rs0</td></tr>
-          <tr><td>Delivery</td><td id="t-delivery">N/A</td></tr>
-          <tr><td>Postage</td><td id="t-postage">N/A</td></tr>
-          <tr><td>Grand Total</td><td id="t-total"><strong>Rs0</strong></td></tr>
-        </table>
-      </div>
-
-      <h3 style="margin-top:18px">Delivery Method</h3>
-      <div class="method">
-        <label><input type="radio" name="method" value="pickup" checked> Pick up (Free)</label>
-        <label><input type="radio" name="method" value="delivery"> Delivery (Rs150)</label>
-        <label><input type="radio" name="method" value="postage"> Postage (Rs125)</label>
-      </div>
-
-      <h3 style="margin-top:18px">Your Details</h3>
-      <div class="form-grid">
-        <input id="name" placeholder="Full name" required>
-        <input id="phone" placeholder="Phone" required>
-        <input id="email" placeholder="Email (optional)">
-        <input id="address" placeholder="Address (for delivery/postage)">
-        <textarea id="note" placeholder="Note (optional)" rows="3"></textarea>
-      </div>
-
-      <button id="place" class="btn" style="margin-top:14px">Place Order</button>
-      <p class="muted" style="margin-top:10px">We’ll confirm your order via WhatsApp/SMS.</p>
-    </aside>
+  <div id="cart-items" class="cart-list"></div>
+  <div class="totals">
+    <div class="totals-row"><span>Subtotal</span><span id="subtotal">Rs0</span></div>
+    <div class="totals-row"><span>Shipping</span><span id="shipping">Rs0</span></div>
+    <div class="totals-row"><strong>Total</strong><strong id="total">Rs0</strong></div>
   </div>
-</main>
 
-<footer class="site-footer">
-  <p>© 2025 B’s Beauty Blossom</p>
-</footer>
+  <h2 style="margin-top:18px">Delivery Method</h2>
+  <form id="delivery-form" class="card">
+    <label><input type="radio" name="delivery" value="Pick Up" required> Pick Up (Free)</label><br>
+    <label><input type="radio" name="delivery" value="Postage"> Postage (+Rs125)</label><br>
+    <label><input type="radio" name="delivery" value="Delivery"> Delivery (+Rs150)</label><br><br>
 
+    <div id="customer-info" style="display:none;">
+      <h3>Customer Details</h3>
+      <input type="text" id="name" placeholder="Full Name" required><br>
+      <input type="email" id="email" placeholder="Email" required><br>
+      <input type="tel" id="phone" placeholder="Phone Number" required><br>
+      <div id="address-section" style="display:none;">
+        <input type="text" id="address" placeholder="Delivery Address"><br>
+      </div>
+
+      <h3>Payment Method</h3>
+      <label><input type="radio" name="payment" value="Juice" required> Juice Payment (account transfer)</label><br>
+      <label><input type="radio" name="payment" value="Pick Up Payment"> Payment at Pick Up</label><br><br>
+
+      <div id="juice-section" style="display:none;">
+        <div class="card" style="text-align:center">
+          <h3>Juice Payment Instructions</h3>
+          <p>1. Open your Juice app</p>
+          <p>2. Transfer the total amount to: <strong>Account Number: 000450702685</strong></p>
+          <p>3. Send the receipt to <strong>+230 58195560</strong></p>
+          <p>4. Press "Confirm Order" once payment is done</p>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="margin-top:10px">Confirm Order</button>
+    </div>
+  </form>
+</section>
+
+<footer class="site-footer"><p>© 2025 B’s Beauty Blossom • All rights reserved</p></footer>
+
+<script src="script.js"></script>
 <script>
-// --- Helpers ---
-const fmt = n => 'Rs' + Number(n||0).toFixed(0);
+let baseTotal=0, extraCharge=0;
 
-function getCart(){ try{ return JSON.parse(localStorage.getItem('cart')||'[]'); }catch(_){ return []; } }
-function setCart(v){ localStorage.setItem('cart', JSON.stringify(v||[])); }
+function money(n){ return 'Rs'+Number(n||0).toFixed(0); }
 
-function render(){
-  const itemsWrap = document.getElementById('cart-items');
-  const badge = document.getElementById('cart-count');
-  const empty = document.getElementById('cart-empty');
-  const sections = document.getElementById('cart-sections');
-  const cart = getCart();
-
-  badge.textContent = String(cart.reduce((s,i)=>s+Number(i.quantity||0),0));
+function loadCart(){
+  const cart = JSON.parse(localStorage.getItem('cart')||'[]');
+  const container = document.getElementById('cart-items');
+  container.innerHTML = '';
+  baseTotal = 0;
 
   if (!cart.length){
-    empty.style.display = '';
-    sections.style.display = 'none';
+    container.innerHTML = '<p class="muted">Your cart is empty.</p>';
+    updateTotals();
     return;
   }
-  empty.style.display = 'none';
-  sections.style.display = '';
 
-  itemsWrap.innerHTML = '';
-  cart.forEach((it, idx) => {
-    const div = document.createElement('div');
-    div.className = 'cart-item';
-    div.innerHTML = `
-      <img src="${(it.imageURL||'1.jpg')}" alt="" style="width:84px;height:84px;object-fit:cover;border-radius:10px">
+  cart.forEach((item, idx)=>{
+    const line = Number(item.price||0)*Number(item.qty||item.quantity||1);
+    baseTotal += line;
+    const row = document.createElement('div');
+    row.className = 'cart-row';
+    row.innerHTML = `
+      <img class="cart-thumb" src="${item.imageURL||''}" alt="">
       <div>
-        <div style="font-weight:600">${it.name}</div>
-        <div class="muted">${it.variant ? it.variant : ''}</div>
-        <div class="muted">Price: ${fmt(it.price)}</div>
+        <div class="cart-title">${item.name||''}</div>
+        <div class="cart-meta">${money(item.price)} each</div>
       </div>
-      <div style="text-align:right">
-        <div class="qty">
-          <button class="remove-btn" data-act="dec" data-idx="${idx}">−</button>
-          <input type="number" min="1" value="${Number(it.quantity||1)}" data-idx="${idx}" aria-label="Quantity">
-          <button class="remove-btn" data-act="inc" data-idx="${idx}">+</button>
-        </div>
-        <button class="remove-btn" data-act="del" data-idx="${idx}" style="margin-top:6px">Remove</button>
+      <div class="cart-actions">
+        <button class="qty-btn" onclick="changeQty(${idx},-1)">–</button>
+        <span class="qty-val">${Number(item.qty||item.quantity||1)}</span>
+        <button class="qty-btn" onclick="changeQty(${idx},1)">+</button>
       </div>
+      <div class="cart-line">${money(line)}</div>
     `;
-    itemsWrap.appendChild(div);
+    container.appendChild(row);
   });
-
-  // Wire quantity & remove
-  itemsWrap.onclick = (e)=>{
-    const btn = e.target.closest('button.remove-btn');
-    if (!btn) return;
-    const idx = Number(btn.dataset.idx);
-    const cart = getCart();
-    if (btn.dataset.act === 'del'){ cart.splice(idx,1); }
-    if (btn.dataset.act === 'inc'){ cart[idx].quantity = Number(cart[idx].quantity||1)+1; }
-    if (btn.dataset.act === 'dec'){ cart[idx].quantity = Math.max(1, Number(cart[idx].quantity||1)-1); }
-    setCart(cart);
-    render();
-  };
-  itemsWrap.onchange = (e)=>{
-    const inp = e.target.closest('input[type="number"]');
-    if (!inp) return;
-    const cart = getCart();
-    cart[Number(inp.dataset.idx)].quantity = Math.max(1, Number(inp.value||1));
-    setCart(cart);
-    render();
-  };
-
   updateTotals();
+  refreshCartBadge();
 }
-
 function updateTotals(){
-  const cart = getCart();
-  const subtotal = cart.reduce((s,i)=> s + Number(i.price||0)*Number(i.quantity||0), 0);
-
-  const method = (document.querySelector('input[name="method"]:checked')||{}).value || 'pickup';
-  const deliveryFee = method === 'delivery' ? 150 : 0;
-  const postageFee  = method === 'postage'  ? 125 : 0;
-
-  document.getElementById('t-subtotal').textContent = fmt(subtotal);
-  document.getElementById('t-delivery').textContent = method==='delivery' ? fmt(deliveryFee) : 'N/A';
-  document.getElementById('t-postage').textContent  = method==='postage'  ? fmt(postageFee)  : 'N/A';
-  document.getElementById('t-total').innerHTML = '<strong>'+fmt(subtotal + deliveryFee + postageFee)+'</strong>';
+  document.getElementById('subtotal').textContent = money(baseTotal);
+  document.getElementById('shipping').textContent = money(extraCharge);
+  document.getElementById('total').textContent = money(baseTotal+extraCharge);
+}
+function changeQty(index, delta){
+  const cart = JSON.parse(localStorage.getItem('cart')||'[]');
+  if (!cart[index]) return;
+  const current = Number(cart[index].qty||cart[index].quantity||1);
+  const next = Math.max(1, current + delta);
+  cart[index].qty = next; delete cart[index].quantity;
+  localStorage.setItem('cart', JSON.stringify(cart));
+  loadCart();
 }
 
-function placeOrder(){
-  const cart = getCart();
-  if (!cart.length){ alert("Cart is empty"); return; }
+const deliveryRadios = document.querySelectorAll('input[name="delivery"]');
+const paymentRadios = document.querySelectorAll('input[name="payment"]');
+const customerInfo = document.getElementById("customer-info");
+const addressSection = document.getElementById("address-section");
+const juiceSection = document.getElementById("juice-section");
 
-  const name = document.getElementById('name').value.trim();
-  const phone= document.getElementById('phone').value.trim();
-  const email= document.getElementById('email').value.trim();
-  const addr = document.getElementById('address').value.trim();
-  const note = document.getElementById('note').value.trim();
-  const method = (document.querySelector('input[name="method"]:checked')||{}).value || 'pickup';
+deliveryRadios.forEach(r=>{
+  r.addEventListener('change', ()=>{
+    customerInfo.style.display='block';
+    if (r.value==='Postage'){ extraCharge=125; addressSection.style.display='block'; }
+    else if (r.value==='Delivery'){ extraCharge=150; addressSection.style.display='block'; }
+    else { extraCharge=0; addressSection.style.display='none'; }
 
-  if (!name || !phone){ alert("Please enter your name and phone."); return; }
+    paymentRadios.forEach(p=>{
+      if (r.value!=='Pick Up' && p.value==='Pick Up Payment'){ p.disabled=true; p.checked=false; }
+      else p.disabled=false;
+    });
+    const chosen = document.querySelector('input[name="payment"]:checked');
+    juiceSection.style.display = (chosen && chosen.value==='Juice') ? 'block' : 'none';
+    updateTotals();
+  });
+});
+paymentRadios.forEach(p=>{
+  p.addEventListener('change', ()=>{
+    juiceSection.style.display = (p.value==='Juice') ? 'block' : 'none';
+  });
+});
 
-  const subtotal = cart.reduce((s,i)=> s + Number(i.price||0)*Number(i.quantity||0), 0);
-  const deliveryFee = method === 'delivery' ? 150 : 0;
-  const postageFee  = method === 'postage'  ? 125 : 0;
-  const total = subtotal + deliveryFee + postageFee;
+function validateForm(){
+  const phone = document.getElementById("phone").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const delivery = document.querySelector('input[name="delivery"]:checked')?.value;
+  if (!/^5\d{7}$/.test(phone)){ alert("Phone must start with 5 and be exactly 8 digits."); return false; }
+  if (!email.includes("@")){ alert("Enter a valid email."); return false; }
+  if (delivery && delivery!=='Pick Up'){
+    const payment = document.querySelector('input[name="payment"]:checked')?.value;
+    if (payment!=='Juice'){ alert("For Postage/Delivery, payment must be via Juice."); return false; }
+  }
+  return true;
+}
 
-  const now = new Date().toISOString();
+document.getElementById("delivery-form").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  if (!validateForm()) return;
+  const cart = JSON.parse(localStorage.getItem('cart')||'[]');
+  if (!cart.length){ alert("Cart is empty."); return; }
 
-  // Mutually exclusive labeling (Postage vs Delivery)
-  const deliveryLabel = method === 'delivery' ? 'Delivery' : 'N/A';
-  const postageLabel  = method === 'postage'  ? 'Postage'  : 'N/A';
-
+  const selectedDelivery = document.querySelector('input[name="delivery"]:checked').value;
   const order = {
-    createdAt: now,
-    name, phone, email, address: addr, note,
-    items: cart,
-    subtotal, deliveryFee, postageFee, total,
-    method,
-    deliveryLabel, postageLabel,
-    status: 'new'
+    items: cart.map(i=>({
+      name: i.name, quantity: Number(i.qty||i.quantity||1)||1, price: Number(i.price||0)||0, imageURL: i.imageURL||''
+    })),
+    delivery: selectedDelivery === "Delivery" ? "Delivery" : null,
+    postage: selectedDelivery === "Postage" ? "Postage" : null,
+    pickup: selectedDelivery === "Pick Up" ? "Pick Up" : null,
+    payment: document.querySelector('input[name="payment"]:checked').value,
+    name: document.getElementById("name").value.trim(),
+    email: document.getElementById("email").value.trim(),
+    phone: document.getElementById("phone").value.trim(),
+    address: document.getElementById("address").value.trim() || "N/A",
+    shipping: extraCharge,
+    subtotal: baseTotal,
+    total: baseTotal+extraCharge,
+    timestamp: new Date().toISOString()
   };
 
   try{
-    const db = firebase.database();
-    const ref = db.ref('orders').push();
-    ref.set(order).then(()=>{
-      alert("Order placed! Thank you.");
-      setCart([]);
-      location.href = "index.html";
-    }).catch(err=>{
-      console.error(err);
-      alert("Error placing order: " + (err && err.message ? err.message : err));
-    });
+    const ref = rtdb.ref('orders').push();
+    await ref.set(order);
+    alert("Order confirmed! Thank you for shopping with B's Beauty Blossom.");
+    localStorage.removeItem("cart");
+    loadCart();
+    document.getElementById("cart-count").textContent = 0;
+    location.href="index.html";
   }catch(err){
-    console.error(err);
-    alert("Firebase not ready. Check firebase-config.js");
+    alert("Error saving order: "+err.message);
   }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  const hamburger = document.querySelector('.hamburger');
-  const nav = document.querySelector('.nav-links');
-  if (hamburger && nav) {
-    hamburger.addEventListener('click', () => {
-      nav.classList.toggle('show');
-      const expanded = nav.classList.contains('show');
-      hamburger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-    });
-  }
-
-  render();
-  document.getElementById('clear-cart').onclick = () => { setCart([]); render(); };
-  document.querySelectorAll('input[name="method"]').forEach(r => r.addEventListener('change', updateTotals));
-  document.getElementById('place').onclick = placeOrder;
 });
+
+loadCart();
+document.getElementById("cart-count").textContent =
+  (JSON.parse(localStorage.getItem("cart")||"[]")).reduce((s,i)=>s+(Number(i.qty||i.quantity||1)||1),0);
 </script>
 </body>
 </html>
