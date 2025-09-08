@@ -1,191 +1,146 @@
 // product-detail.js
-// Renders a product detail page with:
-// - Main hero image + clickable thumbnail gallery
-// - Brand, description
-// - Size select that updates price
-// - Quantity controls
-// - Add to Cart (saves to localStorage, updates cart count)
+(function(){
+  const $ = (s)=>document.querySelector(s);
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
 
-(function () {
-  const $ = (sel) => document.querySelector(sel);
-  const heroImg = $('#pd-hero-img');
-  const thumbsEl = $('#pd-thumbs');
-  const titleEl = $('#pd-title');
+  const hero = $('#pd-hero');
+  const thumbs = $('#pd-thumbs');
+  const nameEl = $('#pd-name');
   const brandEl = $('#pd-brand');
   const priceEl = $('#pd-price');
-  const descEl  = $('#pd-desc');
-  const sizeSel = $('#size-select');
-  const qtyVal  = $('#qty-val');
-  const qtyInc  = $('#qty-inc');
-  const qtyDec  = $('#qty-dec');
-  const addBtn  = $('#add-to-cart');
-  const detailWrap = $('#product-detail');
-  const errBox = $('#pd-error');
+  const descEl = $('#pd-desc');
+  const sizeSel = $('#pd-size');
+  const addBtn = $('#pd-add');
+  const qtyVal = $('#qty-val');
+  const btnDec = $('#qty-dec');
+  const btnInc = $('#qty-inc');
 
-  // Helpers
-  const money = (n) => 'Rs' + Number(n || 0).toFixed(0);
-
-  function getQueryId() {
-    const url = new URL(window.location.href);
-    return url.searchParams.get('id') || '';
+  if (!id) {
+    nameEl.textContent = 'Product not found';
+    hero.src = 'https://via.placeholder.com/800x800?text=Not+Found';
+    return;
   }
 
-  function updateCartCount() {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const count = cart.reduce((s, i) => s + (Number(i.qty ?? i.quantity ?? 1) || 1), 0);
-    const badge = document.getElementById('cart-count');
-    if (badge) badge.textContent = count;
-  }
+  const money = (n)=>'Rs'+Number(n||0).toFixed(0);
 
-  function setHero(src) {
-    heroImg.src = src || 'https://via.placeholder.com/800x800?text=No+Image';
-  }
-
-  function renderThumbs(images) {
-    thumbsEl.innerHTML = '';
-    images.forEach((src, idx) => {
-      const t = document.createElement('img');
-      t.src = src;
-      t.alt = 'Thumbnail ' + (idx + 1);
-      t.addEventListener('click', () => setHero(src));
-      thumbsEl.appendChild(t);
-    });
-  }
-
-  function renderSizes(p) {
+  function renderSizes(p){
     sizeSel.innerHTML = '';
     const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-
     if (sizes.length) {
-      sizes.forEach(s => {
+      sizes.forEach(s=>{
         const opt = document.createElement('option');
-        const label = s?.label ?? '';
-        const price = Number(s?.price ?? 0) || 0;
-        opt.value = label;
-        opt.dataset.price = String(price);
-        opt.textContent = `${label} — ${money(price)}`;
+        opt.value = s.label;
+        opt.textContent = `${s.label} — ${money(s.price)}`;
+        opt.dataset.price = Number(s.price||0);
         sizeSel.appendChild(opt);
       });
     } else {
-      // Fallback to basePrice
-      const base = Number(p.basePrice || 0) || 0;
+      // single price fallback
       const opt = document.createElement('option');
       opt.value = 'default';
-      opt.dataset.price = String(base);
-      opt.textContent = money(base);
+      opt.textContent = money(p.basePrice||0);
+      opt.dataset.price = Number(p.basePrice||0);
       sizeSel.appendChild(opt);
     }
+    // update price display
+    const firstPrice = Number(sizeSel.options[0]?.dataset.price||0);
+    priceEl.textContent = money(firstPrice);
   }
 
-  function currentUnitPrice() {
-    const opt = sizeSel.options[sizeSel.selectedIndex];
-    return Number(opt?.dataset?.price || 0) || 0;
-  }
-
-  function updatePrice() {
-    priceEl.textContent = money(currentUnitPrice());
-  }
-
-  function buildCartItem(p) {
-    const qty = Number(qtyVal.textContent || '1') || 1;
-    const price = currentUnitPrice();
-    const sizeLabel = sizeSel.value && sizeSel.value !== 'default' ? ` (${sizeSel.value})` : '';
-    const nameFull = (p.name || 'Product') + sizeLabel;
-    const firstImg = (Array.isArray(p.images) && p.images[0]) || p.imageURL || '';
-
-    return {
-      id: p.id,
-      name: nameFull,
-      price: price,
-      qty: qty,
-      imageURL: firstImg
-    };
-  }
-
-  function addToCart(item) {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    // Check if same product+size already exists → merge qty
-    const key = `${item.id}__${item.name}`;
-    let merged = false;
-    for (const it of cart) {
-      const itKey = `${it.id || ''}__${it.name || ''}`;
-      if (itKey === key) {
-        it.qty = (Number(it.qty || it.quantity || 1) || 1) + item.qty;
-        merged = true;
-        break;
-      }
+  function renderGallery(imgs){
+    // imgs = array of urls
+    if (!imgs.length) {
+      const ph = 'https://via.placeholder.com/900x900?text=No+Image';
+      hero.src = ph;
+      thumbs.innerHTML = '';
+      return;
     }
-    if (!merged) cart.push(item);
-    localStorage.setItem('cart', JSON.stringify(cart));
-    updateCartCount();
+    hero.src = imgs[0];
+    thumbs.innerHTML = '';
+    imgs.forEach((src, i)=>{
+      const t = document.createElement('img');
+      t.src = src;
+      if (i===0) t.classList.add('active');
+      t.addEventListener('click', ()=>{
+        hero.src = src;
+        thumbs.querySelectorAll('img').forEach(x=>x.classList.remove('active'));
+        t.classList.add('active');
+      });
+      thumbs.appendChild(t);
+    });
   }
 
-  async function loadProduct() {
+  function setQty(n){
+    const v = Math.max(1, Number(n||1));
+    qtyVal.textContent = v;
+  }
+
+  btnDec.addEventListener('click', ()=>setQty(Number(qtyVal.textContent)-1));
+  btnInc.addEventListener('click', ()=>setQty(Number(qtyVal.textContent)+1));
+
+  sizeSel.addEventListener('change', ()=>{
+    const p = Number(sizeSel.selectedOptions[0]?.dataset.price||0);
+    priceEl.textContent = money(p);
+  });
+
+  addBtn.addEventListener('click', ()=>{
+    const qty = Number(qtyVal.textContent||1) || 1;
+    const label = sizeSel.value;
+    const unitPrice = Number(sizeSel.selectedOptions[0]?.dataset.price||0) || 0;
+
+    const item = {
+      id,
+      name: `${nameEl.textContent}${label && label!=='default' ? ' ('+label+')' : ''}`,
+      price: unitPrice,
+      qty,
+      imageURL: hero.src
+    };
+    const cart = JSON.parse(localStorage.getItem('cart')||'[]');
+    cart.push(item);
+    localStorage.setItem('cart', JSON.stringify(cart));
+    const count = cart.reduce((s,i)=>s+(Number(i.qty || i.quantity || 1)||1),0);
+    const badge = document.getElementById('cart-count');
+    if (badge) badge.textContent = count;
+    alert('Added to cart!');
+  });
+
+  // Fetch product
+  async function load(){
     try {
-      const id = getQueryId();
-      if (!id) throw new Error('Missing product id');
-
       const doc = await db.collection('products').doc(id).get();
-      if (!doc.exists) throw new Error('Not found');
+      if (!doc.exists) {
+        nameEl.textContent = 'Product not found';
+        hero.src = 'https://via.placeholder.com/800x800?text=Not+Found';
+        return;
+      }
+      const p = doc.data();
 
-      const p = { id: doc.id, ...doc.data() };
-
-      // Title & brand
-      titleEl.textContent = p.name || 'Product';
-      brandEl.textContent = p.brand ? String(p.brand) : '';
-      brandEl.style.display = p.brand ? 'block' : 'none';
-
-      // Description
+      nameEl.textContent = p.name || 'Product';
+      brandEl.textContent = p.brand ? p.brand : '';
       descEl.textContent = p.description || '—';
-
-      // Images
-      const images = (Array.isArray(p.images) && p.images.length ? p.images : [])
-        .filter(Boolean);
-      if (!images.length && p.imageURL) images.push(p.imageURL);
-
-      setHero(images[0] || '');
-      renderThumbs(images);
-
-      // Sizes & price
       renderSizes(p);
-      updatePrice();
 
-      // Quantity controls
-      qtyInc.addEventListener('click', () => {
-        const q = Math.max(1, (Number(qtyVal.textContent || '1') || 1) + 1);
-        qtyVal.textContent = String(q);
-      });
-      qtyDec.addEventListener('click', () => {
-        const q = Math.max(1, (Number(qtyVal.textContent || '1') || 1) - 1);
-        qtyVal.textContent = String(q);
-      });
-      sizeSel.addEventListener('change', updatePrice);
-
-      // Add to cart
-      addBtn.addEventListener('click', () => {
-        const item = buildCartItem(p);
-        if (!item.price) {
-          alert('Please select a valid size.');
-          return;
-        }
-        addToCart(item);
-        alert('Added to cart!');
-      });
-
-      // Show detail, hide error
-      detailWrap.style.display = 'grid';
-      errBox.style.display = 'none';
-      updateCartCount();
+      // Build gallery images list: array 'images' + main 'imageURL'
+      const gallery = [];
+      if (Array.isArray(p.images)) {
+        p.images.filter(Boolean).forEach(u=>gallery.push(u));
+      }
+      if (p.imageURL) {
+        // put the main image first if not already included
+        if (!gallery.length || gallery[0] !== p.imageURL) gallery.unshift(p.imageURL);
+      }
+      renderGallery(gallery);
     } catch (e) {
-      console.error('Product load error:', e);
-      detailWrap.style.display = 'none';
-      errBox.style.display = 'block';
+      console.error('Load product error:', e);
+      nameEl.textContent = 'Product not found';
+      hero.src = 'https://via.placeholder.com/800x800?text=Error';
     }
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadProduct, { once: true });
+    document.addEventListener('DOMContentLoaded', load, {once:true});
   } else {
-    loadProduct();
+    load();
   }
 })();
