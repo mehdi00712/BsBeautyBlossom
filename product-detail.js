@@ -1,4 +1,4 @@
-// product-detail.js – flexible variants + gallery + robust loading + cart
+// product-detail.js – flexible variants + gallery + robust loading + car
 (function(){
   // ---- Guards --------------------------------------------------------------
   if (!window.firebase) { console.error("Firebase SDK not loaded"); return; }
