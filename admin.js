@@ -1,197 +1,183 @@
-// admin.js – Admin CRUD with variants (sizes/shades/flavors) + Cloudinary uploads
+// admin.js — robust auth wiring + clear errors
 (function(){
-  // Basic guard so we don't crash if scripts were included in wrong order
-  if (!window.firebase || !window.db || !window.auth) {
-    console.error("❌ Firebase not initialized. Make sure admin.html loads firebase-app-compat, auth-compat, firestore-compat, then firebase-config.js.");
-    return;
+  function $(s){ return document.querySelector(s); }
+  function setStatus(msg, isError=false){
+    const el = $('#auth-status');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.style.color = isError ? '#b91c1c' : '#6b7280';
+  }
+  function disable(el, on){ if (el) el.disabled = !!on; }
+
+  function guardFirebase(){
+    if (!window.firebase) { console.error('Firebase SDK not loaded'); setStatus('Firebase not loaded', true); return false; }
+    if (!window.auth || !window.db){
+      console.error('firebase-config.js did not set window.auth/window.db');
+      setStatus('Config error: auth/db not initialized', true);
+      return false;
+    }
+    return true;
   }
 
-  const $ = (s) => document.querySelector(s);
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!guardFirebase()) return;
 
-  // Auth widgets
-  const authStatus=$('#auth-status'),
-        loginBtn=$('#loginBtn'), signupBtn=$('#signupBtn'), logoutBtn=$('#logoutBtn'),
-        email=$('#email'), password=$('#password');
+    const email = $('#email');
+    const password = $('#password');
+    const loginBtn = $('#loginBtn');
+    const signupBtn = $('#signupBtn');
+    const logoutBtn = $('#logoutBtn');
 
-  // Product widgets
-  const productSection=$('#product-section'),
-        listSection=$('#list-section'),
-        nameEl=$('#name'), priceEl=$('#price'), brandEl=$('#brand'),
-        sizesEl=$('#sizes'), descEl=$('#description'),
-        categoryEl=$('#category'), imgEl=$('#images'),
-        activeEl=$('#active'), saveBtn=$('#saveBtn'), resetBtn=$('#resetBtn'),
-        tableBody=$('#tableBody'), filterCategory=$('#filterCategory'),
-        refreshBtn=$('#refreshBtn'), docIdEl=$('#docId');
+    const productSection = $('#product-section');
+    const listSection    = $('#list-section');
 
-  // ===== AUTH =====
-  loginBtn.onclick=()=>auth.signInWithEmailAndPassword(email.value,password.value)
-    .catch(e=>alert(e.message));
-
-  signupBtn.onclick=()=>auth.createUserWithEmailAndPassword(email.value,password.value)
-    .then(()=>alert("Account created. (Remember to secure Firestore rules)"))
-    .catch(e=>alert(e.message));
-
-  logoutBtn.onclick=()=>auth.signOut();
-
-  auth.onAuthStateChanged(u=>{
-    if(u){
-      authStatus.textContent=Signed in as ${u.email};
-      logoutBtn.style.display="inline-block";
-      productSection.style.display=listSection.style.display="block";
-    } else {
-      authStatus.textContent="Not signed in";
-      logoutBtn.style.display="none";
-      productSection.style.display=listSection.style.display="none";
-    }
-  });
-
-  // ===== HELPERS =====
-  const parseSizes=(t)=>t.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{
-    let [label,p]=l.split("|").map(x=>x.trim());
-    return {label, price:Number(p)};
-  });
-
-  const renderSizes=(s)=> (s||[]).map(x=>${x.label} Rs${x.price}).join(", ");
-
-  const resetForm=()=>{
-    docIdEl.value="";
-    nameEl.value="";
-    priceEl.value="";
-    brandEl.value="";
-    sizesEl.value="";
-    descEl.value="";
-    imgEl.value="";
-    categoryEl.value="perfume";
-    activeEl.checked=true;
-  };
-
-  resetBtn.onclick=resetForm;
-
-  // ===== SAVE (CREATE/UPDATE) =====
-  saveBtn.onclick=async()=>{
-    try{
-      const sizes=parseSizes(sizesEl.value);
-      const data={
-        name:nameEl.value,
-        basePrice:Number(priceEl.value || 0),
-        brand:brandEl.value,
-        sizes,
-        description:descEl.value,
-        category:categoryEl.value,
-        active:activeEl.checked,
-        updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
-        createdAt:firebase.firestore.FieldValue.serverTimestamp()
-      };
-
-      // get or create ID
-      const id=docIdEl.value || db.collection("products").doc().id;
-
-      // Optional: upload images to Cloudinary (unsigned)
-      if(imgEl.files && imgEl.files.length){
-        const urls=[];
-        for(const f of imgEl.files){
-          const fd=new FormData();
-          fd.append("file", f);
-          fd.append("upload_preset", window.CLOUDINARY_UPLOAD_PRESET);
-          const res=await fetch(https://api.cloudinary.com/v1_1/${window.CLOUDINARY_CLOUD_NAME}/image/upload,{
-            method:"POST", body:fd
-          });
-          const out=await res.json();
-          if(out && out.secure_url) urls.push(out.secure_url);
-        }
-        if(urls.length){
-          data.imageURL = urls[0]; // primary image
-          data.images   = urls;    // all images
-        }
-      }
-
-      if (docIdEl.value){
-        // update existing
-        delete data.createdAt;
-        await db.collection("products").doc(id).set(data,{merge:true});
-      } else {
-        // create new
-        await db.collection("products").doc(id).set(data);
-      }
-
-      alert("✅ Product saved");
-      resetForm();
-      load();
-    }catch(err){
-      console.error(err);
-      alert("Save failed: " + (err?.message||err));
-    }
-  };
-
-  // ===== LIST / EDIT / DELETE =====
-  async function load(){
-    tableBody.innerHTML="<tr><td colspan='6'>Loading…</td></tr>";
-    try{
-      const snap=await db.collection("products")
-        .where("category","==",String(filterCategory.value).toLowerCase())
-        .get();
-
-      if(snap.empty){
-        tableBody.innerHTML="<tr><td colspan='6'>No products</td></tr>";
+    // ----- BUTTON HANDLERS -----
+    async function doLogin(){
+      if (!email.value.trim() || !password.value.trim()){
+        setStatus('Please enter email and password.', true);
         return;
       }
-
-      tableBody.innerHTML="";
-      snap.forEach(doc=>{
-        const p=doc.data();
-        const tr=document.createElement("tr");
-        tr.innerHTML=`
-          <td>${p.imageURL ? <img src="${p.imageURL}" width="50" height="50" style="object-fit:cover;border-radius:6px;border:1px solid #eee"> : ""}</td>
-          <td>${p.name||""}${p.brand?<div class="muted">${p.brand}</div>:""}</td>
-          <td>${renderSizes(p.sizes)}</td>
-          <td>Rs${Number(p.basePrice||0).toFixed(0)}</td>
-          <td>${p.active ? "Yes" : "No"}</td>
-          <td>
-            <button class="edit" data-id="${doc.id}">Edit</button>
-            <button class="delete" data-id="${doc.id}">Delete</button>
-          </td>
-        `;
-        tableBody.appendChild(tr);
-      });
-
-      // wire edit/delete
-      tableBody.querySelectorAll(".edit").forEach(b=>b.onclick=async()=>{
-        try{
-          const d=await db.collection("products").doc(b.dataset.id).get();
-          if(!d.exists) return;
-          const p=d.data();
-          docIdEl.value=d.id;
-          nameEl.value=p.name||"";
-          priceEl.value=p.basePrice||0;
-          brandEl.value=p.brand||"";
-          sizesEl.value=(p.sizes||[]).map(s=>${s.label}|${s.price}).join("\n");
-          descEl.value=p.description||"";
-          categoryEl.value=p.category||"perfume";
-          activeEl.checked=!!p.active;
-          window.scrollTo({top:0,behavior:"smooth"});
-        }catch(err){
-          alert("Could not load product: " + (err?.message||err));
-        }
-      });
-
-      tableBody.querySelectorAll(".delete").forEach(b=>b.onclick=async()=>{
-        if(!confirm("Delete this product?")) return;
-        try{
-          await db.collection("products").doc(b.dataset.id).delete();
-          load();
-        }catch(err){
-          alert("Delete failed: " + (err?.message||err));
-        }
-      });
-
-    }catch(err){
-      console.error(err);
-      tableBody.innerHTML="<tr><td colspan='6'>Error loading products</td></tr>";
+      try{
+        disable(loginBtn, true); setStatus('Signing in…');
+        await auth.signInWithEmailAndPassword(email.value.trim(), password.value.trim());
+        setStatus('Signed in.');
+      }catch(err){
+        console.error('Login failed:', err);
+        setStatus(err?.message || 'Login failed', true);
+        alert(err?.message || 'Login failed');
+      }finally{
+        disable(loginBtn, false);
+      }
     }
-  }
 
-  refreshBtn.onclick=load;
-  filterCategory.onchange=load;
-  // initial load (little delay so auth state resolves)
-  setTimeout(load, 600);
+    async function doSignup(){
+      if (!email.value.trim() || !password.value.trim()){
+        setStatus('Please enter email and password.', true);
+        return;
+      }
+      try{
+        disable(signupBtn, true); setStatus('Creating account…');
+        await auth.createUserWithEmailAndPassword(email.value.trim(), password.value.trim());
+        setStatus('Account created. You are now signed in.');
+        alert('Account created. If you restrict writes by UID, add this new UID in Firestore Rules.');
+      }catch(err){
+        console.error('Signup failed:', err);
+        setStatus(err?.message || 'Signup failed', true);
+        alert(err?.message || 'Signup failed');
+      }finally{
+        disable(signupBtn, false);
+      }
+    }
+
+    async function doLogout(){
+      try{
+        disable(logoutBtn, true); setStatus('Signing out…');
+        await auth.signOut();
+        setStatus('Signed out.');
+      }catch(err){
+        console.error('Logout failed:', err);
+        setStatus(err?.message || 'Logout failed', true);
+      }finally{
+        disable(logoutBtn, false);
+      }
+    }
+
+    // Clicks
+    if (loginBtn)  loginBtn.addEventListener('click', doLogin);
+    if (signupBtn) signupBtn.addEventListener('click', doSignup);
+    if (logoutBtn) logoutBtn.addEventListener('click', doLogout);
+
+    // ENTER to submit
+    [email, password].forEach(inp=>{
+      if (!inp) return;
+      inp.addEventListener('keydown', (e)=>{
+        if (e.key === 'Enter') doLogin();
+      });
+    });
+
+    // ----- AUTH STATE -----
+    auth.onAuthStateChanged(user=>{
+      if (user){
+        setStatus(Signed in as ${user.email});
+        if (logoutBtn) logoutBtn.style.display = 'inline-block';
+        if (productSection) productSection.style.display = 'block';
+        if (listSection)    listSection.style.display    = 'block';
+      }else{
+        setStatus('Not signed in');
+        if (logoutBtn) logoutBtn.style.display = 'none';
+        if (productSection) productSection.style.display = 'none';
+        if (listSection)    listSection.style.display    = 'none';
+      }
+    });
+
+    // ----- PRODUCTS LIST (kept minimal so we can focus on login) -----
+    const filterCategory = $('#filterCategory');
+    const refreshBtn     = $('#refreshBtn');
+    const tableBody      = $('#tableBody');
+
+    async function loadProducts(){
+      if (!tableBody) return;
+      tableBody.innerHTML = "<tr><td colspan='6'>Loading…</td></tr>";
+      try{
+        const cat = (filterCategory?.value || 'perfume').toLowerCase();
+        const snap = await db.collection('products').where('category','==',cat).get();
+        if (snap.empty){
+          tableBody.innerHTML = "<tr><td colspan='6'>No products</td></tr>";
+          return;
+        }
+        tableBody.innerHTML = '';
+        snap.forEach(doc=>{
+          const p = doc.data();
+          const tr = document.createElement('tr');
+          const sizes = Array.isArray(p.sizes) ? p.sizes.map(s=>${s.label} Rs${s.price}).join(', ') : '';
+          tr.innerHTML = `
+            <td>${p.imageURL?<img src="${p.imageURL}" width="50" height="50" style="object-fit:cover;border-radius:6px;border:1px solid #eee">:''}</td>
+            <td>${p.name||''}${p.brand?<div class="muted">${p.brand}</div>:''}</td>
+            <td>${sizes}</td>
+            <td>Rs${Number(p.basePrice||0).toFixed(0)}</td>
+            <td>${p.active?'Yes':'No'}</td>
+            <td>
+              <button class="edit" data-id="${doc.id}">Edit</button>
+              <button class="delete" data-id="${doc.id}">Delete</button>
+            </td>
+          `;
+          tableBody.appendChild(tr);
+        });
+
+        // wire edit/delete minimal (you already have the full CRUD elsewhere)
+        tableBody.querySelectorAll('.delete').forEach(b=>{
+          b.addEventListener('click', async ()=>{
+            if (!confirm('Delete this product?')) return;
+            await db.collection('products').doc(b.dataset.id).delete();
+            loadProducts();
+          });
+        });
+
+        tableBody.querySelectorAll('.edit').forEach(b=>{
+          b.addEventListener('click', async ()=>{
+            const d = await db.collection('products').doc(b.dataset.id).get();
+            if (!d.exists) return;
+            const p = d.data();
+            // fill form
+            $('#docId').value = d.id;
+            $('#name').value = p.name || '';
+            $('#price').value = Number(p.basePrice||0) || 0;
+            $('#brand').value = p.brand || '';
+            $('#sizes').value = (Array.isArray(p.sizes)?p.sizes:[]).map(s=>${s.label}|${s.price}).join('\n');
+            $('#description').value = p.description || '';
+            $('#category').value = p.category || 'perfume';
+            $('#active').checked = !!p.active;
+            window.scrollTo({top:0, behavior:'smooth'});
+          });
+        });
+      }catch(err){
+        console.error('Load products failed:', err);
+        tableBody.innerHTML = "<tr><td colspan='6'>Error loading products</td></tr>";
+      }
+    }
+
+    if (filterCategory) filterCategory.addEventListener('change', loadProducts);
+    if (refreshBtn)     refreshBtn.addEventListener('click',  loadProducts);
+    setTimeout(loadProducts, 700); // small delay to let auth state settle
+  });
 })();
