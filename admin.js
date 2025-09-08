@@ -1,325 +1,210 @@
-// admin.js — Auth + Site Settings + Cloudinary + Product CRUD (variants only: ml/flavour)
-(function () {
-  if (!window.firebase || !window.db) {
-    throw new Error("❌ Firebase not initialized: load compat SDKs BEFORE firebase-config.js.");
+// admin.js — Cloudinary unsigned upload + Firestore CRUD
+(function(){
+  if (!window.auth || !window.db) throw new Error("❌ Firebase not initialized: ensure firebase-auth-compat.js + firebase-config.js loaded first.");
+
+  const $ = (s)=>document.querySelector(s);
+
+  // Auth elements
+  const email=$('#email'), password=$('#password');
+  const loginBtn=$('#loginBtn'), signupBtn=$('#signupBtn'), logoutBtn=$('#logoutBtn'), authStatus=$('#auth-status');
+
+  // Site settings
+  const siteSection=$('#site-section');
+  const siteHeroTitle=$('#site-heroTitle'), siteHeroSubtitle=$('#site-heroSubtitle');
+  const siteFeatured=$('#site-featuredCategory'), siteShow=$('#site-showFeatured');
+  const siteBanner=$('#site-banner'), siteBannerPrev=$('#site-banner-preview');
+  const siteGallery=$('#site-gallery'), siteGalleryPrev=$('#site-gallery-preview');
+  const siteSave=$('#site-save'), siteReload=$('#site-reload'), siteStatus=$('#site-status');
+
+  // Product form
+  const productSection=$('#product-section'), listSection=$('#list-section');
+  const nameEl=$('#name'), priceEl=$('#price'), brandEl=$('#brand'), categoryEl=$('#category');
+  const sizesEl=$('#sizes'), descEl=$('#description'), imagesEl=$('#images'), activeEl=$('#active');
+  const saveBtn=$('#saveBtn'), resetBtn=$('#resetBtn'), docIdEl=$('#docId');
+
+  // Product list
+  const tableBody=$('#tableBody'), filterCategory=$('#filterCategory'), refreshBtn=$('#refreshBtn');
+
+  // Admin control (whitelist if needed)
+  const ALLOWED_ADMIN_UIDS = new Set(["w5jtigflSVezQwUvnsgM7AY4ZK73"]); // your UID here
+  const requireWhitelist = true; // set to false to allow any signed-in user
+
+  function parseSizes(text){
+    return text.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
+      const [label,price]=l.split('|').map(x=>String(x||'').trim());
+      return {label, price: Number(price||0)};
+    });
   }
+  function renderSizes(s){ return (s||[]).map(x=>`${x.label} (${x.price})`).join(', '); }
 
-  const $ = (s) => document.querySelector(s);
-  const auth = firebase.auth();
-  const dbRef = db;
+  // Auth handlers
+  loginBtn.onclick = ()=> auth.signInWithEmailAndPassword(email.value, password.value).catch(e=>alert(e.message));
+  signupBtn.onclick= ()=> auth.createUserWithEmailAndPassword(email.value, password.value).then((cred)=>alert('Signed up. Your UID: '+cred.user.uid)).catch(e=>alert(e.message));
+  logoutBtn.onclick = ()=> auth.signOut();
 
-  const CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME;
-  const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET;
-
-  // ✅ Allowed admin UIDs
-  const ALLOWED_ADMIN_UIDS = new Set([
-    "w5jtigflSVezQwUvnsgM7AY4ZK73",
-    "nyQYzolZI2fLFqIkAPNHHbcSJ2p1",
-  ]);
-
-  const money = (n) => 'Rs' + Number(n || 0).toFixed(0);
-
-  // ---- Auth DOM
-  const authStatus = $('#auth-status');
-  const loginBtn   = $('#loginBtn');
-  const signupBtn  = $('#signupBtn');
-  const logoutBtn  = $('#logoutBtn');
-  const email      = $('#email');
-  const password   = $('#password');
-
-  // ---- Sections DOM
-  const siteSection    = $('#site-section');
-  const productSection = $('#product-section');
-  const listSection    = $('#list-section');
-
-  // ---- Site Settings DOM
-  const siteHeroTitle    = $('#site-heroTitle');
-  const siteHeroSubtitle = $('#site-heroSubtitle');
-  const siteFeatCat      = $('#site-featuredCategory');
-  const siteShowFeat     = $('#site-showFeatured');
-  const siteBannerInput  = $('#site-banner');
-  const siteBannerPrev   = $('#site-banner-preview');
-  const siteGalleryInput = $('#site-gallery');
-  const siteGalleryPrev  = $('#site-gallery-preview');
-  const siteSaveBtn      = $('#site-save');
-  const siteReloadBtn    = $('#site-reload');
-  const siteStatus       = $('#site-status');
-
-  const HOME_DOC_REF = dbRef.collection('site').doc('home');
-
-  // ---- Product form DOM
-  const nameEl   = $('#name');
-  const priceEl  = $('#price');
-  const sizesEl  = $('#sizes'); // "Label | Price"
-  const descEl   = $('#description');
-  const brandEl  = $('#brand');
-  const categoryEl = $('#category');
-  const activeEl = $('#active');
-  const imagesEl = $('#images');
-  const docIdEl  = $('#docId');
-
-  // ---- Product list DOM
-  const filterCategory = $('#filterCategory');
-  const refreshBtn     = $('#refreshBtn');
-  const tableBody      = $('#tableBody');
-
-  // ===== Helpers =====
-  function parseSizes(text) {
-    return String(text || '')
-      .split('\n')
-      .map(l => l.trim())
-      .filter(Boolean)
-      .map(l => {
-        const parts = l.split('|').map(x => x.trim());
-        const label = parts[0] || '';
-        const price = Number(parts[1] || 0);
-        return { label, price: isNaN(price) ? 0 : price };
-      });
-  }
-
-  function renderSizesText(sizes) {
-    if (!Array.isArray(sizes) || !sizes.length) return '—';
-    return sizes.map(s => ${s.label} – ${money(Number(s.price||0))}).join(', ');
-  }
-
-  function sizesToTextarea(sizes) {
-    if (!Array.isArray(sizes) || !sizes.length) return '';
-    return sizes.map(s => ${s.label} | ${s.price}).join('\n');
-  }
-
-  function resetForm() {
-    docIdEl.value = '';
-    nameEl.value = '';
-    priceEl.value = '';
-    brandEl.value = '';
-    sizesEl.value = '';
-    descEl.value = '';
-    categoryEl.value = 'perfume';
-    imagesEl.value = '';
-    activeEl.checked = true;
-  }
-
-  async function uploadImages(files) {
-    if (!files || !files.length) return [];
-    const urls = [];
-    for (const f of files) {
-      const fd = new FormData();
-      fd.append('file', f);
-      fd.append('upload_preset', UPLOAD_PRESET);
-      const res = await fetch(https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload, { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.secure_url) urls.push(data.secure_url);
-    }
-    return urls;
-  }
-
-  // ===== Auth =====
-  loginBtn && (loginBtn.onclick = () =>
-    auth.signInWithEmailAndPassword(email.value, password.value).catch(e => alert(e.message)));
-
-  signupBtn && (signupBtn.onclick = () =>
-    auth.createUserWithEmailAndPassword(email.value, password.value)
-      .then(cred => alert(Account created. UID:\n${cred.user.uid}))
-      .catch(e => alert(e.message)));
-
-  logoutBtn && (logoutBtn.onclick = () => auth.signOut());
-
-  auth.onAuthStateChanged(async (u) => {
-    const ok = u && (ALLOWED_ADMIN_UIDS.size === 0 || ALLOWED_ADMIN_UIDS.has(u.uid));
-    if (authStatus) authStatus.textContent = u ? (ok ? Signed in as ${u.email} : 'Unauthorized') : 'Not signed in';
-    if (logoutBtn) logoutBtn.style.display = u ? 'inline-block' : 'none';
-
-    const show = !!ok;
-    if (siteSection)    siteSection.style.display    = show ? 'block' : 'none';
-    if (productSection) productSection.style.display = show ? 'block' : 'none';
-    if (listSection)    listSection.style.display    = show ? 'block' : 'none';
-
-    if (show) {
-      await loadSiteSettings();
-      await loadList();
-    }
+  auth.onAuthStateChanged(async (u)=>{
+    const ok = !!u && (!requireWhitelist || ALLOWED_ADMIN_UIDS.has(u.uid));
+    authStatus.textContent = u ? (ok ? `Signed in as ${u.email}` : 'Unauthorized user') : 'Not signed in';
+    logoutBtn.style.display = u ? 'inline-block' : 'none';
+    siteSection.style.display = ok ? 'block' : 'none';
+    productSection.style.display = ok ? 'block' : 'none';
+    listSection.style.display = ok ? 'block' : 'none';
+    if (ok){ loadSite(); loadList(); }
   });
 
-  // ===== Site Settings =====
-  async function loadSiteSettings() {
-    try {
-      if (siteStatus) siteStatus.textContent = 'Loading…';
-      const snap = await HOME_DOC_REF.get();
-      const h = snap.exists ? snap.data() : {};
-      siteHeroTitle.value    = h.heroTitle || '';
-      siteHeroSubtitle.value = h.heroSubtitle || '';
-      siteFeatCat.value      = (h.featuredCategory || 'perfume');
-      siteShowFeat.checked   = !!h.showFeatured;
-
-      siteBannerPrev.innerHTML = h.bannerImage
-        ? <img src="${h.bannerImage}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">
-        : '';
-
-      siteGalleryPrev.innerHTML = Array.isArray(h.gallery) && h.gallery.length
-        ? h.gallery.map(u => <img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">).join('')
-        : '';
-
-      if (siteStatus) siteStatus.textContent = 'Ready';
-    } catch (e) {
-      console.error(e);
-      if (siteStatus) siteStatus.textContent = 'Error loading site settings';
-    }
+  // -------- Cloudinary Upload (unsigned) --------
+  async function uploadToCloudinary(file){
+    const cloud = window.CLOUDINARY_CLOUD_NAME;
+    const preset= window.CLOUDINARY_UPLOAD_PRESET;
+    const url = `https://api.cloudinary.com/v1_1/${cloud}/image/upload`;
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', preset);
+    const res = await fetch(url, {method:'POST', body:fd});
+    const json = await res.json();
+    if (json.error) throw new Error(json.error.message || 'Cloudinary error');
+    return json.secure_url;
   }
 
-  siteReloadBtn && siteReloadBtn.addEventListener('click', loadSiteSettings);
+  // -------- Site Settings --------
+  async function loadSite(){
+    try{
+      const doc=await db.collection('site').doc('home').get();
+      const s=doc.exists?doc.data():{};
+      siteHeroTitle.value = s.heroTitle||'';
+      siteHeroSubtitle.value = s.heroSubtitle||'';
+      siteFeatured.value = s.featuredCategory||'perfume';
+      siteShow.checked = !!s.showFeatured;
+      siteBannerPrev.innerHTML = s.bannerImage?`<img src="${s.bannerImage}" style="width:120px;height:120px;object-fit:cover;border-radius:8px">`:'';
+      siteGalleryPrev.innerHTML = Array.isArray(s.gallery)? s.gallery.map(u=>`<img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`).join('') : '';
+    }catch(e){ console.error(e); }
+  }
+  siteReload.onclick = loadSite;
 
-  siteSaveBtn && siteSaveBtn.addEventListener('click', async () => {
-    try {
-      if (siteStatus) siteStatus.textContent = 'Saving…';
+  siteSave.onclick = async ()=>{
+    try{
+      siteStatus.textContent='Uploading…';
+      let bannerURL;
+      if (siteBanner.files[0]) bannerURL = await uploadToCloudinary(siteBanner.files[0]);
 
-      let bannerURL = null;
-      if (siteBannerInput.files && siteBannerInput.files[0]) {
-        const [url] = await uploadImages(siteBannerInput.files);
-        bannerURL = url || null;
+      let gallery=[];
+      if (siteGallery.files.length){
+        for (const f of siteGallery.files){ gallery.push(await uploadToCloudinary(f)); }
       }
-
-      let galleryURLs = null;
-      if (siteGalleryInput.files && siteGalleryInput.files.length) {
-        galleryURLs = await uploadImages(siteGalleryInput.files);
-      }
-
-      const payload = {
+      const update = {
         heroTitle: siteHeroTitle.value.trim(),
         heroSubtitle: siteHeroSubtitle.value.trim(),
-        featuredCategory: siteFeatCat.value,
-        showFeatured: !!siteShowFeat.checked,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        featuredCategory: siteFeatured.value,
+        showFeatured: siteShow.checked
       };
-      if (bannerURL !== null) payload.bannerImage = bannerURL;
-      if (galleryURLs !== null) payload.gallery = galleryURLs;
+      if (bannerURL) update.bannerImage = bannerURL;
+      if (gallery.length) update.gallery = gallery;
 
-      await HOME_DOC_REF.set(payload, { merge: true });
-
-      if (siteStatus) siteStatus.textContent = '✅ Saved';
-      if (bannerURL) siteBannerPrev.innerHTML = `<img src="${bannerURL}" style="width:180px;`height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">;
-      if (galleryURLs) siteGalleryPrev.innerHTML = galleryURLs.map(u => <img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">).join('');
-      siteBannerInput.value = '';
-      siteGalleryInput.value = '';
-    } catch (e) {
-      console.error(e);
-      if (siteStatus) siteStatus.textContent = '❌ Save error: ' + e.message;
+      await db.collection('site').doc('home').set(update, {merge:true});
+      siteStatus.textContent='Saved!';
+      await loadSite();
+    }catch(e){
+      console.error(e); siteStatus.textContent='Error saving site';
+      alert(e.message||e);
     }
-  });
+  };
 
-  // ===== Product Save =====
-  $('#saveBtn') && ($('#saveBtn').onclick = async () => {
-    try {
+  // -------- Product Save --------
+  saveBtn.onclick = async ()=>{
+    try{
       const sizes = parseSizes(sizesEl.value);
-
       const data = {
-        name: (nameEl.value || '').trim(),
-        basePrice: Number(priceEl.value || 0),
-        brand: (brandEl.value || '').trim() || null,
+        name: nameEl.value.trim(),
+        basePrice: Number(priceEl.value||0),
+        brand: brandEl.value.trim(),
+        description: (descEl.value||'').trim(),
+        category: categoryEl.value,
         sizes,
-        description: (descEl.value || '').trim(),
-        category: String(categoryEl.value || '').toLowerCase(),
         active: !!activeEl.checked,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       };
+      let id = docIdEl.value || db.collection('products').doc().id;
 
-      const id = docIdEl.value || dbRef.collection('products').doc().id;
-
-      // images
-      if (imagesEl.files && imagesEl.files.length) {
-        const uploaded = await uploadImages(imagesEl.files);
-        if (uploaded.length) {
-          const snap = await dbRef.collection('products').doc(id).get();
-          const old  = snap.exists ? snap.data() : {};
-          const oldList = Array.isArray(old.images) ? old.images : [];
-          if (!old.imageURL) data.imageURL = uploaded[0];
-          data.images = [...oldList, ...uploaded];
-        }
+      // Upload images (multiple)
+      let images=[];
+      for (const f of imagesEl.files){ images.push(await uploadToCloudinary(f)); }
+      if (images.length){
+        data.images = (data.images||[]).concat(images);
+        if (!data.imageURL) data.imageURL = images[0];
       }
 
-      if (!docIdEl.value) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-
-      await dbRef.collection('products').doc(id).set(data, { merge: true });
-
-      alert('✅ Product saved');
+      if (docIdEl.value){
+        await db.collection('products').doc(id).set(data, {merge:true});
+      } else {
+        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        await db.collection('products').doc(id).set(data);
+      }
+      alert('Saved!');
       resetForm();
-      await loadList();
-    } catch (e) {
-      console.error(e);
-      alert('Save error: ' + e.message);
+      loadList();
+    }catch(e){
+      console.error(e); alert(e.message||e);
     }
-  });
+  };
 
-  $('#resetBtn') && ($('#resetBtn').onclick = resetForm);
+  function resetForm(){
+    docIdEl.value = '';
+    nameEl.value = priceEl.value = brandEl.value = sizesEl.value = descEl.value = '';
+    categoryEl.value='perfume'; imagesEl.value=''; activeEl.checked=true;
+  }
+  resetBtn.onclick = resetForm;
 
-  // ===== Product list =====
-  async function loadList() {
-    try {
-      tableBody.innerHTML = `<tr><td colspan="6">Loading…</td></tr>`;
-
-      const snap = await dbRef.collection('products')
-        .where('category', '==', filterCategory.value)
-        .get();
-
-      if (snap.empty) {
-        tableBody.innerHTML = `<tr><td colspan="6">No products</td></tr>`;
-        return;
-      }
-
-      const docs = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
-
+  // -------- Product List --------
+  async function loadList(){
+    try{
+      tableBody.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
+      const snap = await db.collection('products').where('category','==',filterCategory.value).get();
+      if (snap.empty){ tableBody.innerHTML='<tr><td colspan="6">No products</td></tr>'; return; }
       tableBody.innerHTML = '';
-      docs.forEach(p => {
-        const sizesTxt = renderSizesText(p.sizes);
-        const tr = document.createElement('tr');
+      snap.forEach(doc=>{
+        const p=doc.data();
+        const tr=document.createElement('tr');
+        const sizeTxt = (p.sizes||[]).map(s=>`${s.label} (${s.price})`).join(', ');
         tr.innerHTML = `
-          <td>${p.imageURL ? <img src="${p.imageURL}" width="60" height="60" style="object-fit:cover;border-radius:6px;border:1px solid #e5e5e5"> : ''}</td>
+          <td>${p.imageURL?`<img src="${p.imageURL}" width="56" height="56" style="object-fit:cover;border-radius:6px;border:1px solid #e5e5e5">`:''}</td>
+          <td>${p.name||''}</td>
+          <td>${sizeTxt||''}</td>
+          <td>Rs${Number(p.basePrice||0).toFixed(0)}</td>
+          <td>${p.active?'Yes':'No'}</td>
           <td>
-            <div style="font-weight:600">${p.name || ''}</div>
-            ${p.brand ? <div class="muted">${p.brand}</div> : ''}
-          </td>
-          <td>${sizesTxt}</td>
-          <td>${money(p.basePrice)}</td>
-          <td>${p.active ? 'Yes' : 'No'}</td>
-          <td>
-            <button class="btn edit" data-id="${p.id}">Edit</button>
-            <button class="btn danger delete" data-id="${p.id}">Delete</button>
+            <button class="btn" data-edit="${doc.id}">Edit</button>
+            <button class="btn danger" data-del="${doc.id}">Delete</button>
           </td>
         `;
         tableBody.appendChild(tr);
       });
 
-      tableBody.querySelectorAll('.edit').forEach(btn => {
-        btn.onclick = async () => {
-          const d = await dbRef.collection('products').doc(btn.dataset.id).get();
+      // Edit/Delete bind
+      tableBody.querySelectorAll('[data-edit]').forEach(btn=>{
+        btn.addEventListener('click', async ()=>{
+          const id = btn.getAttribute('data-edit');
+          const d=await db.collection('products').doc(id).get();
           if (!d.exists) return;
-          const p = d.data();
-          docIdEl.value = d.id;
-          nameEl.value = p.name || '';
-          priceEl.value = Number(p.basePrice || 0);
-          brandEl.value = p.brand || '';
-          sizesEl.value = sizesToTextarea(p.sizes || []);
-          descEl.value = p.description || '';
-          categoryEl.value = p.category || 'perfume';
-          activeEl.checked = !!p.active;
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
+          const p=d.data();
+          docIdEl.value=id;
+          nameEl.value=p.name||''; priceEl.value=Number(p.basePrice||0)||0; brandEl.value=p.brand||'';
+          sizesEl.value=Array.isArray(p.sizes)?p.sizes.map(s=>`${s.label} | ${s.price}`).join('\n'):'';
+          descEl.value=p.description||''; categoryEl.value=p.category||'perfume'; activeEl.checked=!!p.active;
+          window.scrollTo({top:0,behavior:'smooth'});
+        });
       });
-
-      tableBody.querySelectorAll('.delete').forEach(btn => {
-        btn.onclick = async () => {
+      tableBody.querySelectorAll('[data-del]').forEach(btn=>{
+        btn.addEventListener('click', async ()=>{
+          const id = btn.getAttribute('data-del');
           if (!confirm('Delete this product?')) return;
-          await dbRef.collection('products').doc(btn.dataset.id).delete();
+          await db.collection('products').doc(id).delete();
           loadList();
-        };
+        });
       });
-    } catch (err) {
-      console.error('loadList error:', err);
-      tableBody.innerHTML = `<tr><td colspan="6" style="color:#b00020">Error loading products. Check Console.</td></tr>`;
+    }catch(e){
+      console.error(e); tableBody.innerHTML='<tr><td colspan="6">Error loading list</td></tr>';
     }
   }
-
-  refreshBtn && (refreshBtn.onclick = loadList);
-  filterCategory && (filterCategory.onchange = loadList);
+  refreshBtn.onclick = loadList;
+  filterCategory.onchange = loadList;
 })();
