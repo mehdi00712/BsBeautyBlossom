@@ -1,4 +1,4 @@
-// product-detail.js — product page with stock control + gallery
+// product-detail.js — product page with stock control + gallery (adds sizeLabel to cart items)
 (function(){
   const $ = (s)=>document.querySelector(s);
   const params = new URLSearchParams(location.search);
@@ -131,6 +131,7 @@
 
     const item = {
       id,
+      sizeLabel: label !== 'default' ? label : null,
       name: `${nameEl.textContent}${label && label!=='default' ? ' ('+label+')' : ''}`,
       price: unitPrice,
       qty,
