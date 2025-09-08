@@ -1,7 +1,5 @@
-// admin.js — Auth + CRUD + Cloudinary + per-size/global stock
+// admin.js — Auth + CRUD + Cloudinary + per-size stock + global stock
 (function () {
-  'use strict';
-
   if (!window.firebase || !window.db) {
     throw new Error("❌ Firebase not initialized: ensure admin.html loads compat SDKs then firebase-config.js.");
   }
