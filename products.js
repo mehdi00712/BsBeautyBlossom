@@ -1,9 +1,4 @@
-// products.js — groups products by brand into sections on category pages.
-// Requires: firebase-config.js (sets window.db), script.js (navbar/cart), search.js (optional).
-// Usage: on a category page, set:
-//   window.PRODUCT_CATEGORY = 'perfume' (or body/skincare/...)
-//   window.GROUP_BY_BRAND = true
-
+// products.js — category pages with optional brand sections and out-of-stock badges
 (async function () {
   const gridHost = document.getElementById('product-grid');
   if (!gridHost) return;
@@ -11,25 +6,35 @@
   const category = String(window.PRODUCT_CATEGORY || '').toLowerCase();
   const groupByBrand = !!window.GROUP_BY_BRAND;
 
-  // Helpers
   const money = (n) => 'Rs' + Number(n || 0).toFixed(0);
   const minPrice = (p) => {
     const base = Number(p.basePrice || 0) || 0;
     const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-    const prices = sizes
-      .map((s) => Number((s && s.price) || 0))
-      .filter((x) => x > 0);
+    const prices = sizes.map(s => Number((s && s.price) || 0)).filter(x => x > 0);
     return prices.length ? Math.min(...prices) : base;
   };
   const safeBrand = (b) => (b && String(b).trim()) || 'Other';
+
+  function computeInStock(p){
+    if (Array.isArray(p.sizes) && p.sizes.length) {
+      return p.sizes.some(s => typeof s.stock === 'number' ? s.stock > 0 : true);
+    }
+    if (typeof p.stock === 'number') return p.stock > 0;
+    return true; // not tracked => allow
+  }
 
   function productCard(id, p) {
     const from = minPrice(p);
     const img = p.imageURL || 'https://via.placeholder.com/600x750?text=No+Image';
     const brand = p.brand ? `<div class="muted">${p.brand}</div>` : '';
+    const oos = !computeInStock(p);
+
     return `
       <a class="product" href="product.html?id=${id}" data-name="${p.name || ''}" data-brand="${p.brand || ''}">
-        <img src="${img}" alt="${p.name || ''}">
+        <div style="position:relative">
+          <img src="${img}" alt="${p.name || ''}">
+          ${oos ? `<div class="badge" style="position:absolute;top:8px;left:8px;background:#111;color:#fff;border:none">Out of stock</div>` : ''}
+        </div>
         <div class="pad">
           <h3>${p.name || ''}</h3>
           ${brand}
@@ -53,19 +58,16 @@
         return;
       }
 
-      // Build list
       const items = [];
-      snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
+      snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
 
       if (!groupByBrand) {
-        // Flat grid (legacy mode)
         gridHost.innerHTML = `<div class="product-grid"></div>`;
         const grid = gridHost.querySelector('.product-grid');
-        items.forEach((p) => grid.insertAdjacentHTML('beforeend', productCard(p.id, p)));
+        items.forEach(p => grid.insertAdjacentHTML('beforeend', productCard(p.id, p)));
         return;
       }
 
-      // Group by brand
       const buckets = new Map();
       for (const p of items) {
         const key = safeBrand(p.brand);
@@ -73,9 +75,8 @@
         buckets.get(key).push(p);
       }
 
-      // Sort brands A→Z, and items by name
       const brandNames = Array.from(buckets.keys()).sort((a, b) => a.localeCompare(b));
-      gridHost.innerHTML = ''; // reset
+      gridHost.innerHTML = '';
 
       brandNames.forEach((brandName) => {
         const list = buckets.get(brandName).slice().sort((a, b) => {
@@ -102,7 +103,6 @@
     }
   }
 
-  // Kick off
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', load, { once: true });
   } else {
