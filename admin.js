@@ -14,7 +14,7 @@
 
   // Restrict access (add your UID here to lock down the admin; empty = allow any signed-in user)
   const ALLOWED_ADMIN_UIDS = new Set([
-    "w5jtigflSVezQwUvnsgM7AY4ZK73", // your UID (from earlier)
+    "w5jtigflSVezQwUvnsgM7AY4ZK73", // your UID
   ]);
 
   // ===== Auth elements =====
@@ -252,72 +252,88 @@
 
   $('#resetBtn').onclick = resetForm;
 
+  // ===== Products table (NO INDEX NEEDED) =====
   async function loadList() {
-    tableBody.innerHTML = `<tr><td colspan="6">Loading…</td></tr>`;
-    const snap = await dbRef.collection('products').where('category', '==', filterCategory.value).orderBy('name').get();
+    try {
+      tableBody.innerHTML = `<tr><td colspan="6">Loading…</td></tr>`;
 
-    if (snap.empty) {
-      tableBody.innerHTML = `<tr><td colspan="6">No products</td></tr>`;
-      return;
+      // no orderBy -> no composite index required
+      const snap = await dbRef.collection('products')
+        .where('category', '==', filterCategory.value)
+        .get();
+
+      if (snap.empty) {
+        tableBody.innerHTML = `<tr><td colspan="6">No products</td></tr>`;
+        return;
+      }
+
+      // sort client-side by name
+      const docs = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+
+      tableBody.innerHTML = '';
+      docs.forEach((p) => {
+        const sizesTxt = renderSizesText(p.sizes);
+        const totalStock = Array.isArray(p.sizes) && p.sizes.length
+          ? p.sizes.reduce((sum, s) => sum + (typeof s.stock === 'number' ? s.stock : 0), 0)
+          : (typeof p.stock === 'number' ? p.stock : null);
+
+        const stockTxt = Array.isArray(p.sizes) && p.sizes.length
+          ? (totalStock !== null ? `${totalStock} pcs total` : '(sizes; stock unspecified)')
+          : (typeof p.stock === 'number' ? `${p.stock} pcs` : '—');
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.imageURL ? `<img src="${p.imageURL}" width="60" height="60" style="object-fit:cover;border-radius:6px;border:1px solid #e5e5e5">` : ''}</td>
+          <td>
+            <div style="font-weight:600">${p.name || ''}</div>
+            ${p.brand ? `<div class="muted">${p.brand}</div>` : ''}
+            <div class="muted">Stock: ${stockTxt}</div>
+          </td>
+          <td>${sizesTxt}</td>
+          <td>${money(p.basePrice)}</td>
+          <td>${p.active ? 'Yes' : 'No'}</td>
+          <td>
+            <button class="btn edit" data-id="${p.id}">Edit</button>
+            <button class="btn danger delete" data-id="${p.id}">Delete</button>
+          </td>
+        `;
+        tableBody.appendChild(tr);
+      });
+
+      // actions
+      tableBody.querySelectorAll('.edit').forEach(btn => {
+        btn.onclick = async () => {
+          const d = await dbRef.collection('products').doc(btn.dataset.id).get();
+          if (!d.exists) return;
+          const p = d.data();
+
+          docIdEl.value = d.id;
+          nameEl.value = p.name || '';
+          priceEl.value = Number(p.basePrice || 0);
+          brandEl.value = p.brand || '';
+          sizesEl.value = sizesToTextarea(p.sizes || []);
+          globalStockEl.value = typeof p.stock === 'number' ? String(p.stock) : '';
+          descEl.value = p.description || '';
+          categoryEl.value = p.category || 'perfume';
+          activeEl.checked = !!p.active;
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+      });
+
+      tableBody.querySelectorAll('.delete').forEach(btn => {
+        btn.onclick = async () => {
+          if (!confirm('Delete this product?')) return;
+          await dbRef.collection('products').doc(btn.dataset.id).delete();
+          loadList();
+        };
+      });
+
+    } catch (err) {
+      console.error('loadList error:', err);
+      tableBody.innerHTML = `<tr><td colspan="6" style="color:#b00020">Error loading products. Open the Console for details.</td></tr>`;
     }
-
-    tableBody.innerHTML = '';
-    snap.forEach((doc) => {
-      const p = doc.data();
-      const sizesTxt = renderSizesText(p.sizes);
-      const totalStock = Array.isArray(p.sizes) && p.sizes.length
-        ? p.sizes.reduce((sum, s) => sum + (typeof s.stock === 'number' ? s.stock : 0), 0)
-        : (typeof p.stock === 'number' ? p.stock : null);
-
-      const stockTxt = Array.isArray(p.sizes) && p.sizes.length
-        ? (totalStock !== null ? `${totalStock} pcs total` : '(sizes; stock unspecified)')
-        : (typeof p.stock === 'number' ? `${p.stock} pcs` : '—');
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${p.imageURL ? `<img src="${p.imageURL}" width="60" height="60" style="object-fit:cover;border-radius:6px;border:1px solid #e5e5e5">` : ''}</td>
-        <td>
-          <div style="font-weight:600">${p.name || ''}</div>
-          ${p.brand ? `<div class="muted">${p.brand}</div>` : ''}
-          <div class="muted">Stock: ${stockTxt}</div>
-        </td>
-        <td>${sizesTxt}</td>
-        <td>${money(p.basePrice)}</td>
-        <td>${p.active ? 'Yes' : 'No'}</td>
-        <td>
-          <button class="btn edit" data-id="${doc.id}">Edit</button>
-          <button class="btn danger delete" data-id="${doc.id}">Delete</button>
-        </td>
-      `;
-      tableBody.appendChild(tr);
-    });
-
-    tableBody.querySelectorAll('.edit').forEach(btn => {
-      btn.onclick = async () => {
-        const d = await dbRef.collection('products').doc(btn.dataset.id).get();
-        if (!d.exists) return;
-        const p = d.data();
-
-        docIdEl.value = d.id;
-        nameEl.value = p.name || '';
-        priceEl.value = Number(p.basePrice || 0);
-        brandEl.value = p.brand || '';
-        sizesEl.value = sizesToTextarea(p.sizes || []);
-        globalStockEl.value = typeof p.stock === 'number' ? String(p.stock) : '';
-        descEl.value = p.description || '';
-        categoryEl.value = p.category || 'perfume';
-        activeEl.checked = !!p.active;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      };
-    });
-
-    tableBody.querySelectorAll('.delete').forEach(btn => {
-      btn.onclick = async () => {
-        if (!confirm('Delete this product?')) return;
-        await dbRef.collection('products').doc(btn.dataset.id).delete();
-        loadList();
-      };
-    });
   }
 
   refreshBtn.onclick = loadList;
