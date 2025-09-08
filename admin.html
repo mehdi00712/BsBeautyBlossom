@@ -10,10 +10,12 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <!-- Your shared config MUST set: window.auth, window.db -->
   <script src="firebase-config.js"></script>
 
-  <!-- Cloudinary config (for image uploads) -->
+  <!-- Cloudinary config (browser-side unsigned uploads) -->
   <script>
+    /* Replace only if you changed these in Cloudinary */
     window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
     window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
   </script>
@@ -35,7 +37,7 @@
       <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
       <li><a href="admin.html" class="active">Admin</a></li>
     </ul>
-    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
+    <button class="hamburger" aria-label="menu" aria-expanded="false" aria-controls="primary-navigation">&#9776;</button>
   </nav>
 </header>
 
@@ -92,14 +94,14 @@
           <input id="brand" placeholder="Brand">
         </div>
         <div>
-          <label for="stock">Stock</label>
-          <input id="stock" type="number" min="0" placeholder="Stock">
+          <label>Active</label><br>
+          <label><input id="active" type="checkbox" checked> Visible on site</label>
         </div>
       </div>
 
       <div class="row">
-        <label for="sizes">Sizes (one per line): <small>Label | Price — e.g. “100ml | 2350”</small></label>
-        <textarea id="sizes" rows="4" placeholder="100ml | 2350&#10;30ml | 1550"></textarea>
+        <label for="sizes">Variants (one per line): <small>Label | Price — e.g. “100ml | 2500” or “Red | 800”</small></label>
+        <textarea id="sizes" rows="4" placeholder="100ml | 2500&#10;50ml | 1500"></textarea>
       </div>
 
       <div class="row">
@@ -110,10 +112,6 @@
       <div class="row">
         <label for="images">Image(s) (upload)</label>
         <input id="images" type="file" accept="image/*" multiple>
-      </div>
-
-      <div class="row">
-        <label><input id="active" type="checkbox" checked> Visible on site</label>
       </div>
 
       <div style="display:flex;gap:8px">
@@ -140,9 +138,9 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Image</th><th>Name</th><th>Sizes / Stock</th><th>Base</th><th>Active</th><th>Actions</th></tr>
+            <tr><th>Image</th><th>Name</th><th>Variants</th><th>Base</th><th>Active</th><th>Actions</th></tr>
           </thead>
-        <tbody id="tableBody"><tr><td colspan="6">Loading…</td></tr></tbody>
+          <tbody id="tableBody"><tr><td colspan="6">Loading…</td></tr></tbody>
         </table>
       </div>
     </section>
@@ -153,7 +151,10 @@
   <p>© 2025 B’s Beauty Blossom • Admin</p>
 </footer>
 
+<!-- Admin logic -->
 <script src="admin.js" defer></script>
+
+<!-- Navbar hamburger / cart badge -->
 <script src="script.js" defer></script>
 </body>
 </html>
