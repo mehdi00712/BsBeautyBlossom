@@ -177,7 +177,6 @@ textarea{resize:vertical}
   transition: box-shadow .2s ease;
 }
 .product:hover{box-shadow:var(--shadow)}
-/* contain so images don’t crop */
 .product img{
   width:100%; height:250px; object-fit:contain;
   background:#fafafa; border-radius:6px; padding:6px;
@@ -204,7 +203,6 @@ textarea{resize:vertical}
 }
 @media (max-width:980px){ .product-detail{grid-template-columns:1fr} }
 
-/* Gallery on the left */
 .pd-gallery{
   display:grid; grid-template-rows:auto 86px; gap:12px;
 }
@@ -226,7 +224,6 @@ textarea{resize:vertical}
 .pd-thumbs img:hover{box-shadow:var(--shadow); transform:translateY(-1px)}
 .pd-thumbs img.active{outline:2px solid var(--brand)}
 
-/* Info on the right */
 .pd-info h1{font-family:'Playfair Display',serif; font-size:1.6rem; margin-bottom:6px}
 .pd-brand{color:#666; margin-bottom:12px}
 .pd-price{font-weight:800; color:var(--brand); margin:8px 0 14px}
@@ -261,7 +258,7 @@ textarea{resize:vertical}
 ------------------------- */
 .cart-list{display:flex; flex-direction:column; gap:10px}
 .cart-row{
-  display:grid; grid-template-columns:56px 1fr auto auto;
+  display:grid; grid-template-columns:56px 1fr auto auto auto;
   gap:12px; align-items:center; padding:10px;
   border:1px solid var(--line); border-radius:12px; background:#fff;
 }
@@ -297,6 +294,7 @@ textarea{resize:vertical}
    Minor Utilities
 ------------------------- */
 .hidden{display:none !important}
-.badge{display:inline-block; padding:4px 8px; background:#f1f5f9; border:1px solid var(--line); border-radius:999px; font-size:.85rem}
+.badge{display:inline-block; padding:4px 8px; background:#f1f5f9; border:1px solid var(--line); border-radius:999px; font-size:.85rem; color:#111}
 
-/* .outline * { outline:1px dashed #c4c4c4 } */
+/* Disabled button look */
+.btn.disabled, button:disabled { opacity:.6; cursor:not-allowed; filter:grayscale(20%); }
