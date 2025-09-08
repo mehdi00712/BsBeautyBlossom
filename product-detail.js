@@ -1,204 +1,166 @@
-// product-detail.js — product page with stock control + gallery (adds sizeLabel to cart items)
+// product-detail.js – supports flexible variants (ml, shade, flavor, etc.) + gallery + add-to-cart
 (function(){
-  const $ = (s)=>document.querySelector(s);
-  const params = new URLSearchParams(location.search);
-  const id = params.get('id');
-
-  const hero = $('#pd-hero');
-  const thumbs = $('#pd-thumbs');
-  const nameEl = $('#pd-name');
-  const brandEl = $('#pd-brand');
-  const priceEl = $('#pd-price');
-  const descEl = $('#pd-desc');
-  const sizeSel = $('#pd-size');
-  const addBtn = $('#pd-add');
-  const qtyVal = $('#qty-val');
-  const btnDec = $('#qty-dec');
-  const btnInc = $('#qty-inc');
-
-  const stockBadgeId = 'pd-oos-msg';
-  const money = (n)=>'Rs'+Number(n||0).toFixed(0);
-
-  if (!id) {
-    nameEl.textContent = 'Product not found';
-    hero.src = 'https://via.placeholder.com/800x800?text=Not+Found';
-    addBtn.disabled = true;
+  if (!window.db) {
+    console.error("Firebase db not found. Ensure firebase-config.js ran.");
     return;
   }
 
-  function mountOOS(msg){
-    let el = document.getElementById(stockBadgeId);
-    if (!el) {
-      el = document.createElement('div');
-      el.id = stockBadgeId;
-      el.style.marginTop = '8px';
-      el.className = 'muted';
-      addBtn.insertAdjacentElement('beforebegin', el);
-    }
-    el.textContent = msg;
-  }
-  function clearOOS(){
-    const el = document.getElementById(stockBadgeId);
-    if (el) el.textContent = '';
-  }
+  // --- Utilities ---
+  const $ = (s, r=document) => r.querySelector(s);
+  const qs = (key) => new URLSearchParams(location.search).get(key);
+  const productId = qs('id');
 
-  function setQty(n, max) {
-    const v = Math.max(1, Math.min(Number(n||1), Number(max||9999)));
-    qtyVal.textContent = v;
-  }
-
-  function renderSizes(p){
-    sizeSel.innerHTML = '';
-    const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-    if (sizes.length) {
-      sizes.forEach(s=>{
-        const opt = document.createElement('option');
-        opt.value = s.label;
-        opt.textContent = s.stock === 0
-          ? `${s.label} — Out of stock`
-          : `${s.label} — ${money(s.price)}` + (typeof s.stock === 'number' ? ` — ${s.stock} left` : '');
-        opt.dataset.price = Number(s.price||0);
-        if (typeof s.stock === 'number') opt.dataset.stock = String(s.stock);
-        sizeSel.appendChild(opt);
-      });
-    } else {
-      const opt = document.createElement('option');
-      opt.value = 'default';
-      opt.textContent = `${money(p.basePrice||0)}` + (typeof p.stock === 'number' ? ` — ${p.stock} left` : '');
-      opt.dataset.price = Number(p.basePrice||0);
-      if (typeof p.stock === 'number') opt.dataset.stock = String(p.stock);
-      sizeSel.appendChild(opt);
-    }
-    updatePriceAndStock();
-  }
-
-  function currentStock(){
-    const opt = sizeSel.selectedOptions[0];
-    const s = opt?.dataset?.stock;
-    return (s === undefined) ? null : Number(s);
-  }
-  function currentPrice(){
-    return Number(sizeSel.selectedOptions[0]?.dataset?.price || 0);
-  }
-
-  function updatePriceAndStock(){
-    const st = currentStock();
-    priceEl.textContent = money(currentPrice());
-
-    if (st !== null) {
-      if (st <= 0) {
-        addBtn.disabled = true;
-        addBtn.classList.add('disabled');
-        mountOOS('Out of stock');
-        setQty(1, 1);
-      } else {
-        addBtn.disabled = false;
-        addBtn.classList.remove('disabled');
-        clearOOS();
-        setQty(1, st);
-      }
-    } else {
-      addBtn.disabled = false;
-      addBtn.classList.remove('disabled');
-      clearOOS();
-      setQty(1, 9999);
-    }
-  }
-
-  sizeSel.addEventListener('change', updatePriceAndStock);
-
-  btnDec.addEventListener('click', ()=>{
-    const st = currentStock();
-    setQty(Number(qtyVal.textContent) - 1, st ?? 9999);
-  });
-  btnInc.addEventListener('click', ()=>{
-    const st = currentStock();
-    setQty(Number(qtyVal.textContent) + 1, st ?? 9999);
-  });
-
-  addBtn.addEventListener('click', ()=>{
-    if (addBtn.disabled) return;
-
-    const qty = Number(qtyVal.textContent||1) || 1;
-    const st = currentStock();
-    if (st !== null && qty > st) {
-      alert('Not enough stock.');
-      return;
-    }
-
-    const label = sizeSel.value;
-    const unitPrice = currentPrice();
-
-    const item = {
-      id,
-      sizeLabel: label !== 'default' ? label : null,
-      name: `${nameEl.textContent}${label && label!=='default' ? ' ('+label+')' : ''}`,
-      price: unitPrice,
-      qty,
-      imageURL: hero.src
-    };
-    const cart = JSON.parse(localStorage.getItem('cart')||'[]');
-    cart.push(item);
-    localStorage.setItem('cart', JSON.stringify(cart));
-    const count = cart.reduce((s,i)=>s+(Number(i.qty || i.quantity || 1)||1),0);
+  function getCart(){ try { return JSON.parse(localStorage.getItem('cart')) || []; } catch { return []; } }
+  function setCart(c){ localStorage.setItem('cart', JSON.stringify(c)); }
+  function cartCount(c){ return c.reduce((s,i)=> s + Number(i.quantity||0), 0); }
+  function updateBadge(){
+    const c = getCart();
     const badge = document.getElementById('cart-count');
-    if (badge) badge.textContent = count;
-    alert('Added to cart!');
-  });
+    if (badge) badge.textContent = String(cartCount(c));
+  }
 
-  function renderGallery(imgs){
-    if (!imgs.length) {
-      hero.src = 'https://via.placeholder.com/900x900?text=No+Image';
-      thumbs.innerHTML = '';
+  function money(n){ return 'Rs' + Number(n||0).toFixed(0); }
+  function clUrl(url, w){ // optimize cloudinary images if available
+    try {
+      if (!url || !/res\.cloudinary\.com/.test(url)) return url;
+      return url.replace(/\/upload\/(?!.*\/)/, /upload/f_auto,q_auto,w_${w}/);
+    } catch { return url; }
+  }
+
+  // --- Render Product ---
+  async function loadProduct(){
+    const root = document.getElementById('product-root');
+    if (!productId){
+      root.innerHTML = <div class="prod-info"><h1>Product not found</h1></div>;
       return;
     }
-    hero.src = imgs[0];
-    thumbs.innerHTML = '';
-    imgs.forEach((src, i)=>{
-      const t = document.createElement('img');
-      t.src = src;
-      if (i===0) t.classList.add('active');
-      t.addEventListener('click', ()=>{
-        hero.src = src;
-        thumbs.querySelectorAll('img').forEach(x=>x.classList.remove('active'));
-        t.classList.add('active');
-      });
-      thumbs.appendChild(t);
-    });
-  }
 
-  async function load() {
-    try {
-      const doc = await db.collection('products').doc(id).get();
-      if (!doc.exists) {
-        nameEl.textContent = 'Product not found';
-        hero.src = 'https://via.placeholder.com/800x800?text=Not+Found';
-        addBtn.disabled = true;
-        return;
-      }
-      const p = doc.data();
-
-      nameEl.textContent = p.name || 'Product';
-      brandEl.textContent = p.brand ? p.brand : '';
-      descEl.textContent = p.description || '—';
-
-      renderSizes(p);
-
-      const gallery = [];
-      if (Array.isArray(p.images)) p.images.filter(Boolean).forEach(u=>gallery.push(u));
-      if (p.imageURL && (!gallery.length || gallery[0] !== p.imageURL)) gallery.unshift(p.imageURL);
-      renderGallery(gallery);
-    } catch (e) {
-      console.error('Load product error:', e);
-      nameEl.textContent = 'Product not found';
-      hero.src = 'https://via.placeholder.com/800x800?text=Error';
-      addBtn.disabled = true;
+    const snap = await db.collection('products').doc(productId).get();
+    if (!snap.exists){
+      root.innerHTML = <div class="prod-info"><h1>Product not found</h1></div>;
+      return;
     }
+
+    const p = snap.data();
+    const images = Array.isArray(p.images) && p.images.length ? p.images : (p.imageURL ? [p.imageURL] : []);
+    const mainSrc = clUrl(images[0] || 'https://via.placeholder.com/900x900?text=No+Image', Math.min(900, window.innerWidth));
+    const variants = Array.isArray(p.sizes) ? p.sizes : []; // each variant: {label, price}
+
+    // Compute "from" price (lowest of variants or basePrice)
+    const base = Number(p.basePrice || 0) || 0;
+    const varPrices = variants.map(v => Number(v.price||0)).filter(n => n>0);
+    const fromPrice = varPrices.length ? Math.min(...varPrices) : base;
+
+    // DOM
+    const wrap = document.createElement('div');
+    wrap.className = 'prod-layout';
+    wrap.innerHTML = `
+      <div class="prod-gallery">
+        <img id="main-img" class="prod-main" src="${mainSrc}" alt="${p.name || ''}">
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+
+      <div class="prod-info">
+        <h1>${p.name || ''}</h1>
+        ${p.brand ? <div class="prod-brand">${p.brand}</div> : ''}
+        <div class="price-line" id="price-line">${fromPrice ? money(fromPrice) : ''}</div>
+
+        ${variants.length ? `
+          <div class="variant-wrap">
+            <label for="variant"><b>Choose an option</b></label>
+            <select id="variant"></select>
+          </div>
+        ` : ''}
+
+        <div class="qty-row">
+          <label for="qty" class="muted">Quantity</label>
+          <input id="qty" type="number" min="1" step="1" value="1"/>
+        </div>
+
+        <div class="actions">
+          <button id="add" class="btn-primary">Add to Cart</button>
+          <a href="cart.html" class="btn">Go to Cart</a>
+        </div>
+
+        ${p.description ? <div class="desc"><h3>Description</h3><p>${p.description}</p></div> : ''}
+      </div>
+    `;
+    root.innerHTML = '';
+    root.appendChild(wrap);
+
+    // Thumbnails
+    const thumbs = $('#thumbs', wrap);
+    if (images.length){
+      images.forEach((src, i) => {
+        const im = document.createElement('img');
+        im.src = clUrl(src, 260);
+        im.alt = "Product image " + (i+1);
+        im.addEventListener('click', () => {
+          $('#main-img', wrap).src = clUrl(src, Math.min(900, window.innerWidth));
+        });
+        thumbs.appendChild(im);
+      });
+    }
+
+    // Variants dropdown (flexible: ml / shade / flavor / pack label)
+    const sel = $('#variant', wrap);
+    if (sel && variants.length){
+      variants.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.label;
+        opt.dataset.price = Number(v.price||0);
+        opt.textContent = ${v.label} — ${money(v.price||0)};
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', () => {
+        const price = Number(sel.selectedOptions[0].dataset.price || 0);
+        $('#price-line', wrap).textContent = money(price || base);
+      });
+      // initialize price line to first variant
+      const firstPrice = Number(sel.options[0].dataset.price || 0);
+      $('#price-line', wrap).textContent = money(firstPrice || base);
+    }
+
+    // Add to cart
+    $('#add', wrap).addEventListener('click', () => {
+      const qty = Math.max(1, Number($('#qty', wrap).value || 1));
+
+      // selected variant (or none)
+      let title = p.name || 'Product';
+      let price = base;
+      let variantLabel = '';
+
+      if (sel && variants.length){
+        const o = sel.selectedOptions[0];
+        variantLabel = o.value;
+        price = Number(o.dataset.price || 0) || base;
+        title = ${title} (${variantLabel});
+      }
+
+      const item = {
+        id: productId,
+        name: title,
+        price: price,
+        quantity: qty,
+        imageURL: images[0] || null
+      };
+
+      const cart = getCart();
+      // merge same-name lines
+      const idx = cart.findIndex(x => x.name === item.name);
+      if (idx >= 0){
+        cart[idx].quantity = Number(cart[idx].quantity || 1) + qty;
+      } else {
+        cart.push(item);
+      }
+      setCart(cart);
+      updateBadge();
+      alert('Added to cart!');
+    });
+
+    // init badge
+    updateBadge();
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', load, {once:true});
-  } else {
-    load();
-  }
+  document.addEventListener('DOMContentLoaded', loadProduct);
 })();
