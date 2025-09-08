@@ -31,7 +31,19 @@
 </div>
 
 <section class="section">
-  <h1 class="page-title">Perfume</h1>
+  <div class="section-header">
+    <h1 class="page-title">Perfume</h1>
+    <div class="sort-wrap">
+      <label for="sort">Sort</label>
+      <select id="sort">
+        <option value="rec">Recommended</option>
+        <option value="az">Name A–Z</option>
+        <option value="za">Name Z–A</option>
+        <option value="low">Price low→high</option>
+        <option value="high">Price high→low</option>
+      </select>
+    </div>
+  </div>
   <div id="product-grid" class="product-grid"><p>Loading…</p></div>
 </section>
 
@@ -39,7 +51,7 @@
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
-<!-- Firebase (Compat) in this order -->
+<!-- Firebase (Compat) in this exact order -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
