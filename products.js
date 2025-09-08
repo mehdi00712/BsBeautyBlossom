@@ -1,100 +1,78 @@
-// products.js — group products by brand into sections on category pages.
+// products.js — render products for a category page
+(async function(){
+  if (!window.db) { console.error('No Firestore on this page.'); return; }
 
-(async function () {
   const gridHost = document.getElementById('product-grid');
   if (!gridHost) return;
 
-  const category = String(window.PRODUCT_CATEGORY || '').toLowerCase();
-  const groupByBrand = !!window.GROUP_BY_BRAND;
+  const CAT = (window.PRODUCT_CATEGORY || '').toLowerCase();
+  const GROUP = !!window.GROUP_BY_BRAND;
 
-  const money = (n) => 'Rs' + Number(n || 0).toFixed(0);
-  const minPrice = (p) => {
-    const base = Number(p.basePrice || 0) || 0;
+  function money(n){ return 'Rs'+Number(n||0).toFixed(0); }
+
+  // Create a product card
+  function cardFor(docId, p){
+    const base = Number(p.basePrice||0) || 0;
     const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-    const prices = sizes.map(s => Number((s && s.price) || 0)).filter(x => x > 0);
-    return prices.length ? Math.min(...prices) : base;
-  };
-  const safeBrand = (b) => (b && String(b).trim()) || 'Other';
+    const prices = sizes.map(s=>Number(s?.price||0)).filter(n=>n>0);
+    const from = prices.length ? Math.min(...prices) : base;
+    const img = (Array.isArray(p.images) && p.images[0]) || p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image';
 
-  function productCard(id, p) {
-    const from = minPrice(p);
-    const img = p.imageURL || 'https://via.placeholder.com/600x750?text=No+Image';
-    const brand = p.brand ? <div class="muted">${p.brand}</div> : '';
-    return `
-      <a class="product" href="product.html?id=${id}" data-name="${p.name || ''}" data-brand="${p.brand || ''}">
-        <img src="${img}" alt="${p.name || ''}">
-        <div class="pad">
-          <h3>${p.name || ''}</h3>
-          ${brand}
-          <div class="price">${from > 0 ? 'From ' + money(from) : ''}</div>
-        </div>
+    const wrap = document.createElement('div');
+    wrap.className = 'product';
+    wrap.setAttribute('data-name', p.name||'');
+    wrap.setAttribute('data-brand', p.brand||'');
+    wrap.innerHTML = `
+      <a href="product.html?id=${docId}">
+        <img src="${img}" alt="${p.name||''}">
       </a>
+      <h3><a href="product.html?id=${docId}">${p.name||''}</a></h3>
+      ${p.brand ? `<div class="muted">${p.brand}</div>` : ''}
+      <p class="price">${from>0 ? 'From '+money(from) : ''}</p>
     `;
+    return wrap;
   }
 
-  async function load() {
-    try {
-      gridHost.innerHTML = <p class="muted">Loading products…</p>;
-      const snap = await db
-        .collection('products')
-        .where('category', '==', category)
-        .where('active', '==', true)
-        .get();
+  async function load(){
+    const snap = await db.collection('products')
+      .where('category','==',CAT)
+      .where('active','==',true)
+      .orderBy('name')
+      .get();
 
-      if (snap.empty) {
-        gridHost.innerHTML = <p class="muted">No products in this category yet.</p>;
-        return;
-      }
+    if (snap.empty){
+      gridHost.innerHTML = '<div class="product-grid"><p>No products</p></div>';
+      return;
+    }
 
-      const items = [];
-      snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
-
-      if (!groupByBrand) {
-        gridHost.innerHTML = <div class="product-grid"></div>;
-        const grid = gridHost.querySelector('.product-grid');
-        items.forEach((p) => grid.insertAdjacentHTML('beforeend', productCard(p.id, p)));
-        return;
-      }
-
-      const buckets = new Map();
-      for (const p of items) {
-        const key = safeBrand(p.brand);
-        if (!buckets.has(key)) buckets.set(key, []);
-        buckets.get(key).push(p);
-      }
-
-      const brandNames = Array.from(buckets.keys()).sort((a, b) => a.localeCompare(b));
+    if (!GROUP){
+      const grid = document.createElement('div');
+      grid.className = 'product-grid';
+      snap.forEach(d=>grid.appendChild(cardFor(d.id, d.data())));
       gridHost.innerHTML = '';
-
-      brandNames.forEach((brandName) => {
-        const list = buckets.get(brandName).slice().sort((a, b) => {
-          const an = (a.name || '').toLowerCase();
-          const bn = (b.name || '').toLowerCase();
-          return an.localeCompare(bn);
-        });
-
-        const section = document.createElement('section');
-        section.className = 'brand-section';
-        section.innerHTML = `
-          <h2 class="brand-title">${brandName}</h2>
-          <div class="brand-grid"></div>
-        `;
-        const grid = section.querySelector('.brand-grid');
-
-        list.forEach((p) => grid.insertAdjacentHTML('beforeend', productCard(p.id, p)));
-        gridHost.appendChild(section);
+      gridHost.appendChild(grid);
+    } else {
+      // group by brand
+      const byBrand = {};
+      snap.forEach(d=>{
+        const p = d.data();
+        const brand = (p.brand||'Other').trim() || 'Other';
+        byBrand[brand] = byBrand[brand] || [];
+        byBrand[brand].push({id:d.id, data:p});
       });
-
-      if (window.applySearch) window.applySearch();
-    } catch (e) {
-      console.error('Category load error:', e);
-      gridHost.innerHTML = <p class="muted">Couldn’t load products.</p>;
+      gridHost.innerHTML = '';
+      Object.keys(byBrand).sort().forEach(b=>{
+        const sec = document.createElement('div');
+        sec.className = 'brand-section';
+        sec.innerHTML = `<h2 class="brand-title">${b}</h2>`;
+        const grid = document.createElement('div');
+        grid.className = 'brand-grid';
+        byBrand[b].forEach(({id,data}) => grid.appendChild(cardFor(id, data)));
+        sec.appendChild(grid);
+        gridHost.appendChild(sec);
+      });
     }
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', load, { once: true });
-  } else {
-    load();
-  }
+  await load();
 })();
