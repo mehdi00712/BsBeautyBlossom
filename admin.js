@@ -1,325 +1,411 @@
-// admin.js — Auth + Site Settings + Cloudinary + Product CRUD + Stock
+// admin.js — B’s Beauty Blossom (Admin)
+// Requires: admin.html includes firebase-app-compat.js, firebase-auth-compat.js,
+// firebase-firestore-compat.js, then firebase-config.js (which sets window.db & window.auth).
+// Also needs: window.CLOUDINARY_CLOUD_NAME and window.CLOUDINARY_UPLOAD_PRESET set in admin.html.
+
 (function () {
-  if (!window.firebase || !window.db) {
-    throw new Error("❌ Firebase not initialized: ensure admin.html loads compat SDKs then firebase-config.js.");
+  // ---------- Guards ----------
+  if (!window.firebase || !window.db || !window.auth) {
+    throw new Error("❌ Firebase not initialized: check that admin.html loads firebase-auth-compat.js and firebase-config.js in the right order.");
+  }
+  if (!window.CLOUDINARY_CLOUD_NAME || !window.CLOUDINARY_UPLOAD_PRESET) {
+    console.warn("ℹ Cloudinary env not set on window — image uploads will fail.");
   }
 
-  // ===== Basic shorthands =====
+  // ---------- DOM ----------
   const $ = (s) => document.querySelector(s);
-  const auth = firebase.auth();
-  const dbRef = db;
 
-  const CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME;
-  const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET;
-
-  // Restrict access (add your UID here to lock down the admin; empty = allow any signed-in user)
-  const ALLOWED_ADMIN_UIDS = new Set([
-    "w5jtigflSVezQwUvnsgM7AY4ZK73", // your UID (from earlier)
-  ]);
-
-  // ===== Auth elements =====
-  const authStatus = $('#auth-status'), loginBtn = $('#loginBtn'), signupBtn = $('#signupBtn'), logoutBtn = $('#logoutBtn');
-  const email = $('#email'), password = $('#password');
+  // Auth
+  const email = $("#email");
+  const password = $("#password");
+  const loginBtn = $("#loginBtn");
+  const signupBtn = $("#signupBtn");
+  const logoutBtn = $("#logoutBtn");
+  const authStatus = $("#auth-status");
 
   // Sections
-  const siteSection    = $('#site-section');
-  const productSection = $('#product-section');
-  const listSection    = $('#list-section');
+  const siteSection = $("#site-section");
+  const productSection = $("#product-section");
+  const listSection = $("#list-section");
 
-  // ===== Site Settings elements =====
-  const siteHeroTitle   = $('#site-heroTitle');
-  const siteHeroSubtitle= $('#site-heroSubtitle');
-  const siteFeatCat     = $('#site-featuredCategory');
-  const siteShowFeat    = $('#site-showFeatured');
-  const siteBannerInput = $('#site-banner');
-  const siteBannerPrev  = $('#site-banner-preview');
-  const siteGalleryInput= $('#site-gallery');
-  const siteGalleryPrev = $('#site-gallery-preview');
-  const siteSaveBtn     = $('#site-save');
-  const siteReloadBtn   = $('#site-reload');
-  const siteStatus      = $('#site-status');
+  // Site settings
+  const siteHeroTitle = $("#site-heroTitle");
+  const siteHeroSubtitle = $("#site-heroSubtitle");
+  const siteFeaturedCategory = $("#site-featuredCategory");
+  const siteShowFeatured = $("#site-showFeatured");
+  const siteBanner = $("#site-banner");
+  const siteBannerPreview = $("#site-banner-preview");
+  const siteGallery = $("#site-gallery");
+  const siteGalleryPreview = $("#site-gallery-preview");
+  const siteSave = $("#site-save");
+  const siteReload = $("#site-reload");
+  const siteStatus = $("#site-status");
 
-  const HOME_DOC_REF = dbRef.collection('site').doc('home');
+  // Product form
+  const categoryEl = $("#category");
+  const nameEl = $("#name");
+  const priceEl = $("#price");
+  const brandEl = $("#brand");
+  const sizesEl = $("#sizes");
+  const descEl = $("#description");
+  const imagesEl = $("#images");
+  const activeEl = $("#active");
+  const saveBtn = $("#saveBtn");
+  const resetBtn = $("#resetBtn");
+  const docIdEl = $("#docId");
 
-  // ===== Product elements =====
-  const nameEl = $('#name'), priceEl = $('#price'), sizesEl = $('#sizes'), descEl = $('#description');
-  const brandEl = $('#brand'), categoryEl = $('#category'), activeEl = $('#active'), imagesEl = $('#images'), docIdEl = $('#docId');
-  const globalStockEl = $('#stock');
-  const filterCategory = $('#filterCategory'), refreshBtn = $('#refreshBtn'), tableBody = $('#tableBody');
+  // Product list
+  const filterCategory = $("#filterCategory");
+  const refreshBtn = $("#refreshBtn");
+  const tableBody = $("#tableBody");
 
-  const money = (n) => 'Rs' + Number(n || 0).toFixed(0);
+  // ---------- Admin Allowlist (optional) ----------
+  // If you want to limit dashboard visibility to specific UIDs, put them here.
+  // Leave empty to allow any signed-in user; Firestore/Storage rules still protect writes.
+  const ALLOWED_UIDS = new Set([
+    // "w5jtigflSVezQwUvnsgM7AY4ZK73", // example
+  ]);
 
-  // ===== Helpers =====
+  // ---------- Helpers ----------
+  const money = (n) => "Rs" + Number(n || 0).toFixed(0);
+
   function parseSizes(text) {
-    return text.split('\n')
-      .map(l => l.trim())
+    return String(text || "")
+      .split("\n")
+      .map((l) => l.trim())
       .filter(Boolean)
-      .map(l => {
-        const parts = l.split('|').map(x => x.trim());
-        const label = parts[0] || '';
-        const price = Number(parts[1] || 0);
-        const stock = parts[2] !== undefined && parts[2] !== '' ? Number(parts[2]) : null;
-        return { label, price, ...(stock !== null ? { stock } : {}) };
+      .map((l) => {
+        const [label, price] = l.split("|").map((x) => (x || "").trim());
+        return { label, price: Number(price || 0) || 0 };
       });
   }
-  function renderSizesText(sizes) {
-    if (!Array.isArray(sizes) || !sizes.length) return '—';
-    return sizes.map(s => {
-      const price = Number(s.price || 0);
-      const hasStock = typeof s.stock === 'number';
-      return `${s.label} ${hasStock ? (${s.stock} pcs) : ''} – ${isNaN(price) ? 'Rs0' : money(price)}`;
-    }).join(', ');
+  function renderSizesInline(sizes) {
+    return (sizes || [])
+      .map((s) => ${s.label} (${money(s.price)}))
+      .join(", ");
   }
-  function sizesToTextarea(sizes){
-    if (!Array.isArray(sizes) || !sizes.length) return '';
-    return sizes.map(s => `${s.label} | ${s.price}${typeof s.stock==='number' ? ` | ${s.stock}:''}).join('\n');
-  }
-  function resetForm() {
-    docIdEl.value = '';
-    nameEl.value = '';
-    priceEl.value = '';
-    brandEl.value = '';
-    sizesEl.value = '';
-    globalStockEl.value = '';
-    descEl.value = '';
-    categoryEl.value = 'perfume';
-    imagesEl.value = '';
+  function resetProductForm() {
+    docIdEl.value = "";
+    categoryEl.value = "perfume";
+    nameEl.value = "";
+    priceEl.value = "";
+    brandEl.value = "";
+    sizesEl.value = "";
+    descEl.value = "";
+    imagesEl.value = "";
     activeEl.checked = true;
   }
 
-  async function uploadImages(files) {
-    if (!files || !files.length) return [];
-    const urls = [];
-    for (const f of files) {
-      const fd = new FormData();
-      fd.append('file', f);
-      fd.append('upload_preset', UPLOAD_PRESET);
-      const res = await fetch(https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload, { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.secure_url) urls.push(data.secure_url);
+  // Cloudinary unsigned upload (returns secure_url)
+  async function uploadToCloudinary(file) {
+    if (!file) return null;
+    if (!window.CLOUDINARY_CLOUD_NAME || !window.CLOUDINARY_UPLOAD_PRESET) {
+      alert("Cloudinary config missing. Set CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET in admin.html.");
+      throw new Error("Cloudinary missing config");
     }
-    return urls;
+    const url = https://api.cloudinary.com/v1_1/${window.CLOUDINARY_CLOUD_NAME}/upload;
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("upload_preset", window.CLOUDINARY_UPLOAD_PRESET);
+    // Optional: put all product images in a folder
+    fd.append("folder", "products");
+
+    const res = await fetch(url, { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      console.error("Cloudinary error:", data);
+      throw new Error(data?.error?.message || "Cloudinary upload failed");
+    }
+    return data.secure_url;
   }
 
-  // ===== Auth =====
-  loginBtn && (loginBtn.onclick = () => auth.signInWithEmailAndPassword(email.value, password.value).catch(e => alert(e.message)));
-  signupBtn && (signupBtn.onclick = () => auth.createUserWithEmailAndPassword(email.value, password.value)
-    .then(cred => alert(Account created. UID:\n${cred.user.uid}))
-    .catch(e => alert(e.message)));
-  logoutBtn && (logoutBtn.onclick = () => auth.signOut());
+  // ---------- AUTH ----------
+  loginBtn?.addEventListener("click", async () => {
+    try {
+      await auth.signInWithEmailAndPassword(email.value.trim(), password.value.trim());
+    } catch (e) {
+      alert(e.message);
+    }
+  });
+  signupBtn?.addEventListener("click", async () => {
+    try {
+      const cred = await auth.createUserWithEmailAndPassword(email.value.trim(), password.value.trim());
+      alert(Signed up. Your UID: ${cred.user.uid}\nAdd to Firestore rules if you restrict writes.);
+    } catch (e) {
+      alert(e.message);
+    }
+  });
+  logoutBtn?.addEventListener("click", () => auth.signOut());
 
-  auth.onAuthStateChanged(async (u) => {
-    const ok = u && (ALLOWED_ADMIN_UIDS.size === 0 || ALLOWED_ADMIN_UIDS.has(u.uid));
-    authStatus.textContent = u ? (ok ? Signed in as ${u.email} : 'Unauthorized') : 'Not signed in';
-    logoutBtn.style.display = u ? 'inline-block' : 'none';
+  auth.onAuthStateChanged((u) => {
+    const okay = !!u && (ALLOWED_UIDS.size === 0 || ALLOWED_UIDS.has(u.uid));
+    authStatus.textContent = u
+      ? okay
+        ? Signed in as ${u.email}
+        : Signed in as ${u.email} (unauthorized for admin UI)
+      : "Not signed in";
 
-    const show = !!ok;
-    siteSection.style.display    = show ? 'block' : 'none';
-    productSection.style.display = show ? 'block' : 'none';
-    listSection.style.display    = show ? 'block' : 'none';
+    logoutBtn.style.display = u ? "inline-block" : "none";
+    siteSection.style.display = okay ? "block" : "none";
+    productSection.style.display = okay ? "block" : "none";
+    listSection.style.display = okay ? "block" : "none";
 
-    if (show) {
-      await loadSiteSettings();
-      await loadList();
+    if (okay) {
+      loadSite();
+      loadProducts();
+    } else {
+      tableBody.innerHTML = <tr><td colspan="6">Sign in to manage products.</td></tr>;
     }
   });
 
-  // ===== Site Settings logic =====
-  async function loadSiteSettings() {
+  // ---------- SITE SETTINGS ----------
+  async function loadSite() {
     try {
-      siteStatus.textContent = 'Loading…';
-      const snap = await HOME_DOC_REF.get();
-      const h = snap.exists ? snap.data() : {};
-      siteHeroTitle.value    = h.heroTitle || '';
-      siteHeroSubtitle.value = h.heroSubtitle || '';
-      siteFeatCat.value      = (h.featuredCategory || 'perfume');
-      siteShowFeat.checked   = !!h.showFeatured;
+      siteStatus.textContent = "Loading…";
+      siteBannerPreview.innerHTML = "";
+      siteGalleryPreview.innerHTML = "";
 
-      // previews
-      siteBannerPrev.innerHTML  = h.bannerImage ? <img src="${h.bannerImage}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5"> : '';
-      siteGalleryPrev.innerHTML = Array.isArray(h.gallery) && h.gallery.length
-        ? h.gallery.map(u => <img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">).join('')
-        : '';
+      const snap = await db.collection("site").doc("home").get();
+      const data = snap.exists ? snap.data() : {};
 
-      siteStatus.textContent = 'Ready';
+      siteHeroTitle.value = data.heroTitle || "";
+      siteHeroSubtitle.value = data.heroSubtitle || "";
+      siteFeaturedCategory.value = (data.featuredCategory || "perfume").toLowerCase();
+      siteShowFeatured.checked = !!data.showFeatured;
+
+      if (data.bannerImage) {
+        const img = document.createElement("img");
+        img.src = data.bannerImage;
+        siteBannerPreview.appendChild(img);
+      }
+      if (Array.isArray(data.gallery) && data.gallery.length) {
+        data.gallery.forEach((u) => {
+          const img = document.createElement("img");
+          img.src = u;
+          siteGalleryPreview.appendChild(img);
+        });
+      }
+      siteStatus.textContent = "Ready.";
     } catch (e) {
       console.error(e);
-      siteStatus.textContent = 'Error loading site settings';
+      siteStatus.textContent = "Failed to load site settings.";
     }
   }
 
-  siteReloadBtn.addEventListener('click', loadSiteSettings);
+  // preview chosen site images
+  siteBanner?.addEventListener("change", () => {
+    siteBannerPreview.innerHTML = "";
+    const f = siteBanner.files?.[0];
+    if (f) {
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(f);
+      siteBannerPreview.appendChild(img);
+    }
+  });
+  siteGallery?.addEventListener("change", () => {
+    siteGalleryPreview.innerHTML = "";
+    const files = Array.from(siteGallery.files || []);
+    files.forEach((f) => {
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(f);
+      siteGalleryPreview.appendChild(img);
+    });
+  });
 
-  siteSaveBtn.addEventListener('click', async () => {
+  siteReload?.addEventListener("click", loadSite);
+
+  siteSave?.addEventListener("click", async () => {
     try {
-      siteStatus.textContent = 'Saving…';
+      siteStatus.textContent = "Saving…";
 
-      // Upload banner (replace)
-      let bannerURL = null;
-      if (siteBannerInput.files && siteBannerInput.files[0]) {
-        const [url] = await uploadImages(siteBannerInput.files);
-        bannerURL = url || null;
-      }
-
-      // Upload gallery (overwrite with chosen)
-      let galleryURLs = null;
-      if (siteGalleryInput.files && siteGalleryInput.files.length) {
-        galleryURLs = await uploadImages(siteGalleryInput.files);
-      }
+      // Current record
+      const docRef = db.collection("site").doc("home");
+      const snap = await docRef.get();
+      const existing = snap.exists ? snap.data() : {};
 
       const payload = {
         heroTitle: siteHeroTitle.value.trim(),
         heroSubtitle: siteHeroSubtitle.value.trim(),
-        featuredCategory: siteFeatCat.value,
-        showFeatured: !!siteShowFeat.checked,
+        featuredCategory: siteFeaturedCategory.value.trim().toLowerCase(),
+        showFeatured: !!siteShowFeatured.checked,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       };
-      if (bannerURL !== null) payload.bannerImage = bannerURL;
-      if (galleryURLs !== null) payload.gallery = galleryURLs;
 
-      await HOME_DOC_REF.set(payload, { merge: true });
+      // Banner replace (if a new file chosen)
+      if (siteBanner.files && siteBanner.files[0]) {
+        const url = await uploadToCloudinary(siteBanner.files[0]);
+        payload.bannerImage = url;
+      } else if (existing.bannerImage) {
+        // keep current if not replaced
+        payload.bannerImage = existing.bannerImage;
+      }
 
-      siteStatus.textContent = '✅ Saved';
-      // refresh previews
-      if (bannerURL) siteBannerPrev.innerHTML = <img src="${bannerURL}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">;
-      if (galleryURLs) siteGalleryPrev.innerHTML = galleryURLs.map(u => <img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">).join('');
-      siteBannerInput.value = '';
-      siteGalleryInput.value = '';
+      // Gallery overwrite (if files chosen) else keep old
+      if (siteGallery.files && siteGallery.files.length) {
+        const urls = [];
+        for (const f of Array.from(siteGallery.files)) {
+          const u = await uploadToCloudinary(f);
+          urls.push(u);
+        }
+        payload.gallery = urls;
+      } else if (Array.isArray(existing.gallery)) {
+        payload.gallery = existing.gallery;
+      } else {
+        payload.gallery = [];
+      }
+
+      await docRef.set(payload, { merge: true });
+      siteStatus.textContent = "Saved ✓";
+      await loadSite();
+      alert("Homepage settings saved.");
     } catch (e) {
       console.error(e);
-      siteStatus.textContent = '❌ Save error: ' + e.message;
+      siteStatus.textContent = "Save failed.";
+      alert("Failed to save site settings: " + e.message);
     }
   });
 
-  // ===== Product CRUD =====
-  $('#saveBtn').onclick = async () => {
+  // ---------- PRODUCTS ----------
+  async function loadProducts() {
     try {
-      const sizes = parseSizes(sizesEl.value);
-      const data = {
-        name: nameEl.value.trim(),
-        basePrice: Number(priceEl.value || 0),
-        brand: brandEl.value.trim() || null,
-        sizes,
-        description: descEl.value.trim() || '',
-        category: String(categoryEl.value || '').toLowerCase(),
-        active: !!activeEl.checked,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      };
+      tableBody.innerHTML = <tr><td colspan="6">Loading…</td></tr>;
+      const cat = (filterCategory.value || "perfume").toLowerCase();
+      const snap = await db
+        .collection("products")
+        .where("category", "==", cat)
+        .orderBy("name")
+        .get();
 
-      // global stock if no sizes
-      const globalStockVal = globalStockEl.value !== '' ? Number(globalStockEl.value) : null;
-      if (!sizes.length && globalStockVal !== null && !Number.isNaN(globalStockVal)) {
-        data.stock = globalStockVal;
-      } else {
-        data.stock = firebase.firestore.FieldValue.delete();
+      if (snap.empty) {
+        tableBody.innerHTML = <tr><td colspan="6">No products in ${cat}.</td></tr>;
+        return;
       }
 
-      const id = docIdEl.value || dbRef.collection('products').doc().id;
+      tableBody.innerHTML = "";
+      snap.forEach((doc) => {
+        const p = doc.data();
+        const tr = document.createElement("tr");
 
-      // Upload images
+        const firstImg = (Array.isArray(p.images) && p.images[0]) || p.imageURL || "";
+        const sizesInline = renderSizesInline(p.sizes || []);
+        tr.innerHTML = `
+          <td>${firstImg ? <img src="${firstImg}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5"> : ""}</td>
+          <td>
+            <div style="font-weight:600">${p.name || ""}</div>
+            ${p.brand ? <div class="muted">${p.brand}</div> : ""}
+          </td>
+          <td>${sizesInline || "—"}</td>
+          <td>${money(p.basePrice || 0)}</td>
+          <td>${p.active ? "Yes" : "No"}</td>
+          <td>
+            <button class="btn" data-edit="${doc.id}">Edit</button>
+            <button class="btn danger" data-del="${doc.id}">Delete</button>
+          </td>
+        `;
+        tableBody.appendChild(tr);
+      });
+
+      // Bind actions
+      tableBody.querySelectorAll("[data-edit]").forEach((btn) => {
+        btn.addEventListener("click", () => loadIntoForm(btn.dataset.edit));
+      });
+      tableBody.querySelectorAll("[data-del]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          if (!confirm("Delete this product?")) return;
+          await db.collection("products").doc(btn.dataset.del).delete();
+          loadProducts();
+        });
+      });
+    } catch (e) {
+      console.error(e);
+      tableBody.innerHTML = <tr><td colspan="6">Failed to load products.</td></tr>;
+    }
+  }
+
+  async function loadIntoForm(id) {
+    try {
+      const d = await db.collection("products").doc(id).get();
+      if (!d.exists) return alert("Product not found.");
+      const p = d.data();
+
+      docIdEl.value = d.id;
+      categoryEl.value = p.category || "perfume";
+      nameEl.value = p.name || "";
+      priceEl.value = p.basePrice || "";
+      brandEl.value = p.brand || "";
+      sizesEl.value = (Array.isArray(p.sizes) ? p.sizes : [])
+        .map((s) => ${s.label} | ${s.price})
+        .join("\n");
+      descEl.value = p.description || "";
+      activeEl.checked = !!p.active;
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Save / Update product (images append)
+  saveBtn?.addEventListener("click", async () => {
+    try {
+      const id = docIdEl.value || db.collection("products").doc().id;
+      const sizes = parseSizes(sizesEl.value);
+      const base = Number(priceEl.value || 0) || 0;
+
+      // Existing doc (for merging images)
+      let existing = {};
+      if (docIdEl.value) {
+        const snap = await db.collection("products").doc(id).get();
+        existing = snap.exists ? snap.data() : {};
+      }
+
+      const data = {
+        name: nameEl.value.trim(),
+        basePrice: base,
+        brand: brandEl.value.trim(),
+        sizes,
+        description: descEl.value.trim(),
+        category: (categoryEl.value || "perfume").toLowerCase(),
+        active: !!activeEl.checked,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+      if (!docIdEl.value) {
+        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      }
+
+      // Upload selected images (append to existing)
+      let images = Array.isArray(existing.images) ? existing.images.slice() : [];
       if (imagesEl.files && imagesEl.files.length) {
-        const uploaded = await uploadImages(imagesEl.files);
-        if (uploaded.length) {
-          if (!docIdEl.value) {
-            data.imageURL = uploaded[0];
-            data.images = uploaded.slice(1);
-          } else {
-            const snap = await dbRef.collection('products').doc(id).get();
-            const old = snap.exists ? snap.data() : {};
-            const oldList = Array.isArray(old.images) ? old.images : [];
-            data.images = [...oldList, ...uploaded];
-            if (!old.imageURL) data.imageURL = uploaded[0];
-          }
+        for (const f of Array.from(imagesEl.files)) {
+          const url = await uploadToCloudinary(f);
+          if (url) images.push(url);
         }
       }
 
-      if (docIdEl.value) {
-        delete data.createdAt;
-        await dbRef.collection('products').doc(id).set(data, { merge: true });
+      // Ensure main imageURL is set (first image)
+      if (!images.length) {
+        // keep existing imageURL if present
+        if (existing.imageURL) data.imageURL = existing.imageURL;
       } else {
-        await dbRef.collection('products').doc(id).set(data);
+        data.images = images;
+        data.imageURL = images[0];
       }
 
-      alert('✅ Product saved');
-      resetForm();
-      loadList();
+      await db.collection("products").doc(id).set(data, { merge: true });
+      alert("Saved ✓");
+      resetProductForm();
+      await loadProducts();
     } catch (e) {
       console.error(e);
-      alert('Save error: ' + e.message);
+      alert("Save failed: " + e.message);
     }
-  };
+  });
 
-  $('#resetBtn').onclick = resetForm;
+  resetBtn?.addEventListener("click", resetProductForm);
 
-  async function loadList() {
-    tableBody.innerHTML = <tr><td colspan="6">Loading…</td></tr>;
-    const snap = await dbRef.collection('products').where('category', '==', filterCategory.value).orderBy('name').get();
+  refreshBtn?.addEventListener("click", loadProducts);
+  filterCategory?.addEventListener("change", loadProducts);
 
-    if (snap.empty) {
-      tableBody.innerHTML = <tr><td colspan="6">No products</td></tr>;
-      return;
-    }
-
-    tableBody.innerHTML = '';
-    snap.forEach((doc) => {
-      const p = doc.data();
-      const sizesTxt = renderSizesText(p.sizes);
-      const totalStock = Array.isArray(p.sizes) && p.sizes.length
-        ? p.sizes.reduce((sum, s) => sum + (typeof s.stock === 'number' ? s.stock : 0), 0)
-        : (typeof p.stock === 'number' ? p.stock : null);
-
-      const stockTxt = Array.isArray(p.sizes) && p.sizes.length
-        ? (totalStock !== null ? ${totalStock} pcs total : '(sizes; stock unspecified)')
-        : (typeof p.stock === 'number' ? ${p.stock} pcs : '—');
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${p.imageURL ? <img src="${p.imageURL}" width="60" height="60" style="object-fit:cover;border-radius:6px;border:1px solid #e5e5e5"> : ''}</td>
-        <td>
-          <div style="font-weight:600">${p.name || ''}</div>
-          ${p.brand ? <div class="muted">${p.brand}</div> : ''}
-          <div class="muted">Stock: ${stockTxt}</div>
-        </td>
-        <td>${sizesTxt}</td>
-        <td>${money(p.basePrice)}</td>
-        <td>${p.active ? 'Yes' : 'No'}</td>
-        <td>
-          <button class="btn edit" data-id="${doc.id}">Edit</button>
-          <button class="btn danger delete" data-id="${doc.id}">Delete</button>
-        </td>
-      `;
-      tableBody.appendChild(tr);
-    });
-
-    tableBody.querySelectorAll('.edit').forEach(btn => {
-      btn.onclick = async () => {
-        const d = await dbRef.collection('products').doc(btn.dataset.id).get();
-        if (!d.exists) return;
-        const p = d.data();
-
-        docIdEl.value = d.id;
-        nameEl.value = p.name || '';
-        priceEl.value = Number(p.basePrice || 0);
-        brandEl.value = p.brand || '';
-        sizesEl.value = sizesToTextarea(p.sizes || []);
-        globalStockEl.value = typeof p.stock === 'number' ? String(p.stock) : '';
-        descEl.value = p.description || '';
-        categoryEl.value = p.category || 'perfume';
-        activeEl.checked = !!p.active;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      };
-    });
-
-    tableBody.querySelectorAll('.delete').forEach(btn => {
-      btn.onclick = async () => {
-        if (!confirm('Delete this product?')) return;
-        await dbRef.collection('products').doc(btn.dataset.id).delete();
-        loadList();
-      };
-    });
-  }
-
-  refreshBtn.onclick = loadList;
-  filterCategory.onchange = loadList;
+  // ---------- Done ----------
+  console.log("✅ Admin JS ready");
 })();
