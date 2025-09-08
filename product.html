@@ -32,44 +32,36 @@
 
 <section class="section">
   <div id="product-detail" class="product-detail">
-   
+    <!-- Left: gallery -->
     <div class="pd-gallery">
-      <div class="pd-hero">
-        <img id="pd-hero-img" src="https://via.placeholder.com/800x800?text=Loading…" alt="Product image">
-      </div>
-      <div id="pd-thumbs" class="pd-thumbs"></div>
+      <div class="pd-hero"><img id="pd-hero" src="" alt="Product image"></div>
+      <div class="pd-thumbs" id="pd-thumbs"></div>
     </div>
 
-    <!-- Right: Info -->
+    <!-- Right: info -->
     <div class="pd-info">
-      <h1 id="pd-title">Product</h1>
+      <h1 id="pd-name">Product</h1>
       <div id="pd-brand" class="pd-brand"></div>
       <div id="pd-price" class="pd-price">Rs0</div>
 
       <div class="size-row">
-        <label for="size-select">Choose size</label>
-        <select id="size-select"></select>
+        <label for="pd-size" class="muted">Choose size</label>
+        <select id="pd-size"></select>
       </div>
 
       <div class="quantity-row">
-        <label>Quantity</label>
         <button class="qty-btn" id="qty-dec">–</button>
-        <span id="qty-val">1</span>
+        <span class="qty-val" id="qty-val">1</span>
         <button class="qty-btn" id="qty-inc">+</button>
       </div>
 
-      <button id="add-to-cart" class="btn btn-primary add-btn">Add to Cart</button>
+      <button class="btn btn-primary add-btn" id="pd-add">Add to Cart</button>
 
       <div class="card" style="margin-top:14px">
-        <strong>Description</strong>
-        <p id="pd-desc" style="margin-top:6px" class="muted"></p>
+        <h3 style="font-family:'Playfair Display',serif;margin-bottom:6px">Description</h3>
+        <p id="pd-desc" class="muted">—</p>
       </div>
     </div>
-  </div>
-
-  <div id="pd-error" class="card" style="display:none; margin-top:16px">
-    <strong>Product not found</strong>
-    <p class="muted" style="margin-top:6px">This product may have been removed or is not available.</p>
   </div>
 </section>
 
@@ -82,9 +74,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Scripts -->
+<!-- Site scripts -->
 <script src="script.js" defer></script>
 <script src="product-detail.js" defer></script>
-<script src="search.js" defer></script>
 </body>
 </html>
