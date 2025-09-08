@@ -12,7 +12,8 @@
   --card:#ffffff;
   --shadow:0 6px 18px rgba(21,25,35,.08);
   --radius:14px;
-  --accent:#10b981;
+  --accent:#10b981;  /* success / CTA accent */
+  --danger:#ef4444;
 }
 
 /* ============================
@@ -57,7 +58,7 @@ h3{font-weight:600;font-size:18px}
 }
 .btn:hover{background:var(--primary-600);transform:translateY(-1px)}
 .btn:active{transform:translateY(0)}
-.btn.danger{background:#ef4444}
+.btn.danger{background:var(--danger)}
 .btn.muted{background:#eef2ff;color:#4338ca;box-shadow:none}
 .btn.block{display:block;width:100%}
 
@@ -97,23 +98,24 @@ label{font-weight:600;display:block;margin-bottom:6px}
 
 .hamburger{display:none;cursor:pointer;font-size:24px;padding:6px 10px;border-radius:8px;z-index:110}
 
+/* Overlay behind the sliding menu */
 #nav-overlay{
-  position:fixed;inset:0;background:rgba(17,24,39,.35);
-  opacity:0;visibility:hidden;transition:opacity .2s ease, visibility .2s;
+  position:fixed;inset:0;background:rgba(0,0,0,.35);
+  opacity:0;visibility:hidden;transition:opacity .25s ease, visibility .25s ease;
   z-index:80; /* under panel (90) but above page */
 }
 #nav-overlay.show{opacity:1;visibility:visible}
 
-/* Mobile nav panel */
+/* Mobile slide-in from the right */
 @media (max-width:920px){
   .hamburger{display:block}
   .nav-links{
-    position:fixed;top:64px;right:0;bottom:0;width:min(84vw,360px);
+    position:fixed;top:0;right:0;height:100vh;width:min(84vw,320px);
     background:#fff;border-left:1px solid var(--border);
     box-shadow:-12px 0 28px rgba(0,0,0,.12);
-    flex-direction:column;align-items:stretch;
-    padding:14px;gap:6px;
-    transform:translateX(100%);transition:transform .25s ease;z-index:90;
+    flex-direction:column;align-items:flex-start;
+    padding:80px 20px 20px;gap:20px;
+    transform:translateX(100%);transition:transform .3s ease;z-index:90;
   }
   .nav-links.show{transform:translateX(0)}
   .nav-links li{width:100%}
@@ -128,6 +130,21 @@ label{font-weight:600;display:block;margin-bottom:6px}
 .sort-wrap{display:flex;align-items:center;gap:8px}
 .sort-wrap label{font-weight:600}
 .sort-wrap select{min-width:180px}
+
+/* ============================
+   Home: hero / gallery / featured (safe defaults)
+============================ */
+.hero{position:relative;max-width:1400px;margin:10px auto 0}
+.hero-img{width:100%;border-radius:16px;object-fit:cover;aspect-ratio:16/7}
+.hero-overlay{position:absolute;inset:auto 0 0 0;padding:18px 20px;color:#fff;background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.45) 80%) ;border-radius:0 0 16px 16px}
+.hero-overlay h1{color:#fff}
+.hero-overlay p{color:#e5e7eb}
+
+.gallery-grid{display:grid;gap:12px;grid-template-columns:repeat(6,1fr)}
+@media (max-width:1100px){.gallery-grid{grid-template-columns:repeat(4,1fr)}}
+@media (max-width:760px){.gallery-grid{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:520px){.gallery-grid{grid-template-columns:repeat(2,1fr)}}
+.gallery-img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;border:1px solid var(--border);background:#f8fafc}
 
 /* ============================
    Product Grid / Cards
@@ -151,6 +168,10 @@ label{font-weight:600;display:block;margin-bottom:6px}
 .product .price{padding:4px 12px 10px;font-weight:700;color:#111827}
 .product button{margin:0 12px 12px;align-self:flex-start;background:#111827;color:#fff;border-radius:10px;padding:8px 12px;border:0;cursor:pointer;font-weight:600}
 .product button:hover{background:#000}
+
+/* Brand grouping title (categories-by-brand) */
+.brand-group{margin:18px 0}
+.brand-title{font:700 20px/1.2 "Playfair Display", serif;margin:6px 0 10px}
 
 /* ============================
    Product Detail
@@ -177,6 +198,22 @@ label{font-weight:600;display:block;margin-bottom:6px}
     background:linear-gradient(90deg, var(--accent), #059669);
   }
 }
+
+/* ============================
+   Cart / Checkout
+============================ */
+.cart .cart-item{
+  display:flex;align-items:center;gap:12px;
+  border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:10px;background:#fff
+}
+.cart .cart-item img{
+  width:70px;height:70px;object-fit:cover;border-radius:10px;border:1px solid var(--border)
+}
+#total{font-weight:700}
+
+/* Smaller product thumbnails in checkout summary grid (if any) */
+.checkout-summary{display:grid;gap:10px}
+.checkout-summary .row{display:flex;align-items:center;gap:10px}
 
 /* ============================
    Tables (admin list)
