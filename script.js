@@ -1,54 +1,56 @@
-// script.js — handles mobile nav toggle and cart badge
+// script.js — slide-in mobile nav (no overlay) + cart badge
 (function () {
   const hamburger = document.querySelector(".hamburger");
   const navLinks  = document.querySelector(".nav-links");
-  let overlay = document.getElementById("nav-overlay");
-
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "nav-overlay";
-    document.body.appendChild(overlay);
-  }
 
   function openMenu() {
     navLinks?.classList.add("show");
-    overlay?.classList.add("show");
     hamburger?.setAttribute("aria-expanded", "true");
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
+    // optional: keep page scrollable; if you want to lock, uncomment:
+    // document.documentElement.style.overflow = "hidden";
+    // document.body.style.overflow = "hidden";
   }
 
   function closeMenu() {
     navLinks?.classList.remove("show");
-    overlay?.classList.remove("show");
     hamburger?.setAttribute("aria-expanded", "false");
-    document.documentElement.style.overflow = "";
-    document.body.style.overflow = "";
+    // document.documentElement.style.overflow = "";
+    // document.body.style.overflow = "";
   }
 
   function toggleMenu() {
-    if (navLinks?.classList.contains("show")) closeMenu();
-    else openMenu();
+    if (!navLinks) return;
+    navLinks.classList.contains("show") ? closeMenu() : openMenu();
   }
 
   hamburger?.addEventListener("click", toggleMenu);
-  overlay?.addEventListener("click", closeMenu);
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
+
+  // Close when tapping a link
   navLinks?.addEventListener("click", (e) => {
     if (e.target.closest("a")) closeMenu();
   });
 
-  // keep desktop nav normal
+  // Close if resized back to desktop
+  let lastW = window.innerWidth;
   window.addEventListener("resize", () => {
-    if (window.innerWidth > 920) closeMenu();
+    const w = window.innerWidth;
+    if (lastW <= 1023 && w > 1023) closeMenu();
+    lastW = w;
   });
 
-  // cart badge
+  // ESC to close (optional)
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+  });
+
+  // Cart badge
   const cartCountEl = document.getElementById("cart-count");
   if (cartCountEl) {
     try {
       const cart = JSON.parse(localStorage.getItem("cart") || "[]");
       cartCountEl.textContent = cart.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
-    } catch { cartCountEl.textContent = 0; }
+    } catch {
+      cartCountEl.textContent = 0;
+    }
   }
 })();
