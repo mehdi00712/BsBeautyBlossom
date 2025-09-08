@@ -1,4 +1,4 @@
-// script.js
+// script.js — navbar hamburger + cart badge
 (function(){
   const hamburger = document.querySelector('.hamburger');
   const nav = document.querySelector('.nav-links');
@@ -6,29 +6,27 @@
 
   function closeMenu(){
     nav?.classList.remove('show');
+    hamburger?.setAttribute('aria-expanded','false');
     overlay?.classList.remove('show');
-    if (hamburger) hamburger.setAttribute('aria-expanded','false');
   }
   function toggleMenu(){
     if (!nav) return;
-    const open = nav.classList.toggle('show');
-    if (open) {
-      overlay?.classList.add('show');
-      hamburger?.setAttribute('aria-expanded','true');
-    } else {
-      closeMenu();
-    }
+    const willShow = !nav.classList.contains('show');
+    nav.classList.toggle('show', willShow);
+    hamburger?.setAttribute('aria-expanded', willShow ? 'true' : 'false');
+    overlay?.classList.toggle('show', willShow);
   }
+
   hamburger?.addEventListener('click', toggleMenu);
   overlay?.addEventListener('click', closeMenu);
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
 
   // Cart badge
-  function updateCartCount(){
-    const cart = JSON.parse(localStorage.getItem('cart')||'[]');
-    const count = cart.reduce((s,i)=>s+(Number(i.qty||i.quantity||1)||1),0);
-    const badge = document.getElementById('cart-count');
-    if (badge) badge.textContent = count;
+  const cartCountEl = document.getElementById('cart-count');
+  if (cartCountEl) {
+    try {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      cartCountEl.textContent = cart.reduce((s,i)=> s + Number(i.quantity||0), 0);
+    } catch { cartCountEl.textContent = 0; }
   }
-  updateCartCount();
-  window.updateCartCount = updateCartCount;
 })();
