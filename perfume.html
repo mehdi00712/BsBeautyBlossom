@@ -30,7 +30,6 @@
   <div id="nav-overlay"></div>
 </header>
 
-<!-- Global search -->
 <div class="section" style="padding-top:16px">
   <div class="search-container">
     <input type="text" id="search-bar" placeholder="Search by brand or product name…">
@@ -41,7 +40,6 @@
 <section class="section">
   <h1>Perfume</h1>
 
-  <!-- Optional sort (kept; works on flat grids; harmless when grouped) -->
   <div class="card" style="display:flex;gap:10px;align-items:center;justify-content:flex-end">
     <label class="muted" for="sort">Sort</label>
     <select id="sort" style="max-width:180px">
@@ -52,7 +50,6 @@
     </select>
   </div>
 
-  <!-- Brand sections will render here -->
   <div id="product-grid"></div>
 </section>
 
@@ -65,10 +62,10 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Configure this page -->
+<!-- Page config -->
 <script>
   window.PRODUCT_CATEGORY = 'perfume';
-  window.GROUP_BY_BRAND = true; // <— enable brand sections
+  window.GROUP_BY_BRAND = true;
 </script>
 
 <!-- Site scripts -->
@@ -76,15 +73,12 @@
 <script src="products.js" defer></script>
 <script src="search.js" defer></script>
 
-<!-- Optional: light client-side sort for FLAT grids (no effect on grouped markup) -->
+<!-- Optional flat-grid sorter (no effect when grouped) -->
 <script>
 (function(){
   const host = document.getElementById('product-grid');
   const sel  = document.getElementById('sort');
   if (!host || !sel) return;
-
-  // This sorter only reorders direct .product cards.
-  // When grouped by brand (brand sections), it won’t fight layout — it simply does nothing.
   function getPrice(card){
     const el = card.querySelector('.price');
     const n = Number((el?.textContent || '').replace(/[^0-9.]/g, '')) || 0;
@@ -92,17 +86,12 @@
   }
   function sortGrid(mode){
     const flatGrid = host.querySelector('.product-grid');
-    if (!flatGrid) return; // grouped mode → skip
+    if (!flatGrid) return;
     const cards = Array.from(flatGrid.querySelectorAll('.product'));
     if (!cards.length) return;
-
     const sorted = cards.slice();
     if (mode === 'name-asc') {
-      sorted.sort((a,b)=>{
-        const an=(a.querySelector('h3')?.textContent||'').toLowerCase();
-        const bn=(b.querySelector('h3')?.textContent||'').toLowerCase();
-        return an.localeCompare(bn);
-      });
+      sorted.sort((a,b)=>(a.querySelector('h3')?.textContent||'').localeCompare((b.querySelector('h3')?.textContent||'')));
     } else if (mode === 'price-asc') {
       sorted.sort((a,b)=>getPrice(a)-getPrice(b));
     } else if (mode === 'price-desc') {
