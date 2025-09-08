@@ -1,9 +1,8 @@
-// firebase-config.js  (PLAIN JS — do NOT wrap in <script> tags)
+// firebase-config.js
 if (typeof firebase === 'undefined') {
   throw new Error('Firebase SDK not loaded before firebase-config.js');
 }
 
-// Your config
 const firebaseConfig = {
   apiKey: "AIzaSyBSA9iP3kjdYZM0eXt_KOXAgPT_z74cGJ8",
   authDomain: "beauty-blossom-5247d.firebaseapp.com",
@@ -15,12 +14,11 @@ const firebaseConfig = {
   measurementId: "G-1QD13LXLRM"
 };
 
-// Initialize once
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 
-// Shortcuts
+// Shortcuts for other scripts
 window.auth = firebase.auth ? firebase.auth() : undefined;
 window.db   = firebase.firestore ? firebase.firestore() : undefined;
 window.rtdb = firebase.database ? firebase.database() : undefined;
