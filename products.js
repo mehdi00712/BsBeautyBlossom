@@ -9,14 +9,12 @@
     grid.innerHTML = `<p style="padding:12px">${msg}</p>`;
   }
 
-  // Guards (surface problems to the page)
+  // Guards
   if (!window.firebase) { ui('Init error: Firebase SDK not loaded'); return; }
   if (!window.db) { ui('Init error: firebase-config.js did not initialize Firestore'); return; }
 
   const CAT = (window.PRODUCT_CATEGORY || '').toLowerCase();
   if (!CAT) { ui('Init error: PRODUCT_CATEGORY not set on this page'); return; }
-
-  console.log('[products.js] Start', { category: CAT });
 
   // Helpers
   function priceFrom(p) {
@@ -46,7 +44,7 @@
 
   function render(items) {
     if (!items.length) {
-      ui(`No products in “${CAT}”. Tip: In Firestore collection “products” each doc needs { category: "${CAT}", active: true }.`);
+      ui(`No products in “${CAT}”. Tip: Firestore “products” docs need { category: "${CAT}", active: true }.`);
       return;
     }
     grid.innerHTML = items.map(p => cardHTML(p.id, p)).join('');
@@ -59,7 +57,6 @@
     else if (mode === 'za') items.sort((a,b)=> toName(b).localeCompare(toName(a), undefined, {sensitivity:'base'}));
     else if (mode === 'low') items.sort((a,b)=> toPrice(a) - toPrice(b));
     else if (mode === 'high') items.sort((a,b)=> toPrice(b) - toPrice(a));
-    // 'rec' does nothing special for now.
   }
 
   let ALL = [];
@@ -68,24 +65,17 @@
     try {
       ui('Loading…');
 
-      // 🔧 No orderBy here (avoids composite index)
-      const q = db.collection('products')
+      const snap = await db.collection('products')
         .where('category', '==', CAT)
-        .where('active', '==', true);
+        .where('active', '==', true)
+        .get();
 
-      console.log('[products.js] Querying…');
-      const snap = await q.get();
-      console.log('[products.js] Query done. empty?', snap.empty, 'size', snap.size);
-
-      if (snap.empty) {
-        render([]);
-        return;
-      }
+      if (snap.empty) { render([]); return; }
 
       ALL = [];
       snap.forEach(doc => ALL.push({ id: doc.id, ...doc.data() }));
 
-      // Default sort (A–Z for stability)
+      // Default sort by name A–Z
       sortItems(ALL, 'az');
       render(ALL);
       bindSearch();
@@ -102,7 +92,6 @@
       const copy = ALL.slice();
       sortItems(copy, sortSel.value);
       render(copy);
-      // re-apply current search filter after sort
       if (searchInput && searchInput.value.trim()) {
         applySearch(searchInput.value.trim().toLowerCase());
       }
