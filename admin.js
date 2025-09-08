@@ -1,4 +1,4 @@
-// admin.js — Auth + Site Settings + Cloudinary + Product CRUD + Stock
+// admin.js — Auth + Site Settings + Cloudinary + Product CRUD + Stock (with 2 admin UIDs)
 (function () {
   if (!window.firebase || !window.db) {
     throw new Error("❌ Firebase not initialized: ensure admin.html loads compat SDKs then firebase-config.js.");
@@ -12,9 +12,10 @@
   const CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME;
   const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET;
 
-  // Restrict access (add your UID here to lock down the admin; empty = allow any signed-in user)
+  // ✅ Allowed admin UIDs
   const ALLOWED_ADMIN_UIDS = new Set([
-    "w5jtigflSVezQwUvnsgM7AY4ZK73", // your UID
+    "w5jtigflSVezQwUvnsgM7AY4ZK73", // first admin
+    "nyQYzolZI2fLFqIkAPNHHbcSJ2p1", // NEW admin
   ]);
 
   // ===== Auth elements =====
