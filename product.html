@@ -4,52 +4,12 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Product – B’s Beauty Blossom</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
-
-  <style>
-    /* Product page specific layout, neutral look */
-    .product-page { max-width: 1100px; margin: 20px auto; padding: 0 12px; }
-    .prod-layout { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; }
-    .prod-gallery { display: grid; gap: 12px; align-content: start; }
-    .prod-main {
-      width: 100%; aspect-ratio: 1/1; object-fit: cover;
-      border-radius: 12px; border: 1px solid #eee; background:#fff;
-    }
-    .thumbs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-    .thumbs img {
-      width: 100%; aspect-ratio: 1/1; object-fit: cover; cursor: pointer;
-      border:1px solid #e5e7eb; border-radius:10px; background:#fff;
-      transition: transform .15s ease;
-    }
-    .thumbs img:hover { transform: scale(1.02); }
-    .prod-info h1 { margin: 0 0 6px; font-family: "Playfair Display", serif; }
-    .prod-brand { color:#6b7280; margin-bottom: 10px; }
-    .price-line { font-size: 1.15rem; font-weight: 700; margin: 8px 0 14px; }
-    .variant-wrap { margin: 12px 0; }
-    .variant-wrap select {
-      width: 100%; padding: 10px 12px; border:1px solid #e5e7eb; border-radius:10px; background:#fff;
-    }
-    .qty-row { display:flex; align-items:center; gap:8px; margin: 14px 0; }
-    .qty-row input { width:72px; text-align:center; padding:8px 10px; border:1px solid #e5e7eb; border-radius:10px; }
-    .actions { display:flex; gap:10px; margin-top: 10px; }
-    .btn-primary { background:#111827; color:#fff; border:none; padding:12px 16px; border-radius:10px; cursor:pointer; }
-    .btn { background:#f3f4f6; border:1px solid #e5e7eb; padding:10px 12px; border-radius:10px; cursor:pointer; }
-    .desc { margin-top: 18px; color:#374151; line-height: 1.6; }
-    .muted { color:#6b7280; }
-
-    @media (max-width: 900px){
-      .prod-layout { grid-template-columns: 1fr; }
-      .thumbs { grid-template-columns: repeat(6, 1fr); }
-    }
-  </style>
 </head>
 <body>
 <header>
   <nav class="navbar">
-    <div class="logo">
-      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
-    </div>
+    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
     <ul class="nav-links">
       <li><a href="index.html">Home</a></li>
       <li><a href="perfume.html">Perfume</a></li>
@@ -61,27 +21,101 @@
       <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
       <li><a href="admin.html">Admin</a></li>
     </ul>
-    <button class="hamburger" aria-label="menu" aria-expanded="false" aria-controls="primary-navigation">&#9776;</button>
+    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
   </nav>
+  <div id="nav-overlay"></div>
 </header>
 
-<main class="product-page" id="product-root">
-  <p class="muted">Loading…</p>
+<main class="section" id="product-main">
+  <div class="product-detail">
+    <div class="product-media">
+      <img id="product-image" src="https://via.placeholder.com/800x800?text=Product" alt="Product image">
+      <div id="product-thumbs" class="thumbs"></div>
+    </div>
+
+    <div class="product-info">
+      <h1 id="product-name">Product name</h1>
+      <div id="product-brand" class="muted">Brand</div>
+      <p id="product-desc" class="desc">Description</p>
+
+      <label for="size">Choose size</label>
+      <select id="size"></select>
+
+      <div class="price-qty">
+        <div class="price" id="price">Rs0</div>
+        <div class="qty">
+          <button id="qty-minus" type="button">–</button>
+          <input id="qty" type="number" value="1" min="1">
+          <button id="qty-plus" type="button">+</button>
+        </div>
+      </div>
+
+      <button id="add-to-cart" class="btn">Add to Cart</button>
+    </div>
+  </div>
 </main>
 
 <footer class="site-footer">
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
-<!-- Firebase (ORDER MATTERS) -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Navbar / cart helpers (your site’s global js) -->
-<script src="script.js" defer></script>
+<!-- Load product from Firestore and render -->
+<script>
+(async function(){
+  if (!window.db) { console.error('Firestore not ready'); return; }
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  if (!id) { document.getElementById('product-main').innerHTML = '<p>Product not found</p>'; return; }
 
-<!-- Product logic -->
+  try {
+    const doc = await db.collection('products').doc(id).get();
+    if (!doc.exists) { document.getElementById('product-main').innerHTML = '<p>Product not found</p>'; return; }
+    const p = doc.data();
+
+    // Fill UI
+    const big = document.getElementById('product-image');
+    const thumbs = document.getElementById('product-thumbs');
+    const nameEl = document.getElementById('product-name');
+    const brandEl= document.getElementById('product-brand');
+    const descEl = document.getElementById('product-desc');
+    const sizeSel= document.getElementById('size');
+
+    nameEl.textContent = p.name || '';
+    brandEl.textContent= p.brand || '';
+    descEl.textContent = p.description || '';
+
+    const images = (p.images && p.images.length ? p.images : (p.imageURL?[p.imageURL]:[]));
+    if (images.length) {
+      big.src = images[0];
+      thumbs.innerHTML = images.map((src,i)=>`
+        <img class="${i===0?'active':''}" data-src="${src}" src="${src}" alt="thumb ${i+1}">
+      `).join('');
+    } else {
+      thumbs.innerHTML = '';
+    }
+
+    // Sizes
+    const sizes = Array.isArray(p.sizes) ? p.sizes : [];
+    if (sizes.length) {
+      sizeSel.innerHTML = sizes.map(s => `<option data-price="${Number(s.price||0)}" value="${s.label}">${s.label} - Rs${Number(s.price||0)}</option>`).join('');
+    } else {
+      const base = Number(p.basePrice || 0);
+      sizeSel.innerHTML = `<option data-price="${base}" value="">Rs${base}</option>`;
+    }
+  } catch (e) {
+    console.error('Load product error:', e);
+    document.getElementById('product-main').innerHTML = '<p>Error loading product.</p>';
+  }
+})();
+</script>
+
+<!-- Product interactions + navbar -->
 <script src="product-detail.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
