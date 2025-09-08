@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin – B’s Beauty Blossom</title>
   <link rel="stylesheet" href="style.css"/>
 
-  <!-- Firebase (order matters) -->
+  <!-- Firebase (ORDER MATTERS) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
 
-  <!-- Cloudinary (unsigned) -->
+  <!-- Cloudinary config (for image uploads) -->
   <script>
     window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
     window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
@@ -20,7 +21,9 @@
 <body>
 <header>
   <nav class="navbar">
-    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
+    <div class="logo">
+      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
+    </div>
     <ul class="nav-links">
       <li><a href="index.html">Home</a></li>
       <li><a href="perfume.html">Perfume</a></li>
@@ -30,99 +33,184 @@
       <li><a href="jewellery.html">Jewellery</a></li>
       <li><a href="gift.html">Gift</a></li>
       <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
-      <li><a class="active" href="admin.html">Admin</a></li>
+      <li><a href="admin.html" class="active">Admin</a></li>
     </ul>
     <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
-  </nav><div id="nav-overlay"></div>
+  </nav>
+  <div id="nav-overlay"></div>
 </header>
 
 <main class="admin-wrap">
   <h1>Admin Dashboard</h1>
 
+  <!-- Auth -->
   <section id="auth-section" class="card">
     <h2>Login</h2>
-    <label>Email</label><input id="email" type="email" placeholder="Email">
-    <label>Password</label><input id="password" type="password" placeholder="Password">
+
+    <div class="row row-2">
+      <div>
+        <label for="email">Admin email</label>
+        <input id="email" type="email" placeholder="Email">
+      </div>
+      <div>
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Password">
+      </div>
+    </div>
+
     <div style="display:flex;gap:8px;margin:8px 0">
       <button id="loginBtn" class="btn">Log In</button>
       <button id="signupBtn" class="btn muted">Sign Up (first time)</button>
       <button id="logoutBtn" class="btn danger" style="display:none">Log Out</button>
     </div>
+
     <p id="auth-status" class="muted"></p>
+    <p id="auth-help" class="muted" style="margin-top:8px"></p>
   </section>
 
   <div class="admin-grid">
+    <!-- Site Settings -->
     <section id="site-section" class="card" style="display:none">
       <h2>Site Settings (Homepage)</h2>
-      <div class="row row-2">
-        <div><label>Hero Title</label><input id="site-heroTitle" type="text" placeholder="Discover Your Signature Scent"></div>
-        <div><label>Hero Subtitle</label><input id="site-heroSubtitle" type="text" placeholder="Curated beauty & fragrances"></div>
-      </div>
+
       <div class="row row-2">
         <div>
-          <label>Featured Category</label>
-          <select id="site-featuredCategory">
-            <option value="perfume">Perfume</option><option value="body">Body</option>
-            <option value="skincare">Skincare</option><option value="cosmetics">Cosmetics</option>
-            <option value="jewellery">Jewellery</option><option value="gift">Gift</option>
-          </select>
+          <label for="site-heroTitle">Hero Title</label>
+          <input id="site-heroTitle" type="text" placeholder="Discover Your Signature Scent">
         </div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:26px">
-          <label><input id="site-showFeatured" type="checkbox"> Show Featured on Home</label>
+        <div>
+          <label for="site-heroSubtitle">Hero Subtitle</label>
+          <input id="site-heroSubtitle" type="text" placeholder="Curated beauty & fragrances">
         </div>
       </div>
-      <div class="row"><label>Banner Image</label><input id="site-banner" type="file" accept="image/*"><div id="site-banner-preview" class="preview"></div></div>
-      <div class="row"><label>Gallery Images</label><input id="site-gallery" type="file" multiple accept="image/*"><div id="site-gallery-preview" class="preview"></div></div>
-      <div style="display:flex;gap:8px"><button id="site-save" class="btn">Save</button><button id="site-reload" class="btn muted">Reload</button></div>
+
+      <div class="row row-2">
+        <div>
+          <label for="site-featuredCategory">Featured Category</label>
+          <select id="site-featuredCategory">
+            <option value="perfume">Perfume</option>
+            <option value="body">Body</option>
+            <option value="skincare">Skincare</option>
+            <option value="cosmetics">Cosmetics</option>
+            <option value="jewellery">Jewellery</option>
+            <option value="gift">Gift</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px; margin-top:26px">
+          <label><input id="site-showFeatured" type="checkbox"> Show Featured Products on Home</label>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="site-banner">Banner Image (replace)</label>
+        <input id="site-banner" type="file" accept="image/*">
+        <div id="site-banner-preview" class="preview"></div>
+      </div>
+
+      <div class="row">
+        <label for="site-gallery">Gallery Images (overwrite)</label>
+        <input id="site-gallery" type="file" accept="image/*" multiple>
+        <div id="site-gallery-preview" class="preview"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="site-save" class="btn">Save Site Settings</button>
+        <button id="site-reload" class="btn muted">Reload</button>
+      </div>
       <p id="site-status" class="muted" style="margin-top:8px"></p>
     </section>
 
+    <!-- Product Form -->
     <section id="product-section" class="card" style="display:none">
       <h2>Add / Edit Product</h2>
-      <div class="row"><label>Category</label>
+
+      <div class="row">
+        <label for="category">Category</label>
         <select id="category">
-          <option value="perfume">Perfume</option><option value="body">Body</option>
-          <option value="skincare">Skincare</option><option value="cosmetics">Cosmetics</option>
-          <option value="jewellery">Jewellery</option><option value="gift">Gift</option>
+          <option value="perfume">Perfume</option>
+          <option value="body">Body</option>
+          <option value="skincare">Skincare</option>
+          <option value="cosmetics">Cosmetics</option>
+          <option value="jewellery">Jewellery</option>
+          <option value="gift">Gift</option>
         </select>
       </div>
+
       <div class="row row-2">
-        <div><label>Product name</label><input id="name" placeholder="Product name"></div>
-        <div><label>Base price (Rs)</label><input id="price" type="number" placeholder="Rs"></div>
+        <div>
+          <label for="name">Product name</label>
+          <input id="name" placeholder="Product name">
+        </div>
+        <div>
+          <label for="price">Base price (Rs)</label>
+          <input id="price" type="number" placeholder="Base price (Rs)">
+        </div>
       </div>
+
       <div class="row row-2">
-        <div><label>Brand (optional)</label><input id="brand" placeholder="Brand"></div>
-        <div><label>Active</label><br><label><input id="active" type="checkbox" checked> Visible</label></div>
+        <div>
+          <label for="brand">Brand (optional)</label>
+          <input id="brand" placeholder="Brand">
+        </div>
+        <div>
+          <label>Active</label><br>
+          <label><input id="active" type="checkbox" checked> Visible on site</label>
+        </div>
       </div>
-      <div class="row"><label>Sizes (Label | Price, one per line)</label><textarea id="sizes" rows="4" placeholder="100ml | 2350&#10;30ml | 1550"></textarea></div>
-      <div class="row"><label>Description</label><textarea id="description" rows="3" placeholder="Description"></textarea></div>
-      <div class="row"><label>Image(s)</label><input id="images" type="file" multiple accept="image/*"></div>
-      <div style="display:flex;gap:8px"><button id="saveBtn" class="btn">Save Product</button><button id="resetBtn" class="btn muted">Reset</button></div>
+
+      <div class="row">
+        <label for="sizes">Sizes (one per line): <small>Label | Price — e.g. “100ml | 2350”</small></label>
+        <textarea id="sizes" rows="4" placeholder="100ml | 2350&#10;30ml | 1550"></textarea>
+      </div>
+
+      <div class="row">
+        <label for="description">Short description (optional)</label>
+        <textarea id="description" rows="3" placeholder="Description"></textarea>
+      </div>
+
+      <div class="row">
+        <label for="images">Image(s) (upload)</label>
+        <input id="images" type="file" accept="image/*" multiple>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button id="saveBtn" class="btn">Save Product</button>
+        <button id="resetBtn" class="btn muted">Reset Form</button>
+      </div>
       <input type="hidden" id="docId">
     </section>
 
+    <!-- Product List -->
     <section id="list-section" class="card" style="display:none">
       <h2>Products</h2>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
         <select id="filterCategory">
-          <option value="perfume">Perfume</option><option value="body">Body</option>
-          <option value="skincare">Skincare</option><option value="cosmetics">Cosmetics</option>
-          <option value="jewellery">Jewellery</option><option value="gift">Gift</option>
+          <option value="perfume">Perfume</option>
+          <option value="body">Body</option>
+          <option value="skincare">Skincare</option>
+          <option value="cosmetics">Cosmetics</option>
+          <option value="jewellery">Jewellery</option>
+          <option value="gift">Gift</option>
         </select>
         <button id="refreshBtn" class="btn muted">Refresh</button>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Image</th><th>Name</th><th>Sizes</th><th>Base</th><th>Active</th><th>Actions</th></tr></thead>
-          <tbody id="tableBody"><tr><td colspan="6">Loading…</td></tr></tbody>
+          <thead>
+            <tr><th>Image</th><th>Name</th><th>Sizes</th><th>Base</th><th>Active</th><th>Actions</th></tr>
+          </thead>
+        <tbody id="tableBody"><tr><td colspan="6">Loading…</td></tr></tbody>
         </table>
       </div>
     </section>
   </div>
 </main>
 
-<footer class="site-footer"><p>© 2025 B’s Beauty Blossom • Admin</p></footer>
+<footer class="site-footer">
+  <p>© 2025 B’s Beauty Blossom • Admin</p>
+</footer>
 
+<!-- Admin logic + Navbar last -->
 <script src="admin.js" defer></script>
 <script src="script.js" defer></script>
 </body>
