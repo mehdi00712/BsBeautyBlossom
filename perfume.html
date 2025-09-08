@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Perfume – B’s Beauty Blossom</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
@@ -22,37 +22,33 @@
       <li><a href="admin.html">Admin</a></li>
     </ul>
     <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
-  </nav><div id="nav-overlay"></div>
+  </nav>
+  <div id="nav-overlay"></div>
 </header>
 
-<div class="section" style="padding-top:16px">
-  <div class="search-container">
-    <input type="text" id="search-bar" placeholder="Search by brand or product name…">
-    <ul id="search-suggestions"></ul>
-  </div>
+<div class="search-container">
+  <input id="search-bar" type="text" placeholder="Search by brand or product name…">
 </div>
 
 <section class="section">
-  <h1>Perfume</h1>
-  <div class="card" style="display:flex;gap:10px;align-items:center;justify-content:flex-end">
-    <label class="muted" for="sort">Sort</label>
-    <select id="sort" style="max-width:180px">
-      <option value="default">Recommended</option>
-      <option value="name-asc">Name: A → Z</option>
-      <option value="price-asc">Price: Low to High</option>
-      <option value="price-desc">Price: High to Low</option>
-    </select>
-  </div>
-  <div id="product-grid"></div>
+  <h1 class="page-title">Perfume</h1>
+  <div id="product-grid" class="product-grid"><p>Loading…</p></div>
 </section>
 
-<footer class="site-footer"><p>© 2025 B’s Beauty Blossom • All rights reserved</p></footer>
+<footer class="site-footer">
+  <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
+</footer>
+
+<!-- Firebase (Compat) in this order -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script>window.PRODUCT_CATEGORY='perfume';window.GROUP_BY_BRAND=true;</script>
-<script src="script.js" defer></script>
-<script src="products.js" defer></script>
-<script src="search.js" defer></script>
+
+<!-- Page category flag -->
+<script>window.PRODUCT_CATEGORY = 'perfume';</script>
+
+<!-- Products loader + navbar -->
+<script src="products.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
