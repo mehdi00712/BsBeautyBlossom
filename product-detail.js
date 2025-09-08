@@ -1,15 +1,13 @@
-// product-detail.js – supports flexible variants (ml, shade, flavor, etc.) + gallery + add-to-cart
+// product-detail.js – flexible variants + gallery + robust loading + cart
 (function(){
-  if (!window.db) {
-    console.error("Firebase db not found. Ensure firebase-config.js ran.");
-    return;
-  }
+  // ---- Guards --------------------------------------------------------------
+  if (!window.firebase) { console.error("Firebase SDK not loaded"); return; }
+  if (!window.db)       { console.error("firebase-config.js did not set window.db"); return; }
 
-  // --- Utilities ---
   const $ = (s, r=document) => r.querySelector(s);
   const qs = (key) => new URLSearchParams(location.search).get(key);
-  const productId = qs('id');
 
+  // ---- Cart helpers --------------------------------------------------------
   function getCart(){ try { return JSON.parse(localStorage.getItem('cart')) || []; } catch { return []; } }
   function setCart(c){ localStorage.setItem('cart', JSON.stringify(c)); }
   function cartCount(c){ return c.reduce((s,i)=> s + Number(i.quantity||0), 0); }
@@ -18,40 +16,53 @@
     const badge = document.getElementById('cart-count');
     if (badge) badge.textContent = String(cartCount(c));
   }
-
   function money(n){ return 'Rs' + Number(n||0).toFixed(0); }
-  function clUrl(url, w){ // optimize cloudinary images if available
+
+  // Cloudinary optimization (safe if not a Cloudinary URL)
+  function clUrl(url, w){
     try {
       if (!url || !/res\.cloudinary\.com/.test(url)) return url;
       return url.replace(/\/upload\/(?!.*\/)/, /upload/f_auto,q_auto,w_${w}/);
     } catch { return url; }
   }
 
-  // --- Render Product ---
+  // ---- Main loader ---------------------------------------------------------
   async function loadProduct(){
     const root = document.getElementById('product-root');
-    if (!productId){
-      root.innerHTML = <div class="prod-info"><h1>Product not found</h1></div>;
+    const id = qs('id');
+
+    if (!id){
+      root.innerHTML = <div class="prod-info"><h1>Product not found</h1><p class="muted">Missing ?id= in the URL.</p></div>;
       return;
     }
 
-    const snap = await db.collection('products').doc(productId).get();
+    let snap;
+    try {
+      snap = await db.collection('products').doc(id).get();
+    } catch (e) {
+      console.error('Firestore read failed:', e);
+      root.innerHTML = <div class="prod-info"><h1>Product not found</h1><p class="muted">Error loading product.</p></div>;
+      return;
+    }
+
     if (!snap.exists){
       root.innerHTML = <div class="prod-info"><h1>Product not found</h1></div>;
       return;
     }
 
     const p = snap.data();
-    const images = Array.isArray(p.images) && p.images.length ? p.images : (p.imageURL ? [p.imageURL] : []);
-    const mainSrc = clUrl(images[0] || 'https://via.placeholder.com/900x900?text=No+Image', Math.min(900, window.innerWidth));
-    const variants = Array.isArray(p.sizes) ? p.sizes : []; // each variant: {label, price}
+    console.log('Loaded product', id, p);
 
-    // Compute "from" price (lowest of variants or basePrice)
-    const base = Number(p.basePrice || 0) || 0;
+    const images = Array.isArray(p.images) && p.images.length ? p.images
+                   : (p.imageURL ? [p.imageURL] : []);
+    const mainSrc = clUrl(images[0] || 'https://via.placeholder.com/900x900?text=No+Image', Math.min(900, window.innerWidth));
+
+    const variants = Array.isArray(p.sizes) ? p.sizes : []; // [{label, price}]
+    const base     = Number(p.basePrice || 0) || 0;
     const varPrices = variants.map(v => Number(v.price||0)).filter(n => n>0);
     const fromPrice = varPrices.length ? Math.min(...varPrices) : base;
 
-    // DOM
+    // ---- Render ------------------------------------------------------------
     const wrap = document.createElement('div');
     wrap.className = 'prod-layout';
     wrap.innerHTML = `
@@ -102,7 +113,7 @@
       });
     }
 
-    // Variants dropdown (flexible: ml / shade / flavor / pack label)
+    // Variants dropdown (free-form label: ml/shade/flavor/etc.)
     const sel = $('#variant', wrap);
     if (sel && variants.length){
       variants.forEach(v => {
@@ -112,13 +123,12 @@
         opt.textContent = ${v.label} — ${money(v.price||0)};
         sel.appendChild(opt);
       });
-      sel.addEventListener('change', () => {
+      const setPrice = () => {
         const price = Number(sel.selectedOptions[0].dataset.price || 0);
         $('#price-line', wrap).textContent = money(price || base);
-      });
-      // initialize price line to first variant
-      const firstPrice = Number(sel.options[0].dataset.price || 0);
-      $('#price-line', wrap).textContent = money(firstPrice || base);
+      };
+      sel.addEventListener('change', setPrice);
+      setPrice(); // init price line
     }
 
     // Add to cart
@@ -128,17 +138,16 @@
       // selected variant (or none)
       let title = p.name || 'Product';
       let price = base;
-      let variantLabel = '';
 
       if (sel && variants.length){
         const o = sel.selectedOptions[0];
-        variantLabel = o.value;
+        const label = o.value;
         price = Number(o.dataset.price || 0) || base;
-        title = ${title} (${variantLabel});
+        title = ${title} (${label});
       }
 
       const item = {
-        id: productId,
+        id: id,
         name: title,
         price: price,
         quantity: qty,
@@ -146,7 +155,6 @@
       };
 
       const cart = getCart();
-      // merge same-name lines
       const idx = cart.findIndex(x => x.name === item.name);
       if (idx >= 0){
         cart[idx].quantity = Number(cart[idx].quantity || 1) + qty;
