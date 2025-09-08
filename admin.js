@@ -1,168 +1,249 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin – B’s Beauty Blossom</title>
-  <link rel="stylesheet" href="style.css"/>
+// admin.js — Auth + CRUD + Cloudinary + per-size/global stock
+(function () {
+  'use strict';
 
-  <!-- Firebase (ORDER MATTERS) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="firebase-config.js"></script>
+  if (!window.firebase || !window.db) {
+    throw new Error("❌ Firebase not initialized: ensure admin.html loads compat SDKs then firebase-config.js.");
+  }
 
-  <!-- Cloudinary config (for image uploads) -->
-  <script>
-    window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
-    window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
-  </script>
-</head>
-<body>
-<header>
-  <nav class="navbar">
-    <div class="logo">
-      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
-    </div>
-    <ul class="nav-links">
-      <li><a href="index.html">Home</a></li>
-      <li><a href="perfume.html">Perfume</a></li>
-      <li><a href="body.html">Body</a></li>
-      <li><a href="skincare.html">Skincare</a></li>
-      <li><a href="cosmetics.html">Cosmetics</a></li>
-      <li><a href="jewellery.html">Jewellery</a></li>
-      <li><a href="gift.html">Gift</a></li>
-      <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
-      <li><a href="admin.html" class="active">Admin</a></li>
-    </ul>
-    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
-  </nav>
-  <div id="nav-overlay"></div>
-</header>
+  // ====== Helpers ======
+  const $ = (s) => document.querySelector(s);
+  const auth = firebase.auth();
+  const dbRef = db;
 
-<main class="admin-wrap">
-  <h1>Admin Dashboard</h1>
+  const CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME;
+  const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET;
 
-  <!-- Auth -->
-  <section id="auth-section" class="card">
-    <h2>Login</h2>
-    <label for="email">Admin email</label>
-    <input id="email" type="email" placeholder="Email">
-    <label for="password">Password</label>
-    <input id="password" type="password" placeholder="Password">
-    <div style="display:flex;gap:8px;margin:8px 0">
-      <button id="loginBtn" class="btn">Log In</button>
-      <button id="signupBtn" class="btn muted">Sign Up (first time)</button>
-      <button id="logoutBtn" class="btn danger" style="display:none">Log Out</button>
-    </div>
-    <p id="auth-status" class="muted"></p>
-  </section>
+  // Optional restriction: add your UID(s) to restrict access
+  const ALLOWED_ADMIN_UIDS = new Set([
+    // "w5jtigflSVezQwUvnsgM7AY4ZK73",
+  ]);
 
-  <div class="admin-grid">
+  // ====== DOM ======
+  const authStatus = $('#auth-status'), loginBtn = $('#loginBtn'), signupBtn = $('#signupBtn'), logoutBtn = $('#logoutBtn');
+  const email = $('#email'), password = $('#password');
 
-    <!-- Product Form -->
-    <section id="product-section" class="card" style="display:none">
-      <h2>Add / Edit Product</h2>
+  const productSection = $('#product-section');
+  const listSection = $('#list-section');
 
-      <div class="row">
-        <label for="category">Category</label>
-        <select id="category">
-          <option value="perfume">Perfume</option>
-          <option value="body">Body</option>
-          <option value="skincare">Skincare</option>
-          <option value="cosmetics">Cosmetics</option>
-          <option value="jewellery">Jewellery</option>
-          <option value="gift">Gift</option>
-        </select>
-      </div>
+  const nameEl = $('#name'), priceEl = $('#price'), sizesEl = $('#sizes'), descEl = $('#description');
+  const brandEl = $('#brand'), categoryEl = $('#category'), activeEl = $('#active'), imagesEl = $('#images'), docIdEl = $('#docId');
+  const globalStockEl = $('#stock');
 
-      <div class="row row-2">
-        <div>
-          <label for="name">Product name</label>
-          <input id="name" placeholder="Product name">
-        </div>
-        <div>
-          <label for="price">Base price (Rs)</label>
-          <input id="price" type="number" placeholder="Base price (Rs)">
-        </div>
-      </div>
+  const filterCategory = $('#filterCategory'), refreshBtn = $('#refreshBtn'), tableBody = $('#tableBody');
 
-      <div class="row row-2">
-        <div>
-          <label for="brand">Brand (optional)</label>
-          <input id="brand" placeholder="Brand">
-        </div>
-        <div>
-          <label>Active</label><br>
-          <label><input id="active" type="checkbox" checked> Visible on site</label>
-        </div>
-      </div>
+  const money = (n) => 'Rs' + Number(n || 0).toFixed(0);
 
-      <div class="row">
-        <label for="sizes">
-          Sizes (one per line):
-          <small>Use <b>Label | Price | Stock</b> — e.g. <code>100ml | 2350 | 5</code>. Stock is optional.</small>
-        </label>
-        <textarea id="sizes" rows="4" placeholder="100ml | 2350 | 5&#10;30ml | 1550 | 2"></textarea>
-      </div>
+  // ====== Parse sizes (Label | Price | Stock)
+  const parseSizes = (t) => {
+    return t.split('\n')
+      .map(l => l.trim())
+      .filter(Boolean)
+      .map(l => {
+        const parts = l.split('|').map(x => x.trim());
+        const label = parts[0] || '';
+        const price = Number(parts[1] || 0);
+        const stock = parts[2] !== undefined && parts[2] !== '' ? Number(parts[2]) : null;
+        return { label, price, ...(stock !== null ? { stock } : {}) };
+      });
+  };
 
-      <div class="row">
-        <label for="stock">
-          Global Stock (no sizes)
-          <small>For products without sizes. Leave blank if using size-based stock.</small>
-        </label>
-        <input id="stock" type="number" min="0" placeholder="e.g. 10">
-      </div>
+  const renderSizesText = (sizes) => {
+    if (!Array.isArray(sizes) || !sizes.length) return '';
+    return sizes.map(s => {
+      const price = Number(s.price || 0);
+      const hasStock = typeof s.stock === 'number';
+      return `${s.label} ${hasStock ? `(${s.stock} pcs)` : ''} – ${isNaN(price) ? 'Rs0' : money(price)}`;
+    }).join(', ');
+  };
 
-      <div class="row">
-        <label for="description">Short description (optional)</label>
-        <textarea id="description" rows="3" placeholder="Description"></textarea>
-      </div>
+  const sizesToTextarea = (sizes) => {
+    if (!Array.isArray(sizes) || !sizes.length) return '';
+    return sizes.map(s => {
+      const hasStock = typeof s.stock === 'number';
+      return `${s.label} | ${s.price}${hasStock ? ` | ${s.stock}` : ''}`;
+    }).join('\n');
+  };
 
-      <div class="row">
-        <label for="images">Image(s) (upload)</label>
-        <input id="images" type="file" accept="image/*" multiple>
-      </div>
+  function resetForm() {
+    docIdEl.value = '';
+    nameEl.value = '';
+    priceEl.value = '';
+    brandEl.value = '';
+    sizesEl.value = '';
+    globalStockEl.value = '';
+    descEl.value = '';
+    categoryEl.value = 'perfume';
+    imagesEl.value = '';
+    activeEl.checked = true;
+  }
 
-      <div style="display:flex;gap:8px">
-        <button id="saveBtn" class="btn btn-primary">Save Product</button>
-        <button id="resetBtn" class="btn muted">Reset Form</button>
-      </div>
-      <input type="hidden" id="docId">
-    </section>
+  // ====== Auth ======
+  loginBtn && (loginBtn.onclick = () => auth.signInWithEmailAndPassword(email.value, password.value).catch(e => alert(e.message)));
+  signupBtn && (signupBtn.onclick = () => auth.createUserWithEmailAndPassword(email.value, password.value).then(cred => {
+    alert(`Account created. Your UID is:\n${cred.user.uid}\n(Add it to ALLOWED_ADMIN_UIDS in admin.js if you want to restrict access.)`);
+  }).catch(e => alert(e.message)));
+  logoutBtn && (logoutBtn.onclick = () => auth.signOut());
 
-    <!-- Product List -->
-    <section id="list-section" class="card" style="display:none">
-      <h2>Products</h2>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-        <select id="filterCategory">
-          <option value="perfume">Perfume</option>
-          <option value="body">Body</option>
-          <option value="skincare">Skincare</option>
-          <option value="cosmetics">Cosmetics</option>
-          <option value="jewellery">Jewellery</option>
-          <option value="gift">Gift</option>
-        </select>
-        <button id="refreshBtn" class="btn muted">Refresh</button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Image</th><th>Name</th><th>Sizes / Stock</th><th>Base</th><th>Active</th><th>Actions</th></tr>
-          </thead>
-          <tbody id="tableBody"><tr><td colspan="6">Loading…</td></tr></tbody>
-        </table>
-      </div>
-    </section>
-  </div>
-</main>
+  auth.onAuthStateChanged((u) => {
+    const allowed = u && (ALLOWED_ADMIN_UIDS.size === 0 || ALLOWED_ADMIN_UIDS.has(u.uid));
+    authStatus.textContent = u ? (allowed ? `Signed in as ${u.email}` : 'Unauthorized') : 'Not signed in';
+    logoutBtn.style.display = u ? 'inline-block' : 'none';
 
-<footer class="site-footer">
-  <p>© 2025 B’s Beauty Blossom • Admin</p>
-</footer>
+    const show = !!allowed;
+    productSection.style.display = show ? 'block' : 'none';
+    listSection.style.display = show ? 'block' : 'none';
 
-<!-- Scripts LAST -->
-<script src="script.js" defer></script>
-<script src="admin.js" defer></script>
-</body>
-</html>
+    if (show) loadList();
+  });
+
+  // ====== Cloudinary upload (returns array of URLs) ======
+  async function uploadImages(files) {
+    if (!files || !files.length) return [];
+    const out = [];
+    for (const f of files) {
+      const fd = new FormData();
+      fd.append('file', f);
+      fd.append('upload_preset', UPLOAD_PRESET);
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.secure_url) out.push(data.secure_url);
+    }
+    return out;
+  }
+
+  // ====== Save product (Create/Update) ======
+  $('#saveBtn').onclick = async () => {
+    try {
+      const sizes = parseSizes(sizesEl.value);
+      const data = {
+        name: nameEl.value.trim(),
+        basePrice: Number(priceEl.value || 0),
+        brand: brandEl.value.trim() || null,
+        sizes, // per-size stock lives here
+        description: descEl.value.trim() || '',
+        category: String(categoryEl.value || '').toLowerCase(),
+        active: !!activeEl.checked,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+
+      // global stock applies only when NO sizes provided
+      const globalStockVal = globalStockEl.value !== '' ? Number(globalStockEl.value) : null;
+      if (!sizes.length && globalStockVal !== null && !Number.isNaN(globalStockVal)) {
+        data.stock = globalStockVal;
+      } else {
+        // if sizes are provided, remove single stock to avoid confusion
+        data.stock = firebase.firestore.FieldValue.delete();
+      }
+
+      const id = docIdEl.value || dbRef.collection('products').doc().id;
+
+      // Upload new images if chosen
+      if (imagesEl.files && imagesEl.files.length) {
+        const newImgs = await uploadImages(imagesEl.files);
+        if (newImgs.length) {
+          if (!docIdEl.value) {
+            data.imageURL = newImgs[0];
+            data.images = newImgs.slice(1);
+          } else {
+            const snap = await dbRef.collection('products').doc(id).get();
+            const old = snap.exists ? snap.data() : {};
+            const oldList = Array.isArray(old.images) ? old.images : [];
+            data.images = [...oldList, ...newImgs];
+            if (!old.imageURL) data.imageURL = newImgs[0];
+          }
+        }
+      }
+
+      if (docIdEl.value) {
+        delete data.createdAt;
+        await dbRef.collection('products').doc(id).set(data, { merge: true });
+      } else {
+        await dbRef.collection('products').doc(id).set(data);
+      }
+
+      alert('✅ Product saved');
+      resetForm();
+      loadList();
+    } catch (e) {
+      console.error(e);
+      alert('Save error: ' + e.message);
+    }
+  };
+
+  $('#resetBtn').onclick = resetForm;
+
+  // ====== List / Edit / Delete ======
+  async function loadList() {
+    tableBody.innerHTML = `<tr><td colspan="6">Loading…</td></tr>`;
+    const snap = await dbRef.collection('products').where('category', '==', filterCategory.value).orderBy('name').get();
+
+    if (snap.empty) {
+      tableBody.innerHTML = `<tr><td colspan="6">No products</td></tr>`;
+      return;
+    }
+
+    tableBody.innerHTML = '';
+    snap.forEach((doc) => {
+      const p = doc.data();
+      const sizesTxt = renderSizesText(p.sizes);
+      const totalStock = Array.isArray(p.sizes) && p.sizes.length
+        ? p.sizes.reduce((sum, s) => sum + (typeof s.stock === 'number' ? s.stock : 0), 0)
+        : (typeof p.stock === 'number' ? p.stock : null);
+
+      const stockTxt = Array.isArray(p.sizes) && p.sizes.length
+        ? (totalStock !== null ? `${totalStock} pcs total` : '(sizes; stock unspecified)')
+        : (typeof p.stock === 'number' ? `${p.stock} pcs` : '—');
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${p.imageURL ? `<img src="${p.imageURL}" width="60" height="60" style="object-fit:cover;border-radius:6px;border:1px solid #e5e5e5">` : ''}</td>
+        <td>
+          <div style="font-weight:600">${p.name || ''}</div>
+          ${p.brand ? `<div class="muted">${p.brand}</div>` : ''}
+          <div class="muted">Stock: ${stockTxt}</div>
+        </td>
+        <td>${sizesTxt || '—'}</td>
+        <td>${money(p.basePrice)}</td>
+        <td>${p.active ? 'Yes' : 'No'}</td>
+        <td>
+          <button class="btn edit" data-id="${doc.id}">Edit</button>
+          <button class="btn danger delete" data-id="${doc.id}">Delete</button>
+        </td>
+      `;
+      tableBody.appendChild(tr);
+    });
+
+    // bind actions
+    tableBody.querySelectorAll('.edit').forEach(btn => {
+      btn.onclick = async () => {
+        const d = await dbRef.collection('products').doc(btn.dataset.id).get();
+        if (!d.exists) return;
+        const p = d.data();
+
+        docIdEl.value = d.id;
+        nameEl.value = p.name || '';
+        priceEl.value = Number(p.basePrice || 0);
+        brandEl.value = p.brand || '';
+        sizesEl.value = sizesToTextarea(p.sizes || []);
+        globalStockEl.value = typeof p.stock === 'number' ? String(p.stock) : '';
+        descEl.value = p.description || '';
+        categoryEl.value = p.category || 'perfume';
+        activeEl.checked = !!p.active;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+    });
+
+    tableBody.querySelectorAll('.delete').forEach(btn => {
+      btn.onclick = async () => {
+        if (!confirm('Delete this product?')) return;
+        await dbRef.collection('products').doc(btn.dataset.id).delete();
+        loadList();
+      };
+    });
+  }
+
+  refreshBtn.onclick = loadList;
+  filterCategory.onchange = loadList;
+})();
