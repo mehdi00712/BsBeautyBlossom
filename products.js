@@ -1,101 +1,74 @@
-// products.js — render category grid with ml/flavour variants (no stock)
+// products.js — groups products by brand; requires window.db
 (async function () {
-  const grid = document.getElementById('product-grid');
-  if (!grid) return;
+  const gridHost = document.getElementById('product-grid');
+  if (!gridHost) return;
 
-  const cat = (window.PRODUCT_CATEGORY || '').toLowerCase();
+  const category = String(window.PRODUCT_CATEGORY || '').toLowerCase();
+  const groupByBrand = !!window.GROUP_BY_BRAND;
+  const money = (n)=>'Rs'+Number(n||0).toFixed(0);
 
-  function cardHTML(p, id) {
+  const minPrice = (p) => {
+    const base = Number(p.basePrice || 0) || 0;
     const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-    const opts = (sizes.length
-      ? sizes.map(s => {
-          const price = Number(s.price || 0);
-          return `<option value="${s.label}" data-price="${price}">${s.label} - Rs${price}</option>`;
-        }).join('')
-      : `<option value="default" data-price="${Number(p.basePrice||0)}">Default - Rs${Number(p.basePrice||0)}</option>`
-    );
+    const prices = sizes.map(s=>Number((s&&s.price)||0)).filter(x=>x>0);
+    return prices.length ? Math.min(...prices) : base;
+  };
+  const safeBrand = (b)=> (b && String(b).trim()) || 'Other';
 
+  function productCard(id, p){
+    const from = minPrice(p);
+    const img = p.imageURL || 'https://via.placeholder.com/600x750?text=No+Image';
+    const brand = p.brand ? `<div class="muted">${p.brand}</div>` : '';
     return `
-      <div class="product">
-        <a href="product.html?id=${id}">
-          <img src="${p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image'}" alt="${p.name||''}">
-        </a>
-        <h3><a href="product.html?id=${id}">${p.name||''}</a></h3>
-        ${p.brand ? <div class="muted">${p.brand}</div> : ''}
-        <div class="buy-row">
-          <select class="variant">${opts}</select>
-          <div class="qty">
-            <button class="minus" type="button">−</button>
-            <input class="q" type="number" value="1" min="1" step="1">
-            <button class="plus" type="button">+</button>
-          </div>
-          <button class="add">Add</button>
+      <a class="product" href="product.html?id=${id}" data-name="${p.name||''}" data-brand="${p.brand||''}">
+        <img src="${img}" alt="${p.name||''}">
+        <div class="pad">
+          <h3>${p.name||''}</h3>
+          ${brand}
+          <div class="price">${from>0 ? 'From '+money(from) : ''}</div>
         </div>
-      </div>
+      </a>
     `;
   }
 
-  function attachHandlers(cardEl, p) {
-    const sel = cardEl.querySelector('.variant');
-    const q   = cardEl.querySelector('.q');
-    const plus= cardEl.querySelector('.plus');
-    const minus= cardEl.querySelector('.minus');
-    const add = cardEl.querySelector('.add');
+  async function load(){
+    try{
+      gridHost.innerHTML = `<p class="muted">Loading products…</p>`;
+      const snap = await db.collection('products').where('category','==',category).where('active','==',true).get();
+      if (snap.empty){ gridHost.innerHTML = `<p class="muted">No products in this category yet.</p>`; return; }
 
-    plus.onclick = () => { q.value = String(Math.max(1, Number(q.value||1) + 1)); };
-    minus.onclick= () => { q.value = String(Math.max(1, Number(q.value||1) - 1)); };
+      const items = []; snap.forEach(d=>items.push({id:d.id, ...d.data()}));
 
-    add.onclick = () => {
-      const opt = sel.options[sel.selectedIndex];
-      const variant = opt.value;
-      const price = Number(opt.dataset.price || 0);
-      const qty = Math.max(1, Number(q.value || 1));
-      const image = p.imageURL || (Array.isArray(p.images) && p.images[0]) || '';
+      if (!groupByBrand){
+        gridHost.innerHTML = `<div class="product-grid"></div>`;
+        const grid = gridHost.querySelector('.product-grid');
+        items.forEach(p=>grid.insertAdjacentHTML('beforeend', productCard(p.id,p)));
+        return;
+      }
 
-      const item = {
-        id: p.id,
-        name: p.name + (variant && variant!=='default' ? ` (${variant})` : ''),
-        price,
-        quantity: qty,
-        imageURL: image
-      };
-
-      addToCart(item);
-    };
-  }
-
-  function addToCart(item) {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const idx = cart.findIndex(x => x.name === item.name && Number(x.price) === Number(item.price));
-    if (idx >= 0) {
-      cart[idx].quantity = Number(cart[idx].quantity || 0) + Number(item.quantity || 1);
-    } else {
-      cart.push(item);
+      const buckets = new Map();
+      for (const p of items){
+        const key = safeBrand(p.brand);
+        if (!buckets.has(key)) buckets.set(key, []);
+        buckets.get(key).push(p);
+      }
+      const brands = Array.from(buckets.keys()).sort((a,b)=>a.localeCompare(b));
+      gridHost.innerHTML = '';
+      brands.forEach(name=>{
+        const list = buckets.get(name).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+        const section = document.createElement('section');
+        section.className = 'brand-section';
+        section.innerHTML = `<h2 class="brand-title">${name}</h2><div class="brand-grid"></div>`;
+        const grid = section.querySelector('.brand-grid');
+        list.forEach(p=>grid.insertAdjacentHTML('beforeend', productCard(p.id,p)));
+        gridHost.appendChild(section);
+      });
+    }catch(e){
+      console.error('Category load error:', e);
+      gridHost.innerHTML = `<p class="muted">Couldn’t load products.</p>`;
     }
-    localStorage.setItem('cart', JSON.stringify(cart));
-    const count = cart.reduce((s,i)=>s+Number(i.quantity||0),0);
-    const badge = document.getElementById('cart-count');
-    if (badge) badge.textContent = String(count);
-    alert('Added to cart');
   }
 
-  // Load products for this category
-  const snap = await db.collection('products')
-    .where('category','==',cat)
-    .where('active','==',true)
-    .get();
-
-  grid.innerHTML = '';
-  if (snap.empty) {
-    grid.innerHTML = '<p>No products</p>';
-    return;
-  }
-  snap.forEach(d => {
-    const p = d.data(); p.id = d.id;
-    const div = document.createElement('div');
-    div.innerHTML = cardHTML(p, d.id);
-    const cardEl = div.firstElementChild;
-    grid.appendChild(cardEl);
-    attachHandlers(cardEl, p);
-  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', load, {once:true});
+  else load();
 })();
