@@ -1,10 +1,11 @@
 // admin.js — Auth + Site Settings + Cloudinary + Product CRUD + Stock + client-side sort
 (function () {
-  if (!window.firebase || !window.db) {
-    throw new Error("❌ Firebase not initialized: ensure admin.html loads compat SDKs then firebase-config.js.");
+  // --- Guard: Firebase must be initialized by firebase-config.js ---
+  if (!window.firebase || !window.db || !firebase.auth) {
+    throw new Error("❌ Firebase not initialized: ensure admin.html loads compat SDKs (app/auth/firestore) then firebase-config.js.");
   }
 
-  // ===== Basic shorthands =====
+  // ===== Shorthands & Globals =====
   const $ = (s) => document.querySelector(s);
   const auth = firebase.auth();
   const dbRef = db;
@@ -12,7 +13,7 @@
   const CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME;
   const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET;
 
-  // Restrict access (add your UID here to lock down the admin; empty = allow any signed-in user)
+  // Lock admin to these UIDs (empty Set = any signed-in user can access)
   const ALLOWED_ADMIN_UIDS = new Set([
     "w5jtigflSVezQwUvnsgM7AY4ZK73", // your UID
   ]);
@@ -27,25 +28,35 @@
   const listSection    = $('#list-section');
 
   // ===== Site Settings elements =====
-  const siteHeroTitle   = $('#site-heroTitle');
-  const siteHeroSubtitle= $('#site-heroSubtitle');
-  const siteFeatCat     = $('#site-featuredCategory');
-  const siteShowFeat    = $('#site-showFeatured');
-  const siteBannerInput = $('#site-banner');
-  const siteBannerPrev  = $('#site-banner-preview');
-  const siteGalleryInput= $('#site-gallery');
-  const siteGalleryPrev = $('#site-gallery-preview');
-  const siteSaveBtn     = $('#site-save');
-  const siteReloadBtn   = $('#site-reload');
-  const siteStatus      = $('#site-status');
+  const siteHeroTitle    = $('#site-heroTitle');
+  const siteHeroSubtitle = $('#site-heroSubtitle');
+  const siteFeatCat      = $('#site-featuredCategory');
+  const siteShowFeat     = $('#site-showFeatured');
+  const siteBannerInput  = $('#site-banner');
+  const siteBannerPrev   = $('#site-banner-preview');
+  const siteGalleryInput = $('#site-gallery');
+  const siteGalleryPrev  = $('#site-gallery-preview');
+  const siteSaveBtn      = $('#site-save');
+  const siteReloadBtn    = $('#site-reload');
+  const siteStatus       = $('#site-status');
 
   const HOME_DOC_REF = dbRef.collection('site').doc('home');
 
   // ===== Product elements =====
-  const nameEl = $('#name'), priceEl = $('#price'), sizesEl = $('#sizes'), descEl = $('#description');
-  const brandEl = $('#brand'), categoryEl = $('#category'), activeEl = $('#active'), imagesEl = $('#images'), docIdEl = $('#docId');
+  const nameEl   = $('#name');
+  const priceEl  = $('#price');
+  const sizesEl  = $('#sizes');
+  const descEl   = $('#description');
+  const brandEl  = $('#brand');
+  const categoryEl = $('#category');
+  const activeEl   = $('#active');
+  const imagesEl   = $('#images');
+  const docIdEl    = $('#docId');
   const globalStockEl = $('#stock');
-  const filterCategory = $('#filterCategory'), refreshBtn = $('#refreshBtn'), tableBody = $('#tableBody');
+
+  const filterCategory = $('#filterCategory');
+  const refreshBtn     = $('#refreshBtn');
+  const tableBody      = $('#tableBody');
 
   const money = (n) => 'Rs' + Number(n || 0).toFixed(0);
 
@@ -59,21 +70,28 @@
         const label = parts[0] || '';
         const price = Number(parts[1] || 0);
         const stock = parts[2] !== undefined && parts[2] !== '' ? Number(parts[2]) : null;
-        return { label, price, ...(stock !== null ? { stock } : {}) };
+        const row = { label, price };
+        if (stock !== null && !Number.isNaN(stock)) row.stock = stock;
+        return row;
       });
   }
+
   function renderSizesText(sizes) {
     if (!Array.isArray(sizes) || !sizes.length) return '—';
     return sizes.map(s => {
       const price = Number(s.price || 0);
       const hasStock = typeof s.stock === 'number';
-      return `${s.label} ${hasStock ? (${s.stock} pcs) : ''} – ${isNaN(price) ? 'Rs0' : money(price)}`;
+      return `${s.label}${hasStock ? ` (${s.stock} pcs)` : ''} – ${isNaN(price) ? 'Rs0' : money(price)}`;
     }).join(', ');
   }
+
   function sizesToTextarea(sizes){
     if (!Array.isArray(sizes) || !sizes.length) return '';
-    return sizes.map(s => `${s.label} | ${s.price}${typeof s.stock==='number' ? ` | ${s.stock}:''}).join('\n');
+    return sizes.map(s =>
+      `${s.label} | ${s.price}${typeof s.stock === 'number' ? ` | ${s.stock}` : ''}`
+    ).join('\n');
   }
+
   function resetForm() {
     docIdEl.value = '';
     nameEl.value = '';
@@ -96,17 +114,29 @@
       fd.append('upload_preset', UPLOAD_PRESET);
       const res = await fetch(https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload, { method: 'POST', body: fd });
       const data = await res.json();
+      if (data.error) throw new Error(data.error.message || 'Cloudinary upload failed');
       if (data.secure_url) urls.push(data.secure_url);
     }
     return urls;
   }
 
-  // ===== Auth =====
-  loginBtn && (loginBtn.onclick = () => auth.signInWithEmailAndPassword(email.value, password.value).catch(e => alert(e.message)));
-  signupBtn && (signupBtn.onclick = () => auth.createUserWithEmailAndPassword(email.value, password.value)
-    .then(cred => alert(Account created. UID:\n${cred.user.uid}))
-    .catch(e => alert(e.message)));
-  logoutBtn && (logoutBtn.onclick = () => auth.signOut());
+  // ===== Auth wiring =====
+  if (loginBtn) {
+    loginBtn.onclick = () =>
+      auth.signInWithEmailAndPassword(email.value, password.value)
+        .catch(e => alert(e.message));
+  }
+
+  if (signupBtn) {
+    signupBtn.onclick = () =>
+      auth.createUserWithEmailAndPassword(email.value, password.value)
+        .then(cred => alert(Account created. UID:\n${cred.user.uid}))
+        .catch(e => alert(e.message));
+  }
+
+  if (logoutBtn) {
+    logoutBtn.onclick = () => auth.signOut();
+  }
 
   auth.onAuthStateChanged(async (u) => {
     const ok = u && (ALLOWED_ADMIN_UIDS.size === 0 || ALLOWED_ADMIN_UIDS.has(u.uid));
@@ -136,7 +166,9 @@
       siteShowFeat.checked   = !!h.showFeatured;
 
       // previews
-      siteBannerPrev.innerHTML  = h.bannerImage ? <img src="${h.bannerImage}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5"> : '';
+      siteBannerPrev.innerHTML  = h.bannerImage
+        ? <img src="${h.bannerImage}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">
+        : '';
       siteGalleryPrev.innerHTML = Array.isArray(h.gallery) && h.gallery.length
         ? h.gallery.map(u => <img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">).join('')
         : '';
@@ -148,109 +180,121 @@
     }
   }
 
-  siteReloadBtn.addEventListener('click', loadSiteSettings);
+  if (siteReloadBtn) {
+    siteReloadBtn.addEventListener('click', loadSiteSettings);
+  }
 
-  siteSaveBtn.addEventListener('click', async () => {
-    try {
-      siteStatus.textContent = 'Saving…';
+  if (siteSaveBtn) {
+    siteSaveBtn.addEventListener('click', async () => {
+      try {
+        siteStatus.textContent = 'Saving…';
 
-      // Upload banner (replace)
-      let bannerURL = null;
-      if (siteBannerInput.files && siteBannerInput.files[0]) {
-        const [url] = await uploadImages(siteBannerInput.files);
-        bannerURL = url || null;
+        // Upload banner (replace)
+        let bannerURL = null;
+        if (siteBannerInput.files && siteBannerInput.files[0]) {
+          const [url] = await uploadImages(siteBannerInput.files);
+          bannerURL = url || null;
+        }
+
+        // Upload gallery (overwrite with chosen)
+        let galleryURLs = null;
+        if (siteGalleryInput.files && siteGalleryInput.files.length) {
+          galleryURLs = await uploadImages(siteGalleryInput.files);
+        }
+
+        const payload = {
+          heroTitle: siteHeroTitle.value.trim(),
+          heroSubtitle: siteHeroSubtitle.value.trim(),
+          featuredCategory: siteFeatCat.value,
+          showFeatured: !!siteShowFeat.checked,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        };
+        if (bannerURL !== null) payload.bannerImage = bannerURL;
+        if (galleryURLs !== null) payload.gallery = galleryURLs;
+
+        await HOME_DOC_REF.set(payload, { merge: true });
+
+        siteStatus.textContent = '✅ Saved';
+        // refresh previews
+        if (bannerURL) siteBannerPrev.innerHTML = <img src="${bannerURL}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">;
+        if (galleryURLs) siteGalleryPrev.innerHTML = galleryURLs.map(u => <img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">).join('');
+        siteBannerInput.value = '';
+        siteGalleryInput.value = '';
+      } catch (e) {
+        console.error(e);
+        siteStatus.textContent = '❌ Save error: ' + e.message;
       }
-
-      // Upload gallery (overwrite with chosen)
-      let galleryURLs = null;
-      if (siteGalleryInput.files && siteGalleryInput.files.length) {
-        galleryURLs = await uploadImages(siteGalleryInput.files);
-      }
-
-      const payload = {
-        heroTitle: siteHeroTitle.value.trim(),
-        heroSubtitle: siteHeroSubtitle.value.trim(),
-        featuredCategory: siteFeatCat.value,
-        showFeatured: !!siteShowFeat.checked,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      };
-      if (bannerURL !== null) payload.bannerImage = bannerURL;
-      if (galleryURLs !== null) payload.gallery = galleryURLs;
-
-      await HOME_DOC_REF.set(payload, { merge: true });
-
-      siteStatus.textContent = '✅ Saved';
-      // refresh previews
-      if (bannerURL) siteBannerPrev.innerHTML = <img src="${bannerURL}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">;
-      if (galleryURLs) siteGalleryPrev.innerHTML = galleryURLs.map(u => <img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">).join('');
-      siteBannerInput.value = '';
-      siteGalleryInput.value = '';
-    } catch (e) {
-      console.error(e);
-      siteStatus.textContent = '❌ Save error: ' + e.message;
-    }
-  });
+    });
+  }
 
   // ===== Product CRUD =====
-  $('#saveBtn').onclick = async () => {
-    try {
-      const sizes = parseSizes(sizesEl.value);
-      const data = {
-        name: nameEl.value.trim(),
-        basePrice: Number(priceEl.value || 0),
-        brand: brandEl.value.trim() || null,
-        sizes,
-        description: descEl.value.trim() || '',
-        category: String(categoryEl.value || '').toLowerCase(),
-        active: !!activeEl.checked,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      };
+  const saveBtn = $('#saveBtn');
+  const resetBtn = $('#resetBtn');
 
-      // global stock if no sizes
-      const globalStockVal = globalStockEl.value !== '' ? Number(globalStockEl.value) : null;
-      if (!sizes.length && globalStockVal !== null && !Number.isNaN(globalStockVal)) {
-        data.stock = globalStockVal;
-      } else {
-        data.stock = firebase.firestore.FieldValue.delete();
-      }
+  if (saveBtn) {
+    saveBtn.onclick = async () => {
+      try {
+        const sizes = parseSizes(sizesEl.value);
+        const data = {
+          name: nameEl.value.trim(),
+          basePrice: Number(priceEl.value || 0),
+          brand: brandEl.value.trim() || null,
+          sizes,
+          description: descEl.value.trim() || '',
+          category: String(categoryEl.value || '').toLowerCase(),
+          active: !!activeEl.checked,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        };
 
-      const id = docIdEl.value || dbRef.collection('products').doc().id;
+        // Global stock if no sizes
+        const globalStockVal = globalStockEl.value !== '' ? Number(globalStockEl.value) : null;
+        if (!sizes.length && globalStockVal !== null && !Number.isNaN(globalStockVal)) {
+          data.stock = globalStockVal;
+        } else {
+          // remove stock field if using sizes
+          data.stock = firebase.firestore.FieldValue.delete();
+        }
 
-      // Upload images
-      if (imagesEl.files && imagesEl.files.length) {
-        const uploaded = await uploadImages(imagesEl.files);
-        if (uploaded.length) {
-          if (!docIdEl.value) {
-            data.imageURL = uploaded[0];
-            data.images = uploaded.slice(1);
-          } else {
-            const snap = await dbRef.collection('products').doc(id).get();
-            const old = snap.exists ? snap.data() : {};
-            const oldList = Array.isArray(old.images) ? old.images : [];
-            data.images = [...oldList, ...uploaded];
-            if (!old.imageURL) data.imageURL = uploaded[0];
+        const id = docIdEl.value || dbRef.collection('products').doc().id;
+
+        // Upload images
+        if (imagesEl.files && imagesEl.files.length) {
+          const uploaded = await uploadImages(imagesEl.files);
+          if (uploaded.length) {
+            if (!docIdEl.value) {
+              data.imageURL = uploaded[0];
+              data.images = uploaded.slice(1);
+            } else {
+              const snap = await dbRef.collection('products').doc(id).get();
+              const old = snap.exists ? snap.data() : {};
+              const oldList = Array.isArray(old.images) ? old.images : [];
+              data.images = [...oldList, ...uploaded];
+              if (!old.imageURL) data.imageURL = uploaded[0];
+            }
           }
         }
+
+        if (docIdEl.value) {
+          delete data.createdAt;
+          await dbRef.collection('products').doc(id).set(data, { merge: true });
+        } else {
+          await dbRef.collection('products').doc(id).set(data);
+        }
+
+        alert('✅ Product saved');
+        resetForm();
+        loadList();
+      } catch (e) {
+        console.error(e);
+        alert('Save error: ' + e.message);
       }
+    };
+  }
 
-      if (docIdEl.value) {
-        delete data.createdAt;
-        await dbRef.collection('products').doc(id).set(data, { merge: true });
-      } else {
-        await dbRef.collection('products').doc(id).set(data);
-      }
-
-      alert('✅ Product saved');
-      resetForm();
-      loadList();
-    } catch (e) {
-      console.error(e);
-      alert('Save error: ' + e.message);
-    }
-  };
-
-  $('#resetBtn').onclick = resetForm;
+  if (resetBtn) {
+    resetBtn.onclick = resetForm;
+  }
 
   // ===== Product List (NO index required; sort on client) =====
   async function loadList() {
@@ -335,6 +379,6 @@
     }
   }
 
-  refreshBtn.onclick = loadList;
-  filterCategory.onchange = loadList;
+  if (refreshBtn) refreshBtn.onclick = loadList;
+  if (filterCategory) filterCategory.onchange = loadList;
 })();
