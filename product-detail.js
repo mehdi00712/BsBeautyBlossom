@@ -1,127 +1,191 @@
-// product-detail.js — single main image + unique thumbnails
-(function(){
-  const $ = (s, r=document)=>r.querySelector(s);
-  const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+// product-detail.js
+// Renders a product detail page with:
+// - Main hero image + clickable thumbnail gallery
+// - Brand, description
+// - Size select that updates price
+// - Quantity controls
+// - Add to Cart (saves to localStorage, updates cart count)
 
-  function getParam(name){
-    const u = new URL(location.href);
-    return u.searchParams.get(name);
+(function () {
+  const $ = (sel) => document.querySelector(sel);
+  const heroImg = $('#pd-hero-img');
+  const thumbsEl = $('#pd-thumbs');
+  const titleEl = $('#pd-title');
+  const brandEl = $('#pd-brand');
+  const priceEl = $('#pd-price');
+  const descEl  = $('#pd-desc');
+  const sizeSel = $('#size-select');
+  const qtyVal  = $('#qty-val');
+  const qtyInc  = $('#qty-inc');
+  const qtyDec  = $('#qty-dec');
+  const addBtn  = $('#add-to-cart');
+  const detailWrap = $('#product-detail');
+  const errBox = $('#pd-error');
+
+  // Helpers
+  const money = (n) => 'Rs' + Number(n || 0).toFixed(0);
+
+  function getQueryId() {
+    const url = new URL(window.location.href);
+    return url.searchParams.get('id') || '';
   }
 
-  // Cloudinary on-the-fly optimization (safe no-op for non-Cloudinary)
-  function cOpt(url, w){
-    try{
-      if(!url || !/res\.cloudinary\.com/.test(url)) return url;
-      return url.replace(/\/upload\/(?!.*\/)/, `/upload/f_auto,q_auto,w_${w}/`);
-    }catch{return url;}
+  function updateCartCount() {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const count = cart.reduce((s, i) => s + (Number(i.qty ?? i.quantity ?? 1) || 1), 0);
+    const badge = document.getElementById('cart-count');
+    if (badge) badge.textContent = count;
   }
 
-  function number(val){ const n = Number(val); return Number.isFinite(n) ? n : 0; }
+  function setHero(src) {
+    heroImg.src = src || 'https://via.placeholder.com/800x800?text=No+Image';
+  }
 
-  async function load(){
-    const id = getParam('id');
-    if(!id){ $('#pd-name').textContent='Product not found'; return; }
+  function renderThumbs(images) {
+    thumbsEl.innerHTML = '';
+    images.forEach((src, idx) => {
+      const t = document.createElement('img');
+      t.src = src;
+      t.alt = 'Thumbnail ' + (idx + 1);
+      t.addEventListener('click', () => setHero(src));
+      thumbsEl.appendChild(t);
+    });
+  }
 
-    const doc = await db.collection('products').doc(id).get();
-    if(!doc.exists){ $('#pd-name').textContent='Product not found'; return; }
-    const p = doc.data();
-
-    // ----- Build images list (unique, truthy) -----
-    const arr = Array.isArray(p.images) ? p.images.slice() : [];
-    if(p.imageURL) arr.unshift(p.imageURL);
-    // Keep only first occurrence of each URL
-    const seen = new Set();
-    const allImages = arr.filter(u => u && !seen.has(u) && seen.add(u));
-    const mainImage = allImages[0] || 'https://via.placeholder.com/800x800?text=No+Image';
-    const thumbImages = allImages.slice(1); // exclude main
-
-    // ----- Fill DOM -----
-    $('#pd-name').textContent = p.name || '';
-    $('#pd-brand').textContent = p.brand || '';
-    $('#pd-desc').textContent = p.description || '';
-
-    // sizes & pricing
-    const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-    const sizeSel = $('#pd-size');
+  function renderSizes(p) {
     sizeSel.innerHTML = '';
-    if(sizes.length){
-      sizes.forEach(s=>{
+    const sizes = Array.isArray(p.sizes) ? p.sizes : [];
+
+    if (sizes.length) {
+      sizes.forEach(s => {
         const opt = document.createElement('option');
-        opt.value = s.label;
-        opt.textContent = `${s.label} — Rs${number(s.price).toFixed(0)}`;
-        opt.dataset.price = number(s.price);
+        const label = s?.label ?? '';
+        const price = Number(s?.price ?? 0) || 0;
+        opt.value = label;
+        opt.dataset.price = String(price);
+        opt.textContent = `${label} — ${money(price)}`;
         sizeSel.appendChild(opt);
       });
-    }else{
+    } else {
+      // Fallback to basePrice
+      const base = Number(p.basePrice || 0) || 0;
       const opt = document.createElement('option');
       opt.value = 'default';
-      const base = number(p.basePrice);
-      opt.textContent = `Default — Rs${base.toFixed(0)}`;
-      opt.dataset.price = base;
+      opt.dataset.price = String(base);
+      opt.textContent = money(base);
       sizeSel.appendChild(opt);
     }
+  }
 
-    const setPrice = ()=>{
-      const sel = sizeSel.options[sizeSel.selectedIndex];
-      const price = number(sel?.dataset?.price || 0);
-      $('#pd-price-text').textContent = `Rs${price.toFixed(0)}`;
+  function currentUnitPrice() {
+    const opt = sizeSel.options[sizeSel.selectedIndex];
+    return Number(opt?.dataset?.price || 0) || 0;
+  }
+
+  function updatePrice() {
+    priceEl.textContent = money(currentUnitPrice());
+  }
+
+  function buildCartItem(p) {
+    const qty = Number(qtyVal.textContent || '1') || 1;
+    const price = currentUnitPrice();
+    const sizeLabel = sizeSel.value && sizeSel.value !== 'default' ? ` (${sizeSel.value})` : '';
+    const nameFull = (p.name || 'Product') + sizeLabel;
+    const firstImg = (Array.isArray(p.images) && p.images[0]) || p.imageURL || '';
+
+    return {
+      id: p.id,
+      name: nameFull,
+      price: price,
+      qty: qty,
+      imageURL: firstImg
     };
-    setPrice();
-    sizeSel.onchange = setPrice;
+  }
 
-    // gallery
-    const mainEl = $('#pd-main');
-    mainEl.src = cOpt(mainImage, 900);
-    mainEl.alt = p.name || 'Product image';
-
-    const thumbs = $('#pd-thumbs');
-    thumbs.innerHTML = '';
-    if(thumbImages.length){
-      thumbImages.forEach(u=>{
-        const t = document.createElement('img');
-        t.src = cOpt(u, 160);
-        t.alt = 'Thumbnail';
-        t.className = 'pd-thumb';
-        t.addEventListener('click', ()=>{
-          // swap main image with clicked one
-          mainEl.src = cOpt(u, 900);
-        });
-        thumbs.appendChild(t);
-      });
+  function addToCart(item) {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    // Check if same product+size already exists → merge qty
+    const key = `${item.id}__${item.name}`;
+    let merged = false;
+    for (const it of cart) {
+      const itKey = `${it.id || ''}__${it.name || ''}`;
+      if (itKey === key) {
+        it.qty = (Number(it.qty || it.quantity || 1) || 1) + item.qty;
+        merged = true;
+        break;
+      }
     }
+    if (!merged) cart.push(item);
+    localStorage.setItem('cart', JSON.stringify(cart));
+    updateCartCount();
+  }
 
-    // qty controls
-    const qtyInput = $('#qty-input');
-    $('#qty-minus').onclick = ()=>{ const v = Math.max(1, Number(qtyInput.value||1)-1); qtyInput.value = v; };
-    $('#qty-plus').onclick  = ()=>{ const v = Math.max(1, Number(qtyInput.value||1)+1); qtyInput.value = v; };
+  async function loadProduct() {
+    try {
+      const id = getQueryId();
+      if (!id) throw new Error('Missing product id');
 
-    // add to cart
-    $('#pd-add').onclick = ()=>{
-      const sel = sizeSel.options[sizeSel.selectedIndex];
-      const price = number(sel?.dataset?.price || 0);
-      const sizeLabel = sel?.value || 'default';
-      const qty = Math.max(1, Number(qtyInput.value||1));
+      const doc = await db.collection('products').doc(id).get();
+      if (!doc.exists) throw new Error('Not found');
 
-      const item = {
-        id,
-        name: p.name + (sizeLabel && sizeLabel!=='default' ? ` (${sizeLabel})` : ''),
-        price,
-        quantity: qty,
-        imageURL: mainImage,
-        brand: p.brand || '',
-      };
+      const p = { id: doc.id, ...doc.data() };
 
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      cart.push(item);
-      localStorage.setItem('cart', JSON.stringify(cart));
-      if(window.updateCartCount) window.updateCartCount();
-      alert('Added to cart!');
-    };
+      // Title & brand
+      titleEl.textContent = p.name || 'Product';
+      brandEl.textContent = p.brand ? String(p.brand) : '';
+      brandEl.style.display = p.brand ? 'block' : 'none';
+
+      // Description
+      descEl.textContent = p.description || '—';
+
+      // Images
+      const images = (Array.isArray(p.images) && p.images.length ? p.images : [])
+        .filter(Boolean);
+      if (!images.length && p.imageURL) images.push(p.imageURL);
+
+      setHero(images[0] || '');
+      renderThumbs(images);
+
+      // Sizes & price
+      renderSizes(p);
+      updatePrice();
+
+      // Quantity controls
+      qtyInc.addEventListener('click', () => {
+        const q = Math.max(1, (Number(qtyVal.textContent || '1') || 1) + 1);
+        qtyVal.textContent = String(q);
+      });
+      qtyDec.addEventListener('click', () => {
+        const q = Math.max(1, (Number(qtyVal.textContent || '1') || 1) - 1);
+        qtyVal.textContent = String(q);
+      });
+      sizeSel.addEventListener('change', updatePrice);
+
+      // Add to cart
+      addBtn.addEventListener('click', () => {
+        const item = buildCartItem(p);
+        if (!item.price) {
+          alert('Please select a valid size.');
+          return;
+        }
+        addToCart(item);
+        alert('Added to cart!');
+      });
+
+      // Show detail, hide error
+      detailWrap.style.display = 'grid';
+      errBox.style.display = 'none';
+      updateCartCount();
+    } catch (e) {
+      console.error('Product load error:', e);
+      detailWrap.style.display = 'none';
+      errBox.style.display = 'block';
+    }
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', load, { once:true });
+    document.addEventListener('DOMContentLoaded', loadProduct, { once: true });
   } else {
-    load();
+    loadProduct();
   }
 })();
