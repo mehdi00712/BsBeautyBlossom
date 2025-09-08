@@ -1,11 +1,9 @@
-// admin.js — Auth + Site Settings + Cloudinary + Product CRUD + Stock (merge:true fix)
+// admin.js — Auth + Site Settings + Cloudinary + Product CRUD + Stock
 (function () {
-  // ---------- Guards ----------
   if (!window.firebase || !window.db) {
-    throw new Error("❌ Firebase not initialized: make sure admin.html loads compat SDKs then firebase-config.js.");
+    throw new Error("❌ Firebase not initialized: load compat SDKs BEFORE firebase-config.js.");
   }
 
-  // ---------- Shorthands ----------
   const $ = (s) => document.querySelector(s);
   const auth = firebase.auth();
   const dbRef = db;
@@ -13,26 +11,28 @@
   const CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME;
   const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET;
 
-  // ✅ Only these UIDs are allowed to use the admin
+  // ✅ Allowed admin UIDs
   const ALLOWED_ADMIN_UIDS = new Set([
-    "w5jtigflSVezQwUvnsgM7AY4ZK73", // first admin
-    "nyQYzolZI2fLFqIkAPNHHbcSJ2p1", // second admin
+    "w5jtigflSVezQwUvnsgM7AY4ZK73",
+    "nyQYzolZI2fLFqIkAPNHHbcSJ2p1",
   ]);
 
-  // ---------- Auth UI ----------
-  const authStatus = $('#auth-status');
-  const loginBtn = $('#loginBtn');
-  const signupBtn = $('#signupBtn');
-  const logoutBtn = $('#logoutBtn');
-  const email = $('#email');
-  const password = $('#password');
+  const money = (n) => 'Rs' + Number(n || 0).toFixed(0);
 
-  // Sections
+  // ---- Auth DOM
+  const authStatus = $('#auth-status');
+  const loginBtn   = $('#loginBtn');
+  const signupBtn  = $('#signupBtn');
+  const logoutBtn  = $('#logoutBtn');
+  const email      = $('#email');
+  const password   = $('#password');
+
+  // ---- Sections DOM
   const siteSection    = $('#site-section');
   const productSection = $('#product-section');
   const listSection    = $('#list-section');
 
-  // ---------- Site Settings UI ----------
+  // ---- Site Settings DOM
   const siteHeroTitle    = $('#site-heroTitle');
   const siteHeroSubtitle = $('#site-heroSubtitle');
   const siteFeatCat      = $('#site-featuredCategory');
@@ -47,36 +47,37 @@
 
   const HOME_DOC_REF = dbRef.collection('site').doc('home');
 
-  // ---------- Product Form UI ----------
+  // ---- Product form DOM
   const nameEl   = $('#name');
   const priceEl  = $('#price');
-  const sizesEl  = $('#sizes');
+  const sizesEl  = $('#sizes'); // "Label | Price | Stock" (stock optional)
   const descEl   = $('#description');
   const brandEl  = $('#brand');
   const categoryEl = $('#category');
   const activeEl = $('#active');
   const imagesEl = $('#images');
   const docIdEl  = $('#docId');
-  const globalStockEl = $('#stock');
+  const globalStockEl = $('#stock'); // optional if no sizes
 
+  // ---- Product list DOM
   const filterCategory = $('#filterCategory');
-  const refreshBtn = $('#refreshBtn');
-  const tableBody = $('#tableBody');
+  const refreshBtn     = $('#refreshBtn');
+  const tableBody      = $('#tableBody');
 
-  const currency = (n) => 'Rs' + Number(n || 0).toFixed(0);
-
-  // ---------- Helpers ----------
+  // ===== Helpers =====
   function parseSizes(text) {
-    return text.split('\n')
+    return String(text || '')
+      .split('\n')
       .map(l => l.trim())
       .filter(Boolean)
       .map(l => {
-        // "Label | price | stock"  (stock optional)
-        const [labelRaw, priceRaw, stockRaw] = l.split('|').map(x => (x || '').trim());
-        const out = { label: labelRaw || '' };
-        out.price = Number(priceRaw || 0);
-        if (stockRaw !== undefined && stockRaw !== '') out.stock = Number(stockRaw);
-        return out;
+        const parts = l.split('|').map(x => x.trim());
+        const label = parts[0] || '';
+        const price = Number(parts[1] || 0);
+        const stock = (parts[2] !== undefined && parts[2] !== '') ? Number(parts[2]) : null;
+        const o = { label, price: isNaN(price) ? 0 : price };
+        if (stock !== null && !Number.isNaN(stock)) o.stock = stock;
+        return o;
       });
   }
 
@@ -84,27 +85,27 @@
     if (!Array.isArray(sizes) || !sizes.length) return '—';
     return sizes.map(s => {
       const p = Number(s.price || 0);
-      const hasStock = typeof s.stock === 'number';
-      return `${s.label} ${hasStock ? `(${s.stock} pcs)` : ''} – ${isNaN(p) ? 'Rs0' : currency(p)}`;
+      const stk = (typeof s.stock === 'number') ? ` (${s.stock} pcs)` : '';
+      return `${s.label}${stk} – Rs${p}`;
     }).join(', ');
   }
 
   function sizesToTextarea(sizes) {
     if (!Array.isArray(sizes) || !sizes.length) return '';
-    return sizes.map(s => `${s.label} | ${s.price}${typeof s.stock === 'number' ? ` | ${s.stock}` : ''}`).join('\n');
+    return sizes.map(s => `${s.label} | ${s.price}${typeof s.stock==='number' ? ` | ${s.stock}` : ''}`).join('\n');
   }
 
   function resetForm() {
     docIdEl.value = '';
     nameEl.value = '';
     priceEl.value = '';
-    sizesEl.value = '';
-    descEl.value = '';
     brandEl.value = '';
+    sizesEl.value = '';
+    if (globalStockEl) globalStockEl.value = '';
+    descEl.value = '';
     categoryEl.value = 'perfume';
-    activeEl.checked = true;
     imagesEl.value = '';
-    globalStockEl.value = '';
+    activeEl.checked = true;
   }
 
   async function uploadImages(files) {
@@ -115,13 +116,13 @@
       fd.append('file', f);
       fd.append('upload_preset', UPLOAD_PRESET);
       const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: fd });
-      const j = await res.json();
-      if (j.secure_url) urls.push(j.secure_url);
+      const data = await res.json();
+      if (data.secure_url) urls.push(data.secure_url);
     }
     return urls;
   }
 
-  // ---------- Auth ----------
+  // ===== Auth =====
   loginBtn && (loginBtn.onclick = () =>
     auth.signInWithEmailAndPassword(email.value, password.value).catch(e => alert(e.message)));
 
@@ -134,13 +135,13 @@
 
   auth.onAuthStateChanged(async (u) => {
     const ok = u && (ALLOWED_ADMIN_UIDS.size === 0 || ALLOWED_ADMIN_UIDS.has(u.uid));
-    authStatus.textContent = u ? (ok ? `Signed in as ${u.email}` : 'Unauthorized') : 'Not signed in';
-    logoutBtn.style.display = u ? 'inline-block' : 'none';
+    if (authStatus) authStatus.textContent = u ? (ok ? `Signed in as ${u.email}` : 'Unauthorized') : 'Not signed in';
+    if (logoutBtn) logoutBtn.style.display = u ? 'inline-block' : 'none';
 
     const show = !!ok;
-    siteSection.style.display    = show ? 'block' : 'none';
-    productSection.style.display = show ? 'block' : 'none';
-    listSection.style.display    = show ? 'block' : 'none';
+    if (siteSection)    siteSection.style.display    = show ? 'block' : 'none';
+    if (productSection) productSection.style.display = show ? 'block' : 'none';
+    if (listSection)    listSection.style.display    = show ? 'block' : 'none';
 
     if (show) {
       await loadSiteSettings();
@@ -148,10 +149,10 @@
     }
   });
 
-  // ---------- Site Settings ----------
+  // ===== Site Settings =====
   async function loadSiteSettings() {
     try {
-      siteStatus.textContent = 'Loading…';
+      if (siteStatus) siteStatus.textContent = 'Loading…';
       const snap = await HOME_DOC_REF.get();
       const h = snap.exists ? snap.data() : {};
       siteHeroTitle.value    = h.heroTitle || '';
@@ -159,15 +160,18 @@
       siteFeatCat.value      = (h.featuredCategory || 'perfume');
       siteShowFeat.checked   = !!h.showFeatured;
 
-      siteBannerPrev.innerHTML  = h.bannerImage ? `<img src="${h.bannerImage}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">` : '';
+      siteBannerPrev.innerHTML = h.bannerImage
+        ? `<img src="${h.bannerImage}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`
+        : '';
+
       siteGalleryPrev.innerHTML = Array.isArray(h.gallery) && h.gallery.length
         ? h.gallery.map(u => `<img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`).join('')
         : '';
 
-      siteStatus.textContent = 'Ready';
+      if (siteStatus) siteStatus.textContent = 'Ready';
     } catch (e) {
       console.error(e);
-      siteStatus.textContent = 'Error loading site settings';
+      if (siteStatus) siteStatus.textContent = 'Error loading site settings';
     }
   }
 
@@ -175,7 +179,7 @@
 
   siteSaveBtn && siteSaveBtn.addEventListener('click', async () => {
     try {
-      siteStatus.textContent = 'Saving…';
+      if (siteStatus) siteStatus.textContent = 'Saving…';
 
       let bannerURL = null;
       if (siteBannerInput.files && siteBannerInput.files[0]) {
@@ -198,25 +202,27 @@
       if (bannerURL !== null) payload.bannerImage = bannerURL;
       if (galleryURLs !== null) payload.gallery = galleryURLs;
 
-      // ✅ merge:true always
+      // ✅ ALWAYS MERGE
       await HOME_DOC_REF.set(payload, { merge: true });
 
-      siteStatus.textContent = '✅ Saved';
+      if (siteStatus) siteStatus.textContent = '✅ Saved';
       if (bannerURL) siteBannerPrev.innerHTML = `<img src="${bannerURL}" style="width:180px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`;
       if (galleryURLs) siteGalleryPrev.innerHTML = galleryURLs.map(u => `<img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`).join('');
       siteBannerInput.value = '';
       siteGalleryInput.value = '';
     } catch (e) {
       console.error(e);
-      siteStatus.textContent = '❌ Save error: ' + e.message;
+      if (siteStatus) siteStatus.textContent = '❌ Save error: ' + e.message;
     }
   });
 
-  // ---------- Product CRUD ----------
+  // ===== Product Save =====
   $('#saveBtn') && ($('#saveBtn').onclick = async () => {
     try {
       const sizes = parseSizes(sizesEl.value);
-      const payload = {
+      const hasSizes = sizes.length > 0;
+
+      const data = {
         name: (nameEl.value || '').trim(),
         basePrice: Number(priceEl.value || 0),
         brand: (brandEl.value || '').trim() || null,
@@ -227,42 +233,36 @@
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       };
 
-      // Global stock only applies when there are no size rows
-      const globalStockVal = globalStockEl && globalStockEl.value !== '' ? Number(globalStockEl.value) : null;
-      if (!sizes.length) {
+      // global stock only if NO sizes
+      const globalStockVal = (globalStockEl && globalStockEl.value !== '') ? Number(globalStockEl.value) : null;
+      if (!hasSizes) {
         if (globalStockVal !== null && !Number.isNaN(globalStockVal)) {
-          payload.stock = globalStockVal;
+          data.stock = globalStockVal;
         } else {
-          // ✅ OK because we always use merge:true below
-          payload.stock = firebase.firestore.FieldValue.delete();
+          data.stock = firebase.firestore.FieldValue.delete();
         }
       } else {
-        // when sizes exist, remove global stock if present
-        payload.stock = firebase.firestore.FieldValue.delete();
+        data.stock = firebase.firestore.FieldValue.delete();
       }
 
       const id = docIdEl.value || dbRef.collection('products').doc().id;
 
-      // Upload images (first becomes imageURL, rest to images[])
+      // images
       if (imagesEl.files && imagesEl.files.length) {
         const uploaded = await uploadImages(imagesEl.files);
         if (uploaded.length) {
           const snap = await dbRef.collection('products').doc(id).get();
-          const old = snap.exists ? snap.data() : {};
-          const oldImages = Array.isArray(old.images) ? old.images : [];
-          if (!old.imageURL) payload.imageURL = uploaded[0];
-          payload.images = [...oldImages, ...uploaded.slice(old.imageURL ? 0 : 1)];
+          const old  = snap.exists ? snap.data() : {};
+          const oldList = Array.isArray(old.images) ? old.images : [];
+          if (!old.imageURL) data.imageURL = uploaded[0];
+          data.images = [...oldList, ...uploaded];
         }
       }
 
-      // CreatedAt only if doc doesn't exist yet
-      const existing = await dbRef.collection('products').doc(id).get();
-      if (!existing.exists) {
-        payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-      }
+      if (!docIdEl.value) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
 
-      // ✅ Always merge so FieldValue.delete() is allowed
-      await dbRef.collection('products').doc(id).set(payload, { merge: true });
+      // ✅ ALWAYS MERGE so delete() is allowed
+      await dbRef.collection('products').doc(id).set(data, { merge: true });
 
       alert('✅ Product saved');
       resetForm();
@@ -275,7 +275,7 @@
 
   $('#resetBtn') && ($('#resetBtn').onclick = resetForm);
 
-  // ---------- Product List (no orderBy → no composite index) ----------
+  // ===== Product list (no composite index) =====
   async function loadList() {
     try {
       tableBody.innerHTML = `<tr><td colspan="6">Loading…</td></tr>`;
@@ -289,12 +289,12 @@
         return;
       }
 
-      const items = snap.docs
+      const docs = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 
       tableBody.innerHTML = '';
-      items.forEach(p => {
+      docs.forEach(p => {
         const sizesTxt = renderSizesText(p.sizes);
         const totalStock = Array.isArray(p.sizes) && p.sizes.length
           ? p.sizes.reduce((sum, s) => sum + (typeof s.stock === 'number' ? s.stock : 0), 0)
@@ -313,7 +313,7 @@
             <div class="muted">Stock: ${stockTxt}</div>
           </td>
           <td>${sizesTxt}</td>
-          <td>${currency(p.basePrice)}</td>
+          <td>Rs${Number(p.basePrice||0).toFixed(0)}</td>
           <td>${p.active ? 'Yes' : 'No'}</td>
           <td>
             <button class="btn edit" data-id="${p.id}">Edit</button>
@@ -323,23 +323,20 @@
         tableBody.appendChild(tr);
       });
 
-      // actions
       tableBody.querySelectorAll('.edit').forEach(btn => {
         btn.onclick = async () => {
           const d = await dbRef.collection('products').doc(btn.dataset.id).get();
           if (!d.exists) return;
           const p = d.data();
-
           docIdEl.value = d.id;
           nameEl.value = p.name || '';
           priceEl.value = Number(p.basePrice || 0);
           brandEl.value = p.brand || '';
           sizesEl.value = sizesToTextarea(p.sizes || []);
-          globalStockEl.value = typeof p.stock === 'number' ? String(p.stock) : '';
+          if (globalStockEl) globalStockEl.value = (typeof p.stock === 'number' ? String(p.stock) : '');
           descEl.value = p.description || '';
           categoryEl.value = p.category || 'perfume';
           activeEl.checked = !!p.active;
-
           window.scrollTo({ top: 0, behavior: 'smooth' });
         };
       });
@@ -351,10 +348,9 @@
           loadList();
         };
       });
-
     } catch (err) {
       console.error('loadList error:', err);
-      tableBody.innerHTML = `<tr><td colspan="6" style="color:#b00020">Error loading products. Open the Console for details.</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="6" style="color:#b00020">Error loading products. Check Console.</td></tr>`;
     }
   }
 
