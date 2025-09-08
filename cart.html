@@ -6,110 +6,72 @@
 <title>Checkout - B's Beauty Blossom</title>
 <link rel="stylesheet" href="style.css">
 
-<!-- Minimal page-only styles for smaller thumbs -->
-<style>
-  .cart-list { display:flex; flex-direction:column; gap:10px; }
-  .cart-row {
-    display:grid; grid-template-columns:56px 1fr auto auto;
-    gap:12px; align-items:center; padding:10px;
-    border:1px solid var(--line); border-radius:12px; background:#fff;
-  }
-  .cart-thumb {
-    width:56px; height:56px; object-fit:cover; border-radius:8px; border:1px solid var(--line);
-  }
-  .cart-title { font-weight:600; }
-  .cart-meta { font-size:.9rem; color:var(--muted); }
-  .cart-actions { display:flex; gap:8px; align-items:center; }
-  .qty-btn { width:28px; height:28px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; }
-  .qty-val { min-width:24px; text-align:center; font-weight:600; }
-  .cart-line { font-weight:700; white-space:nowrap; }
-  .totals { margin-top:10px; display:flex; flex-direction:column; gap:6px; }
-  .totals-row { display:flex; justify-content:space-between; }
-  .totals strong { font-size:1.05rem; }
-  .hint { color:var(--muted); font-size:.9rem; }
-</style>
-
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyBSA9iP3kjdYZM0eXt_KOXAgPT_z74cGJ8",
-  authDomain: "beauty-blossom-5247d.firebaseapp.com",
-  databaseURL: "https://beauty-blossom-5247d-default-rtdb.firebaseio.com",
-  projectId: "beauty-blossom-5247d",
-  storageBucket: "beauty-blossom-5247d.firebasestorage.app",
-  messagingSenderId: "916163644879",
-  appId: "1:916163644879:web:2bf1f40e21b1abd73816ba",
-  measurementId: "G-1QD13LXLRM"
-};
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
-</script>
+<script src="firebase-config.js"></script>
 </head>
 <body>
 <header>
-<nav class="navbar">
-  <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
-  <ul class="nav-links">
-    <li><a href="index.html">Home</a></li>
-    <li><a href="perfume.html">Perfume</a></li>
-    <li><a href="body.html">Body</a></li>
-    <li><a href="jewellery.html">Jewellery</a></li>
-    <li><a href="gift.html">Gift</a></li>
-    <li><a href="skincare.html">Skincare</a></li>
-    <li><a href="cosmetics.html">Cosmetics</a></li>
-    <li><a href="cart.html" class="active">🛒 Cart (<span id="cart-count">0</span>)</a></li>
-    <li><a href="admin.html">Admin</a></li>
-  </ul>
-  <div class="hamburger">&#9776;</div>
-</nav>
+  <nav class="navbar">
+    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="perfume.html">Perfume</a></li>
+      <li><a href="body.html">Body</a></li>
+      <li><a href="skincare.html">Skincare</a></li>
+      <li><a href="cosmetics.html">Cosmetics</a></li>
+      <li><a href="jewellery.html">Jewellery</a></li>
+      <li><a href="gift.html">Gift</a></li>
+      <li><a href="cart.html" class="active">🛒 Cart (<span id="cart-count">0</span>)</a></li>
+      <li><a href="admin.html">Admin</a></li>
+    </ul>
+    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
+  </nav>
+  <div id="nav-overlay"></div>
 </header>
 
 <section class="section">
   <h1>Checkout</h1>
 
   <div id="cart-items" class="cart-list"></div>
-
-  <div class="card">
-    <div class="totals">
-      <div class="totals-row"><span>Subtotal</span><strong id="subtotal">Rs0</strong></div>
-      <div class="totals-row"><span>Shipping</span><strong id="shipping">Rs0</strong></div>
-      <div class="totals-row"><span>Total</span><strong id="total">Rs0</strong></div>
-    </div>
+  <div class="totals">
+    <div class="totals-row"><span>Subtotal</span><span id="subtotal">Rs0</span></div>
+    <div class="totals-row"><span>Shipping</span><span id="shipping">Rs0</span></div>
+    <div class="totals-row"><strong>Total</strong><strong id="total">Rs0</strong></div>
   </div>
 
-  <h2>Delivery Method</h2>
-  <form id="delivery-form" class="card">
+  <h2 class="pad">Delivery Method</h2>
+  <form id="delivery-form" class="card" style="margin-top:10px">
     <label><input type="radio" name="delivery" value="Pick Up" required> Pick Up (Free)</label><br>
     <label><input type="radio" name="delivery" value="Postage"> Postage (+Rs125)</label><br>
-    <label><input type="radio" name="delivery" value="Delivery"> Delivery (+Rs150)</label><br>
-    <p class="hint" style="margin-top:8px">Postage/Delivery require Juice payment.</p>
+    <label><input type="radio" name="delivery" value="Delivery"> Delivery (+Rs150)</label><br><br>
 
-    <div id="customer-info" style="display:none; margin-top:12px;">
-      <h2>Customer Details</h2>
-      <div class="row-2">
-        <input type="text" id="name" placeholder="Full Name" required>
-        <input type="email" id="email" placeholder="Email" required>
-      </div>
-      <div class="row-2">
-        <input type="tel" id="phone" placeholder="Phone Number (8 digits starting with 5)" required>
-        <input type="text" id="address" placeholder="Delivery Address (required for Delivery/Postage)">
+    <div id="customer-info" style="display:none;">
+      <h2 class="pad">Customer Details</h2>
+      <input type="text" id="name" placeholder="Full Name" required><br>
+      <input type="email" id="email" placeholder="Email" required><br>
+      <input type="tel" id="phone" placeholder="Phone Number" required><br>
+      <div id="address-section" style="display:none;">
+        <input type="text" id="address" placeholder="Delivery Address"><br>
       </div>
 
-      <h2>Payment Method</h2>
-      <label><input type="radio" name="payment" value="Juice" required> Juice (bank transfer)</label><br>
-      <label><input type="radio" name="payment" value="Pick Up Payment"> Pay at Pick Up</label><br>
+      <h2 class="pad">Payment Method</h2>
+      <label><input type="radio" name="payment" value="Juice" required> Juice Payment (via account transfer)</label><br>
+      <label><input type="radio" name="payment" value="Pick Up Payment"> Payment at Pick Up</label><br><br>
 
-      <div id="juice-section" class="card" style="display:none; text-align:center; margin-top:10px;">
+      <div id="juice-section" style="display:none; text-align:center;" class="card">
         <h3>Juice Payment Instructions</h3>
         <p>1. Open your Juice app</p>
-        <p>2. Transfer the total amount to: <strong>Account Number: 000450702685</strong></p>
-        <p>3. Send your payment screenshot to <strong>+230 58195560</strong></p>
+        <p>2. Transfer the total amount to:</p>
+        <p><strong>Account Number: 000450702685</strong></p>
+        <p>3. Send your payment receipt to <strong>+230 58195560</strong></p>
         <p>4. Press "Confirm Order" once payment is completed</p>
       </div>
 
-      <button type="submit" class="btn btn-primary" style="margin-top:10px;">Confirm Order</button>
+      <button type="submit" class="btn btn-primary" id="confirm">Confirm Order</button>
+      <p id="order-status" class="muted" style="margin-top:8px"></p>
     </div>
   </form>
 </section>
@@ -119,215 +81,248 @@ const database = firebase.database();
 </footer>
 
 <script>
-// Navbar toggle (reuses classes from your global CSS)
-const hamburger = document.querySelector(".hamburger");
-const navLinks = document.querySelector(".nav-links");
-const overlay = document.getElementById('nav-overlay');
-if (hamburger) {
-  hamburger.addEventListener("click", ()=>{
-    const open = navLinks.classList.toggle("show");
-    document.body.classList.toggle("nav-open", open);
-    if (overlay) overlay.classList.toggle('show', open);
-  });
-}
-if (overlay) overlay.addEventListener('click', ()=>{
-  navLinks.classList.remove('show'); document.body.classList.remove('nav-open'); overlay.classList.remove('show');
-});
+  // Navbar toggle
+  (function(){
+    const burger = document.querySelector('.hamburger');
+    const links  = document.querySelector('.nav-links');
+    const overlay= document.getElementById('nav-overlay');
+    if(!burger) return;
+    function close(){ links.classList.remove('show'); overlay.classList.remove('show'); burger.setAttribute('aria-expanded','false'); }
+    burger.addEventListener('click', ()=>{
+      const open = links.classList.toggle('show');
+      overlay.classList.toggle('show', open);
+      burger.setAttribute('aria-expanded', String(open));
+    });
+    overlay.addEventListener('click', close);
+    window.addEventListener('resize', ()=>{ if(window.innerWidth>=1024) close(); });
+  })();
 
-// ---- Cart logic (small thumbs) ----
-let baseTotal = 0;
-let shipping = 0;
+  // --- Cart render ---
+  let baseTotal = 0, extraCharge = 0;
 
-function money(n){ return "Rs"+Number(n||0).toFixed(0); }
+  function getCart(){
+    return JSON.parse(localStorage.getItem("cart")) || [];
+  }
+  function setCart(cart){
+    localStorage.setItem("cart", JSON.stringify(cart));
+  }
+  function updateBadge(){
+    const cart = getCart();
+    const count = cart.reduce((s,i)=>s+(Number(i.qty || i.quantity || 1)||1),0);
+    const b = document.getElementById('cart-count'); if(b) b.textContent = count;
+  }
+  function money(n){ return 'Rs'+Number(n||0).toFixed(0); }
 
-function updTotals(){
-  const subtotal = baseTotal;
-  const total = subtotal + shipping;
-  document.getElementById("subtotal").textContent = money(subtotal);
-  document.getElementById("shipping").textContent = money(shipping);
-  document.getElementById("total").textContent = money(total);
-}
+  function loadCart() {
+    const cart = getCart();
+    const container = document.getElementById("cart-items");
+    container.innerHTML = "";
+    baseTotal = 0;
 
-function saveCart(cart){
-  localStorage.setItem("cart", JSON.stringify(cart));
-  document.getElementById("cart-count").textContent = cart.reduce((s,i)=>s+(Number(i.qty ?? i.quantity ?? 1)||1),0);
-}
+    if(cart.length===0){
+      container.innerHTML = '<p class="muted">Your cart is empty.</p>';
+      document.getElementById("subtotal").textContent = money(0);
+      document.getElementById("total").textContent    = money(0);
+      document.getElementById("shipping").textContent = money(0);
+      return;
+    }
 
-function loadCart(){
-  const cart = JSON.parse(localStorage.getItem("cart")||"[]");
-  const container = document.getElementById("cart-items");
-  container.innerHTML = "";
-  baseTotal = 0;
+    cart.forEach((item, index)=>{
+      const line = Number(item.price||0) * Number(item.qty||item.quantity||1);
+      baseTotal += line;
+      container.insertAdjacentHTML('beforeend', `
+        <div class="cart-row">
+          <img class="cart-thumb" src="${item.imageURL||'https://via.placeholder.com/80'}" alt="">
+          <div>
+            <div class="cart-title">${item.name||'Item'}</div>
+            <div class="cart-meta">${money(item.price)} × ${item.qty||1}</div>
+          </div>
+          <div class="cart-actions">
+            <button class="qty-btn" onclick="changeQty(${index},-1)">–</button>
+            <span class="qty-val">${item.qty||1}</span>
+            <button class="qty-btn" onclick="changeQty(${index},1)">+</button>
+          </div>
+          <div class="cart-line">${money(line)}</div>
+          <button class="btn danger" onclick="removeItem(${index})">Remove</button>
+        </div>
+      `);
+    });
 
-  if(cart.length===0){
-    container.innerHTML = '<p class="muted">Your cart is empty.</p>';
-    updTotals();
-    saveCart(cart);
-    return;
+    document.getElementById("subtotal").textContent = money(baseTotal);
+    updateTotal();
+    updateBadge();
   }
 
-  cart.forEach((item, idx)=>{
-    const name = item.name || '';
-    const qty = Number(item.qty ?? item.quantity ?? 1) || 1;
-    const price = Number(item.price ?? item.unitPrice ?? 0) || 0;
-    const line = qty * price;
-    baseTotal += line;
+  window.removeItem = function(index){
+    const cart = getCart();
+    cart.splice(index,1);
+    setCart(cart);
+    loadCart();
+  }
+  window.changeQty = function(index, delta){
+    const cart = getCart();
+    const item = cart[index];
+    const q = Math.max(1, Number(item.qty||1)+delta);
+    item.qty = q;
+    setCart(cart);
+    loadCart();
+  }
 
-    const img = item.imageURL || item.img || 'https://via.placeholder.com/80x80?text=Img';
-    const row = document.createElement('div');
-    row.className = 'cart-row';
-    row.innerHTML = `
-      <img class="cart-thumb" src="${img}" alt="">
-      <div>
-        <div class="cart-title">${name}</div>
-        <div class="cart-meta">${money(price)} each</div>
-      </div>
-      <div class="cart-actions">
-        <button class="qty-btn" data-act="dec">–</button>
-        <span class="qty-val">${qty}</span>
-        <button class="qty-btn" data-act="inc">+</button>
-      </div>
-      <div class="cart-line">${money(line)}</div>
-    `;
-    // Qty handlers
-    row.querySelectorAll('.qty-btn').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const act = btn.getAttribute('data-act');
-        let c = JSON.parse(localStorage.getItem('cart')||'[]');
-        let it = c[idx];
-        if (!it) return;
-        let q = Number(it.qty ?? it.quantity ?? 1) || 1;
-        if (act==='inc') q++;
-        if (act==='dec') q = Math.max(1, q-1);
-        it.qty = q; delete it.quantity;
-        saveCart(c);
-        loadCart();
+  function updateTotal(){
+    document.getElementById("shipping").textContent = money(extraCharge);
+    document.getElementById("total").textContent    = money(baseTotal+extraCharge);
+  }
+
+  // Delivery & Payment UI logic
+  const deliveryRadios = document.querySelectorAll('input[name="delivery"]');
+  const paymentRadios  = document.querySelectorAll('input[name="payment"]');
+  const customerInfo   = document.getElementById("customer-info");
+  const addressSection = document.getElementById("address-section");
+  const juiceSection   = document.getElementById("juice-section");
+
+  deliveryRadios.forEach(radio=>{
+    radio.addEventListener("change",()=>{
+      customerInfo.style.display="block";
+      if(radio.value === "Postage"){ 
+        extraCharge = 125; addressSection.style.display="block";
+      } else if(radio.value === "Delivery"){ 
+        extraCharge = 150; addressSection.style.display="block";
+      } else { 
+        extraCharge = 0;   addressSection.style.display="none";
+      }
+      updateTotal();
+      paymentRadios.forEach(pay=>{
+        if(radio.value !== "Pick Up"){
+          pay.disabled = (pay.value === "Pick Up Payment");
+          if(pay.value === "Juice") pay.checked = true;
+        } else {
+          pay.disabled = false;
+        }
       });
+      juiceSection.style.display = (document.querySelector('input[name="payment"]:checked')?.value === "Juice") ? "block" : "none";
     });
-    // Remove on image long-press? Keep it simple: click title to remove
-    row.querySelector('.cart-title').addEventListener('dblclick', ()=>{
-      let c = JSON.parse(localStorage.getItem('cart')||'[]');
-      c.splice(idx,1); saveCart(c); loadCart();
-    });
-
-    container.appendChild(row);
+  });
+  paymentRadios.forEach(radio=>{
+    radio.addEventListener("change",()=>{ juiceSection.style.display = (radio.value === "Juice") ? "block" : "none"; });
   });
 
-  updTotals();
-  saveCart(cart);
-}
+  function validateForm(){
+    const phone = document.getElementById("phone").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const delivery = document.querySelector('input[name="delivery"]:checked').value;
+    if(!/^5\d{7}$/.test(phone)){ alert("Phone number must start with 5 and be exactly 8 digits."); return false; }
+    if(!email.includes("@")){ alert("Please enter a valid email address."); return false; }
+    if(delivery !== "Pick Up"){
+      const payment = document.querySelector('input[name="payment"]:checked').value;
+      if(payment !== "Juice"){ alert("For Postage and Delivery, payment must be made via Juice."); return false; }
+    }
+    return true;
+  }
 
-loadCart();
+  // ---------- STOCK CHECK + DECREMENT (Firestore transaction) ----------
+  async function verifyAndDecrementStock(cart){
+    // Each cart item should have: id (product doc id), qty, price, sizeLabel (optional)
+    return db.runTransaction(async (tx)=>{
+      for(const item of cart){
+        if(!item.id){ continue; } // legacy items without id -> skip stock check
+        const ref = db.collection('products').doc(item.id);
+        const snap = await tx.get(ref);
+        if(!snap.exists) throw new Error(`Product not found: ${item.name||item.id}`);
 
-// Delivery & Payment interlocks
-const deliveryRadios = document.querySelectorAll('input[name="delivery"]');
-const paymentRadios  = document.querySelectorAll('input[name="payment"]');
-const customerInfo   = document.getElementById("customer-info");
-const addressInput   = document.getElementById("address");
-const juiceSection   = document.getElementById("juice-section");
+        const p = snap.data();
+        let sizes = Array.isArray(p.sizes) ? [...p.sizes] : [];
+        const label = item.sizeLabel || (/\(([^)]+)\)$/.exec(item.name||'')?.[1]) || null; // detect "(100ml)" if needed
+        const req = Number(item.qty||1);
 
-deliveryRadios.forEach(radio=>{
-  radio.addEventListener("change",()=>{
-    customerInfo.style.display="block";
-    if (radio.value === "Postage"){ shipping = 125; addressInput.required = true; }
-    else if (radio.value === "Delivery"){ shipping = 150; addressInput.required = true; }
-    else { shipping = 0; addressInput.required = false; }
-    updTotals();
-
-    // Restrict payment: postage/delivery => Juice only
-    paymentRadios.forEach(pay=>{
-      if (radio.value === "Postage" || radio.value === "Delivery"){
-        pay.disabled = (pay.value === "Pick Up Payment");
-        if (pay.value === "Juice") pay.checked = true;
-      } else {
-        pay.disabled = false;
+        if(sizes.length){
+          // match size by label
+          const idx = sizes.findIndex(s => String(s.label||'').toLowerCase() === String(label||'').toLowerCase());
+          if(idx === -1){
+            // if size not found, treat as no stock tracking for this item
+            continue;
+          }
+          const cur = typeof sizes[idx].stock === 'number' ? sizes[idx].stock : null;
+          if(cur !== null){
+            if(cur < req) throw new Error(`${p.name} (${sizes[idx].label}) has only ${cur} left`);
+            sizes[idx] = {...sizes[idx], stock: cur - req};
+            tx.update(ref, { sizes });
+          }
+        } else {
+          // single stock
+          const cur = typeof p.stock === 'number' ? p.stock : null;
+          if(cur !== null){
+            if(cur < req) throw new Error(`${p.name} has only ${cur} left`);
+            tx.update(ref, { stock: cur - req });
+          }
+        }
       }
     });
-    const selected = document.querySelector('input[name="payment"]:checked');
-    juiceSection.style.display = selected && selected.value === "Juice" ? "block" : "none";
-  });
-});
-
-paymentRadios.forEach(r=>{
-  r.addEventListener("change",()=>{
-    juiceSection.style.display = r.value === "Juice" ? "block" : "none";
-  });
-});
-
-function validateForm(){
-  const phone = document.getElementById("phone").value.trim();
-  const email = document.getElementById("email").value.trim();
-  const delivery = document.querySelector('input[name="delivery"]:checked')?.value;
-
-  if(!/^5\d{7}$/.test(phone)){
-    alert("Phone number must start with 5 and be exactly 8 digits.");
-    return false;
   }
-  if(!email.includes("@")){
-    alert("Please enter a valid email address.");
-    return false;
-  }
-  if(!delivery){
-    alert("Please select a delivery method.");
-    return false;
-  }
-  if ((delivery==="Postage" || delivery==="Delivery") && !document.querySelector('input[name="payment"]:checked') ){
-    alert("Please select Juice as payment for Postage/Delivery.");
-    return false;
-  }
-  if ((delivery==="Postage" || delivery==="Delivery") && !document.getElementById("address").value.trim()){
-    alert("Please enter your address for Postage/Delivery.");
-    return false;
-  }
-  return true;
-}
 
-document.getElementById("delivery-form").addEventListener("submit", (e)=>{
-  e.preventDefault();
-  if(!validateForm()) return;
+  // ---------- Submit order ----------
+  document.getElementById("delivery-form").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const status = document.getElementById('order-status'); status.textContent = '';
 
-  const cart = JSON.parse(localStorage.getItem("cart")||"[]");
-  if(cart.length===0){ alert("Cart is empty."); return; }
+    if(!validateForm()) return;
 
-  const selectedDelivery = document.querySelector('input[name="delivery"]:checked').value;
-  // Build clean items for DB
-  const items = cart.map(it=>{
-    const qty = Number(it.qty ?? it.quantity ?? 1) || 1;
-    const unitPrice = Number(it.price ?? it.unitPrice ?? 0) || 0;
-    return {
-      name: it.name || '',
-      imageURL: it.imageURL || it.img || '',
-      qty,
-      unitPrice
+    const cart = getCart();
+    if(cart.length===0){ alert("Cart is empty."); return; }
+
+    const selectedDelivery = document.querySelector('input[name="delivery"]:checked').value;
+    const order = {
+      items: cart.map(i=>({
+        id: i.id || null,
+        name: i.name,
+        quantity: Number(i.qty||1),
+        price: Number(i.price||0),
+        imageURL: i.imageURL || null
+      })),
+      delivery: selectedDelivery === "Delivery" ? "Delivery" : null,
+      postage: selectedDelivery === "Postage" ? "Postage" : null,
+      pickup: selectedDelivery === "Pick Up" ? "Pick Up" : null,
+      shipping: extraCharge,
+      payment: document.querySelector('input[name="payment"]:checked').value,
+      name: document.getElementById("name").value.trim(),
+      email: document.getElementById("email").value.trim(),
+      phone: document.getElementById("phone").value.trim(),
+      address: document.getElementById("address").value.trim() || "N/A",
+      subtotal: baseTotal,
+      total: baseTotal+extraCharge,
+      timestamp: new Date().toISOString()
     };
-  });
 
-  const order = {
-    items,
-    delivery: selectedDelivery === "Delivery" ? "Delivery" : null,
-    postage:  selectedDelivery === "Postage"  ? "Postage"  : null,
-    pickup:   selectedDelivery === "Pick Up"  ? "Pick Up"  : null,
-    shipping: shipping,
-    subtotal: baseTotal,
-    total: baseTotal + shipping,
-    payment: document.querySelector('input[name="payment"]:checked').value,
-    name: document.getElementById("name").value.trim(),
-    email: document.getElementById("email").value.trim(),
-    phone: document.getElementById("phone").value.trim(),
-    address: document.getElementById("address").value.trim() || "N/A",
-    timestamp: new Date().toISOString()
-  };
+    // Verify stock + decrement
+    try{
+      document.getElementById('confirm').disabled = true;
+      status.textContent = 'Checking stock…';
+      await verifyAndDecrementStock(cart);
+    }catch(err){
+      document.getElementById('confirm').disabled = false;
+      alert("Stock error: " + err.message);
+      return;
+    }
 
-  database.ref('orders').push(order)
-    .then(()=>{
+    // Save order to Realtime DB
+    try{
+      status.textContent = 'Placing order…';
+      const newOrderRef = firebase.database().ref('orders').push();
+      await newOrderRef.set(order);
       alert("Order confirmed! Thank you for shopping with B's Beauty Blossom.");
+
       localStorage.removeItem("cart");
       loadCart();
-      document.getElementById("cart-count").textContent = 0;
-      window.location.href = "index.html";
-    })
-    .catch(err=>alert("Error saving order: " + err));
-});
+      updateBadge();
+      window.location.href="index.html";
+    }catch(err){
+      alert("Error saving order: " + err.message);
+      document.getElementById('confirm').disabled = false;
+    }
+  });
+
+  // Init
+  loadCart();
+  updateBadge();
 </script>
 </body>
 </html>
