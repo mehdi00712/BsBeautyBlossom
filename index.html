@@ -1,212 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>B’s Beauty Blossom</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Fonts & Styles -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500&family=Roboto&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
+
+  <!-- Firebase SDKs (must be in this order) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Your Firebase config -->
+  <script src="firebase-config.js"></script>
+
+  <!-- Site scripts -->
+  <script src="script.js" defer></script>
 </head>
 <body>
-
-<header>
-  <nav class="navbar">
-    <div class="logo">
-      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
-    </div>
-    <ul class="nav-links">
-      <li><a href="index.html" class="active">Home</a></li>
-      <li><a href="perfume.html">Perfume</a></li>
-      <li><a href="body.html">Body</a></li>
-      <li><a href="skincare.html">Skincare</a></li>
-      <li><a href="cosmetics.html">Cosmetics</a></li>
-      <li><a href="jewellery.html">Jewellery</a></li>
-      <li><a href="gift.html">Gift</a></li>
-      <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
-      <li><a href="admin.html">Admin</a></li>
-    </ul>
-    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
-  </nav>
-  <div id="nav-overlay"></div>
-</header>
-
-<!-- Global  search -->
-<div class="section">
-  <div class="search-container">
-    <input type="text" id="search-bar" placeholder="Search by brand or product name…">
-    <ul id="search-suggestions"></ul>
-  </div>
-</div>
-
-<!-- Hero (editable via Admin → Site Settings) -->
-<section id="hero" class="hero">
-  <img id="hero-banner" src="https://via.placeholder.com/1600x900?text=B%27s+Beauty+Blossom" alt="Banner" class="hero-img">
-  <div class="hero-overlay">
-    <h1 id="hero-title">Discover Your Signature Scent</h1>
-    <p id="hero-subtitle">Curated beauty & fragrances</p>
-  </div>
-</section>
-
-<!-- Benefits (replaces "Free Delivery" row) -->
-<section class="section">
-  <div class="benefits-grid">
-    <div class="benefit">
-      <div class="benefit-emoji">🌸</div>
-      <div>
-        <h3>Curated Selection</h3>
-        <p class="muted">Handpicked bestsellers & seasonal edits</p>
+  <!-- Header / Navbar -->
+  <header>
+    <nav class="navbar">
+      <div class="logo">
+        <a href="index.html">
+          <img src="1.jpg" alt="B’s Beauty Blossom Logo">
+        </a>
       </div>
+      <ul class="nav-links">
+        <li><a href="index.html" class="active">Home</a></li>
+        <li><a href="perfume.html">Perfume</a></li>
+        <li><a href="body.html">Body</a></li>
+        <li><a href="skincare.html">Skincare</a></li>
+        <li><a href="cosmetics.html">Cosmetics</a></li>
+        <li><a href="jewellery.html">Jewellery</a></li>
+        <li><a href="gift.html">Gift</a></li>
+        <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
+        <li><a href="admin.html">Admin</a></li>
+      </ul>
+      <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
+    </nav>
+  </header>
+
+  <!-- Hero Banner -->
+  <section class="hero">
+    <img src="https://via.placeholder.com/1600x900?text=Banner" alt="Main Banner" class="hero-img">
+    <div class="overlay">
+      <h1>Welcome to B’s Beauty Blossom</h1>
+      <p id="greeting">Discover our exclusive products</p>
     </div>
-    <div class="benefit">
-      <div class="benefit-emoji">🛡️</div>
-      <div>
-        <h3>Genuine Brands</h3>
-        <p class="muted">100% authentic, sourced with care</p>
-      </div>
-    </div>
-    <div class="benefit">
-      <div class="benefit-emoji">✨</div>
-      <div>
-        <h3>Easy Returns</h3>
-        <p class="muted">Support that’s friendly & fast</p>
-      </div>
-    </div>
-  </div>
-</section>
+  </section>
 
-<!-- Featured (optional; toggle in Admin → Site Settings) -->
-<section id="featured-section" class="section">
-  <h2>Featured</h2>
-  <div id="home-featured" class="product-grid">
-    <p class="muted">Loading…</p>
-  </div>
-</section>
+  <!-- Content Example -->
+  <main>
+    <section>
+      <h2>Our Collections</h2>
+      <p>Explore perfumes, skincare, cosmetics, jewellery, and more.</p>
+    </section>
+  </main>
 
-<!-- Shop by Category (improved fit) -->
-<section class="section">
-  <h2>Shop by Category</h2>
-  <div class="category-grid">
-    <a class="category-card" href="perfume.html">
-      <img src="19p.JPG" alt="Perfume">
-      <span>Perfume</span>
-    </a>
-    <a class="category-card" href="skincare.html">
-      <img src="s4.JPG" alt="Skincare">
-      <span>Skincare</span>
-    </a>
-    <a class="category-card" href="cosmetics.html">
-      <img src="c3.JPG" alt="Cosmetics">
-      <span>Cosmetics</span>
-    </a>
-    <a class="category-card" href="body.html">
-      <img src="12b.jpg" alt="Body">
-      <span>Body</span>
-    </a>
-    <a class="category-card" href="jewellery.html">
-      <img src="br3.PNG" alt="Jewellery">
-      <span>Jewellery</span>
-    </a>
-    <a class="category-card" href="gift.html">
-      <img src="4c.JPG" alt="Gift">
-      <span>Gift</span>
-    </a>
-  </div>
-</section>
-
-<footer class="site-footer">
-  <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
-</footer>
-
-<!-- Firebase (Compat) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js"></script>
-
-<!-- Navbar / cart / hamburger -->
-<script src="script.js" defer></script>
-
-<!-- Minimal home loader (hero + optional featured) -->
-<script>
-(function(){
-  function optimizeCloudinary(url, width) {
-    try { if (!url || !/res\.cloudinary\.com/.test(url)) return url;
-      return url.replace(/\/upload\/(?!.*\/)/, `/upload/f_auto,q_auto,w_${width}/`);
-    } catch { return url; }
-  }
-
-  window.applyHomeData = async function(h){
-    const title = document.getElementById('hero-title');
-    const sub   = document.getElementById('hero-subtitle');
-    const img   = document.getElementById('hero-banner');
-
-    if (h.heroTitle) title.textContent = h.heroTitle;
-    if (h.heroSubtitle) sub.textContent = h.heroSubtitle;
-    if (h.bannerImage) {
-      const targetW = Math.min(window.innerWidth, 1600);
-      img.src = optimizeCloudinary(h.bannerImage, targetW);
-    }
-
-    const featuredWrap = document.getElementById('home-featured');
-    const featuredSec  = document.getElementById('featured-section');
-
-    if (h.showFeatured && h.featuredCategory) {
-      try{
-        const snap = await db.collection('products')
-          .where('category','==', String(h.featuredCategory).toLowerCase())
-          .where('active','==', true)
-          .limit(8).get();
-
-        featuredWrap.innerHTML = '';
-        if (snap.empty) {
-          featuredWrap.innerHTML = '<p class="muted">No featured products yet.</p>';
-        } else {
-          snap.forEach(d => {
-            const p = d.data(); const id = d.id;
-            const base = Number(p.basePrice || 0) || 0;
-            const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-            const prices = sizes.map(s => Number((s && s.price) || 0)).filter(n => n > 0);
-            const from = prices.length ? Math.min(...prices) : base;
-
-            featuredWrap.insertAdjacentHTML('beforeend', `
-              <a class="product" href="product.html?id=${id}">
-                <img src="${p.imageURL || 'https://via.placeholder.com/600x750?text=No+Image'}" alt="${p.name||''}">
-                <div class="pad">
-                  <h3>${p.name||''}</h3>
-                  ${p.brand ? `<div class="brand">${p.brand}</div>` : ''}
-                  <div class="price">${from>0 ? 'From Rs'+from : ''}</div>
-                </div>
-              </a>
-            `);
-          });
-        }
-      }catch(e){
-        console.error(e);
-        featuredWrap.innerHTML = '<p class="muted">Couldn’t load featured products.</p>';
-      }
-    } else {
-      featuredSec.style.display = 'none';
-    }
-
-    if (window.applySearch) window.applySearch();
-  };
-
-  async function init(){
-    try {
-      const snap = await db.collection('site').doc('home').get();
-      const h = snap.exists ? snap.data() : {};
-      await window.applyHomeData(h);
-    } catch(e) { console.error("Home load error:", e); }
-  }
-
-  if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', init, { once:true });
-  } else {
-    init();
-  }
-})();
-</script>
-
-<!-- Global search/autocomplete (with mini-cart fallback) -->
-<script src="search.js" defer></script>
+  <!-- Footer -->
+  <footer class="site-footer">
+    <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
+  </footer>
 </body>
 </html>
