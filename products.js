@@ -1,19 +1,22 @@
-// products.js — category loader without composite index requirement
+// products.js — category loader with client-side sorting & loud diagnostics
 (function () {
   const grid = document.getElementById('product-grid');
-  const searchInput = document.getElementById('search-bar'); // optional live filter
+  const searchInput = document.getElementById('search-bar');
+  const sortSel = document.getElementById('sort');
 
-  function show(msg) {
+  function ui(msg) {
     if (!grid) return;
     grid.innerHTML = `<p style="padding:12px">${msg}</p>`;
   }
 
-  // Guards
-  if (!window.firebase) { show('Init error: Firebase SDK not loaded'); return; }
-  if (!window.db) { show('Init error: firebase-config.js did not initialize Firestore'); return; }
+  // Guards (surface problems to the page)
+  if (!window.firebase) { ui('Init error: Firebase SDK not loaded'); return; }
+  if (!window.db) { ui('Init error: firebase-config.js did not initialize Firestore'); return; }
 
   const CAT = (window.PRODUCT_CATEGORY || '').toLowerCase();
-  if (!CAT) { show('Init error: PRODUCT_CATEGORY not set on this page'); return; }
+  if (!CAT) { ui('Init error: PRODUCT_CATEGORY not set on this page'); return; }
+
+  console.log('[products.js] Start', { category: CAT });
 
   // Helpers
   function priceFrom(p) {
@@ -41,54 +44,94 @@
     `;
   }
 
+  function render(items) {
+    if (!items.length) {
+      ui(`No products in “${CAT}”. Tip: In Firestore collection “products” each doc needs { category: "${CAT}", active: true }.`);
+      return;
+    }
+    grid.innerHTML = items.map(p => cardHTML(p.id, p)).join('');
+  }
+
+  function sortItems(items, mode) {
+    const toName = x => String(x.name||'');
+    const toPrice = x => priceFrom(x);
+    if (mode === 'az') items.sort((a,b)=> toName(a).localeCompare(toName(b), undefined, {sensitivity:'base'}));
+    else if (mode === 'za') items.sort((a,b)=> toName(b).localeCompare(toName(a), undefined, {sensitivity:'base'}));
+    else if (mode === 'low') items.sort((a,b)=> toPrice(a) - toPrice(b));
+    else if (mode === 'high') items.sort((a,b)=> toPrice(b) - toPrice(a));
+    // 'rec' does nothing special for now.
+  }
+
+  let ALL = [];
+
   async function load() {
     try {
-      show('Loading…');
+      ui('Loading…');
 
       // 🔧 No orderBy here (avoids composite index)
-      const snap = await db.collection('products')
+      const q = db.collection('products')
         .where('category', '==', CAT)
-        .where('active', '==', true)
-        .get();
+        .where('active', '==', true);
+
+      console.log('[products.js] Querying…');
+      const snap = await q.get();
+      console.log('[products.js] Query done. empty?', snap.empty, 'size', snap.size);
 
       if (snap.empty) {
-        show(`No products in “${CAT}”. Tip: check Firestore “products” docs: category must be exactly “${CAT}” (lower-case) and active=true.`);
+        render([]);
         return;
       }
 
-      const items = [];
-      snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+      ALL = [];
+      snap.forEach(doc => ALL.push({ id: doc.id, ...doc.data() }));
 
-      // Sort client-side by name (case-insensitive)
-      items.sort((a,b) => String(a.name||'').localeCompare(String(b.name||''), undefined, {sensitivity:'base'}));
-
-      grid.innerHTML = items.map(p => cardHTML(p.id, p)).join('');
-
-      // Live search on this page (name/brand)
-      if (searchInput) {
-        searchInput.addEventListener('input', () => {
-          const q = searchInput.value.trim().toLowerCase();
-          const cards = grid.querySelectorAll('.product');
-          let visible = 0;
-          cards.forEach(c => {
-            const name = c.getAttribute('data-name')?.toLowerCase() || '';
-            const brand = c.getAttribute('data-brand')?.toLowerCase() || '';
-            const showCard = !q || name.includes(q) || brand.includes(q);
-            c.style.display = showCard ? '' : 'none';
-            if (showCard) visible++;
-          });
-          // remove old “no matches”
-          grid.querySelectorAll('p._nomatch').forEach(el=>el.remove());
-          if (!visible) {
-            grid.insertAdjacentHTML('beforeend',
-              `<p class="_nomatch" style="grid-column:1/-1;padding:8px">No matches for “${q}”.</p>`);
-          }
-        });
-      }
+      // Default sort (A–Z for stability)
+      sortItems(ALL, 'az');
+      render(ALL);
+      bindSearch();
+      bindSort();
     } catch (e) {
-      console.error(e);
-      show('Error loading products.');
+      console.error('[products.js] Load error:', e);
+      ui('Error loading products. Open console for details.');
     }
+  }
+
+  function bindSort() {
+    if (!sortSel) return;
+    sortSel.addEventListener('change', ()=>{
+      const copy = ALL.slice();
+      sortItems(copy, sortSel.value);
+      render(copy);
+      // re-apply current search filter after sort
+      if (searchInput && searchInput.value.trim()) {
+        applySearch(searchInput.value.trim().toLowerCase());
+      }
+    });
+  }
+
+  function applySearch(q) {
+    const cards = grid.querySelectorAll('.product');
+    let visible = 0;
+    cards.forEach(c => {
+      const name = c.getAttribute('data-name')?.toLowerCase() || '';
+      const brand = c.getAttribute('data-brand')?.toLowerCase() || '';
+      const showCard = !q || name.includes(q) || brand.includes(q);
+      c.style.display = showCard ? '' : 'none';
+      if (showCard) visible++;
+    });
+    // remove old “no matches”
+    grid.querySelectorAll('p._nomatch').forEach(el=>el.remove());
+    if (!visible) {
+      grid.insertAdjacentHTML('beforeend',
+        `<p class="_nomatch" style="grid-column:1/-1;padding:8px">No matches for “${q}”.</p>`);
+    }
+  }
+
+  function bindSearch() {
+    if (!searchInput) return;
+    searchInput.addEventListener('input', ()=>{
+      applySearch(searchInput.value.trim().toLowerCase());
+    });
   }
 
   load();
