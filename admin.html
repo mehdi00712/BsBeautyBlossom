@@ -12,7 +12,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
 
-  <!-- Cloudinary config (for image uploads) -->
+  <!-- Cloudinary (unsigned) -->
   <script>
     window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
     window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
@@ -59,7 +59,8 @@
   </section>
 
   <div class="admin-grid">
-    <!-- Site Settings (Homepage) -->
+
+    <!-- Site Settings -->
     <section id="site-section" class="card" style="display:none">
       <h2>Site Settings (Homepage)</h2>
 
@@ -104,7 +105,7 @@
       </div>
 
       <div style="display:flex;gap:8px;margin-top:8px">
-        <button id="site-save" class="btn btn-primary">Save Site Settings</button>
+        <button id="site-save" class="btn">Save Site Settings</button>
         <button id="site-reload" class="btn muted">Reload</button>
       </div>
       <p id="site-status" class="muted" style="margin-top:8px"></p>
@@ -149,19 +150,8 @@
       </div>
 
       <div class="row">
-        <label for="sizes">
-          Sizes (one per line):
-          <small>Use <b>Label | Price | Stock</b> — e.g. <code>100ml | 2350 | 5</code>. Stock is optional.</small>
-        </label>
-        <textarea id="sizes" rows="4" placeholder="100ml | 2350 | 5&#10;30ml | 1550 | 2"></textarea>
-      </div>
-
-      <div class="row">
-        <label for="stock">
-          Global Stock (no sizes)
-          <small>For products without sizes. Leave blank if using size-based stock.</small>
-        </label>
-        <input id="stock" type="number" min="0" placeholder="e.g. 10">
+        <label for="sizes">Sizes (one per line): <small>Label | Price — e.g. “100ml | 2350”</small></label>
+        <textarea id="sizes" rows="4" placeholder="100ml | 2350&#10;30ml | 1550"></textarea>
       </div>
 
       <div class="row">
@@ -175,7 +165,7 @@
       </div>
 
       <div style="display:flex;gap:8px">
-        <button id="saveBtn" class="btn btn-primary">Save Product</button>
+        <button id="saveBtn" class="btn">Save Product</button>
         <button id="resetBtn" class="btn muted">Reset Form</button>
       </div>
       <input type="hidden" id="docId">
@@ -198,9 +188,9 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Image</th><th>Name</th><th>Sizes / Stock</th><th>Base</th><th>Active</th><th>Actions</th></tr>
+            <tr><th>Image</th><th>Name</th><th>Sizes</th><th>Base</th><th>Active</th><th>Actions</th></tr>
           </thead>
-          <tbody id="tableBody"><tr><td colspan="6">Loading…</td></tr></tbody>
+        <tbody id="tableBody"><tr><td colspan="6">Loading…</td></tr></tbody>
         </table>
       </div>
     </section>
@@ -211,25 +201,7 @@
   <p>© 2025 B’s Beauty Blossom • Admin</p>
 </footer>
 
-<!-- Scripts LAST so DOM is ready -->
 <script src="admin.js" defer></script>
-
-<!-- Minimal navbar toggle (independent from other pages) -->
-<script>
-(function(){
-  const burger = document.querySelector('.hamburger');
-  const links  = document.querySelector('.nav-links');
-  const overlay= document.getElementById('nav-overlay');
-  if(!burger) return;
-  function close(){ links.classList.remove('show'); overlay.classList.remove('show'); burger.setAttribute('aria-expanded','false'); }
-  burger.addEventListener('click', ()=>{
-    const open = links.classList.toggle('show');
-    overlay.classList.toggle('show', open);
-    burger.setAttribute('aria-expanded', String(open));
-  });
-  overlay.addEventListener('click', close);
-  window.addEventListener('resize', ()=>{ if(window.innerWidth>=1024) close(); });
-})();
-</script>
+<script src="script.js" defer></script>
 </body>
 </html>
