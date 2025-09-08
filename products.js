@@ -1,74 +1,100 @@
-// products.js — groups products by brand; requires window.db
-(async function () {
-  const gridHost = document.getElementById('product-grid');
-  if (!gridHost) return;
+// products.js — robust category loader with clear errors
+(function () {
+  const grid = document.getElementById('product-grid');
+  const searchInput = document.getElementById('search-bar'); // optional live filter
 
-  const category = String(window.PRODUCT_CATEGORY || '').toLowerCase();
-  const groupByBrand = !!window.GROUP_BY_BRAND;
-  const money = (n)=>'Rs'+Number(n||0).toFixed(0);
+  function show(msg) {
+    if (!grid) return;
+    grid.innerHTML = `<p style="padding:12px">${msg}</p>`;
+  }
 
-  const minPrice = (p) => {
+  // Guard: Firebase must be ready
+  if (!window.firebase) { show('Init error: Firebase SDK not loaded'); return; }
+  if (!window.db) { show('Init error: firebase-config.js did not initialize Firestore'); return; }
+
+  const CAT = (window.PRODUCT_CATEGORY || '').toLowerCase(); // e.g. 'perfume'
+  if (!CAT) { show('Init error: PRODUCT_CATEGORY not set on this page'); return; }
+
+  // Render helpers
+  function priceFrom(p) {
     const base = Number(p.basePrice || 0) || 0;
     const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-    const prices = sizes.map(s=>Number((s&&s.price)||0)).filter(x=>x>0);
+    const prices = sizes
+      .map(s => Number((s && s.price) || 0))
+      .filter(n => n > 0);
     return prices.length ? Math.min(...prices) : base;
-  };
-  const safeBrand = (b)=> (b && String(b).trim()) || 'Other';
+  }
 
-  function productCard(id, p){
-    const from = minPrice(p);
-    const img = p.imageURL || 'https://via.placeholder.com/600x750?text=No+Image';
+  function cardHTML(id, p) {
+    const img = (p.images && p.images[0]) || p.imageURL || 'https://via.placeholder.com/600x600?text=No+Image';
+    const from = priceFrom(p);
     const brand = p.brand ? `<div class="muted">${p.brand}</div>` : '';
+    const price = from > 0 ? `<p class="price">From Rs${from}</p>` : '';
+    // Card
     return `
-      <a class="product" href="product.html?id=${id}" data-name="${p.name||''}" data-brand="${p.brand||''}">
-        <img src="${img}" alt="${p.name||''}">
-        <div class="pad">
-          <h3>${p.name||''}</h3>
-          ${brand}
-          <div class="price">${from>0 ? 'From '+money(from) : ''}</div>
-        </div>
-      </a>
+      <div class="product" data-name="${(p.name||'')}" data-brand="${(p.brand||'')}">
+        <a href="product.html?id=${id}">
+          <img src="${img}" alt="${p.name||''}">
+        </a>
+        <h3><a href="product.html?id=${id}">${p.name || ''}</a></h3>
+        ${brand}
+        ${price}
+        <button onclick="location.href='product.html?id=${id}'">View</button>
+      </div>
     `;
   }
 
-  async function load(){
-    try{
-      gridHost.innerHTML = `<p class="muted">Loading products…</p>`;
-      const snap = await db.collection('products').where('category','==',category).where('active','==',true).get();
-      if (snap.empty){ gridHost.innerHTML = `<p class="muted">No products in this category yet.</p>`; return; }
+  async function load() {
+    try {
+      show('Loading…');
 
-      const items = []; snap.forEach(d=>items.push({id:d.id, ...d.data()}));
+      // Query products for this category that are active
+      const snap = await db.collection('products')
+        .where('category', '==', CAT)
+        .where('active', '==', true)
+        .orderBy('name')
+        .get();
 
-      if (!groupByBrand){
-        gridHost.innerHTML = `<div class="product-grid"></div>`;
-        const grid = gridHost.querySelector('.product-grid');
-        items.forEach(p=>grid.insertAdjacentHTML('beforeend', productCard(p.id,p)));
+      if (snap.empty) {
+        show(`No products in “${CAT}”. Tip: check Firestore “products” docs: category must be exactly “${CAT}” (lower-case) and active=true.`);
         return;
       }
 
-      const buckets = new Map();
-      for (const p of items){
-        const key = safeBrand(p.brand);
-        if (!buckets.has(key)) buckets.set(key, []);
-        buckets.get(key).push(p);
+      const items = [];
+      snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+
+      // Render list
+      grid.innerHTML = items.map(p => cardHTML(p.id, p)).join('');
+
+      // Optional: simple client-side filtering by name/brand
+      if (searchInput) {
+        searchInput.addEventListener('input', () => {
+          const q = searchInput.value.trim().toLowerCase();
+          const cards = grid.querySelectorAll('.product');
+          let visible = 0;
+          cards.forEach(c => {
+            const name = c.getAttribute('data-name')?.toLowerCase() || '';
+            const brand = c.getAttribute('data-brand')?.toLowerCase() || '';
+            const showCard = !q || name.includes(q) || brand.includes(q);
+            c.style.display = showCard ? '' : 'none';
+            if (showCard) visible++;
+          });
+          if (!visible) {
+            grid.insertAdjacentHTML('beforeend',
+              `<p style="grid-column:1/-1;padding:8px">No matches for “${q}”.</p>`);
+          } else {
+            // remove any previous “No matches” messages
+            grid.querySelectorAll('p').forEach(p => {
+              if (p.textContent?.startsWith('No matches for')) p.remove();
+            });
+          }
+        });
       }
-      const brands = Array.from(buckets.keys()).sort((a,b)=>a.localeCompare(b));
-      gridHost.innerHTML = '';
-      brands.forEach(name=>{
-        const list = buckets.get(name).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
-        const section = document.createElement('section');
-        section.className = 'brand-section';
-        section.innerHTML = `<h2 class="brand-title">${name}</h2><div class="brand-grid"></div>`;
-        const grid = section.querySelector('.brand-grid');
-        list.forEach(p=>grid.insertAdjacentHTML('beforeend', productCard(p.id,p)));
-        gridHost.appendChild(section);
-      });
-    }catch(e){
-      console.error('Category load error:', e);
-      gridHost.innerHTML = `<p class="muted">Couldn’t load products.</p>`;
+    } catch (e) {
+      console.error(e);
+      show('Error loading products. Open console for details.');
     }
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', load, {once:true});
-  else load();
+  load();
 })();
