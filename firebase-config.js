@@ -1,10 +1,10 @@
-// firebase-config.js — must load AFTER:
-//   firebase-app-compat.js
-//   firebase-auth-compat.js   (needed on admin.html)
-//   firebase-firestore-compat.js
-
-(function () {
-  if (!window.firebase) throw new Error("Firebase SDK not loaded.");
+<!-- firebase-config.js -->
+<script>
+  // Make sure compat SDKs are loaded BEFORE this file:
+  // firebase-app-compat.js, firebase-auth-compat.js (admin only), firebase-firestore-compat.js
+  if (!window.firebase) {
+    throw new Error("Firebase SDK not loaded. Include the compat scripts before firebase-config.js");
+  }
 
   const firebaseConfig = {
     apiKey: "AIzaSyBSA9iP3kjdYZM0eXt_KOXAgPT_z74cGJ8",
@@ -19,23 +19,7 @@
 
   if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 
-  // Always expose Firestore
-  if (!firebase.firestore) {
-    throw new Error("firebase-firestore-compat.js not loaded");
-  }
-  window.db = firebase.firestore();
-
-  // Expose Auth when the page loaded auth-compat (admin.html does)
-  if (firebase.auth) {
-    window.auth = firebase.auth();
-  } else {
-    // On catalog pages you might not include auth-compat, that’s fine.
-    window.auth = null;
-  }
-
-  console.log("✅ Firebase ready", {
-    apps: firebase.apps.length,
-    hasDb: !!window.db,
-    hasAuth: !!window.auth
-  });
-})();
+  window.db   = firebase.firestore();
+  // Only admin.html uses auth; other pages don’t require it, but exposing is fine:
+  window.auth = firebase.auth?.();
+</script>
