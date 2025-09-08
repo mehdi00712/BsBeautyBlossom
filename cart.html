@@ -1,21 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Checkout - B's Beauty Blossom</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Checkout – B’s Beauty Blossom</title>
+  <link rel="stylesheet" href="style.css"/>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="firebase-config.js"></script>
+  <!-- Firebase (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Your common config initializes the app -->
+  <script src="firebase-config.js"></script>
+
+  <style>
+    /* Small, neat thumbnails in cart */
+    .cart-list { max-width: 900px; margin: 20px auto; }
+    .cart-item {
+      display: grid;
+      grid-template-columns: 70px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid #eee;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      background: #fff;
+    }
+    .cart-thumb {
+      width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 1px solid #eee;
+    }
+    .cart-line b { display:block; margin-bottom: 2px; }
+    .qty-ctrl {
+      display:flex; align-items:center; gap:6px;
+    }
+    .qty-ctrl input {
+      width: 48px; text-align:center; padding:6px 8px;
+      border:1px solid #ddd; border-radius:8px;
+    }
+    .qty-ctrl button {
+      padding:6px 10px; border:1px solid #ddd; background:#f7f7f7; border-radius:8px; cursor:pointer;
+    }
+    .cart-right { display:flex; align-items:center; gap:8px; }
+    .line-total { font-weight:600; min-width: 90px; text-align:right; }
+
+    .checkout-wrap { max-width: 900px; margin: 20px auto; }
+    .card { background:#fff; border:1px solid #eee; border-radius:12px; padding:16px; margin-bottom:16px; }
+    .card h2 { margin-top:0; }
+
+    .muted { color:#6b7280; font-size: 0.95rem; }
+
+    .banner-help { display:flex; gap:16px; flex-wrap:wrap; margin: 16px auto; }
+    .pill { background:#f8fafc; border:1px solid #e5e7eb; border-radius:999px; padding:10px 14px; font-weight:500; }
+
+    .btn-primary {
+      background:#111827; color:#fff; border:none; padding:12px 16px; border-radius:10px; cursor:pointer;
+    }
+    .btn-danger { background:#e11d48; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
+    .btn { background:#f3f4f6; border:1px solid #e5e7eb; padding:8px 12px; border-radius:8px; cursor:pointer; }
+
+    .total-line { text-align:right; font-weight:700; font-size:1.1rem; }
+
+    .juice-box {
+      background:#fff7ed; border:1px solid #fed7aa; padding:12px; border-radius:10px; text-align:center;
+    }
+
+    /* Navbar badge fallback */
+    .navbar .nav-links a.active { font-weight: 600; }
+  </style>
 </head>
 <body>
 <header>
   <nav class="navbar">
-    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
+    <div class="logo">
+      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
+    </div>
     <ul class="nav-links">
       <li><a href="index.html">Home</a></li>
       <li><a href="perfume.html">Perfume</a></li>
@@ -29,300 +87,288 @@
     </ul>
     <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
   </nav>
-  <div id="nav-overlay"></div>
 </header>
 
-<section class="section">
+<main class="checkout-wrap">
   <h1>Checkout</h1>
 
-  <div id="cart-items" class="cart-list"></div>
-  <div class="totals">
-    <div class="totals-row"><span>Subtotal</span><span id="subtotal">Rs0</span></div>
-    <div class="totals-row"><span>Shipping</span><span id="shipping">Rs0</span></div>
-    <div class="totals-row"><strong>Total</strong><strong id="total">Rs0</strong></div>
+  <div class="banner-help">
+    <div class="pill">✅ Authentic – Trusted brands only</div>
+    <div class="pill">💬 Friendly support</div>
+    <div class="pill">🛍️ Easy pickup or delivery</div>
   </div>
 
-  <h2 class="pad">Delivery Method</h2>
-  <form id="delivery-form" class="card" style="margin-top:10px">
-    <label><input type="radio" name="delivery" value="Pick Up" required> Pick Up (Free)</label><br>
-    <label><input type="radio" name="delivery" value="Postage"> Postage (+Rs125)</label><br>
-    <label><input type="radio" name="delivery" value="Delivery"> Delivery (+Rs150)</label><br><br>
+  <section class="card">
+    <h2>Your Cart</h2>
+    <div id="cart-list" class="cart-list"></div>
+    <div class="total-line"><span id="total">Total: Rs0</span></div>
+  </section>
 
-    <div id="customer-info" style="display:none;">
-      <h2 class="pad">Customer Details</h2>
-      <input type="text" id="name" placeholder="Full Name" required><br>
-      <input type="email" id="email" placeholder="Email" required><br>
-      <input type="tel" id="phone" placeholder="Phone Number" required><br>
-      <div id="address-section" style="display:none;">
-        <input type="text" id="address" placeholder="Delivery Address"><br>
+  <section class="card">
+    <h2>Delivery Method</h2>
+    <form id="delivery-form">
+      <label><input type="radio" name="delivery" value="Pick Up" required> Pick Up (Free)</label><br>
+      <label><input type="radio" name="delivery" value="Postage"> Postage (+Rs125)</label><br>
+      <label><input type="radio" name="delivery" value="Delivery"> Delivery (+Rs150)</label><br><br>
+
+      <div id="customer-info" style="display:none;">
+        <h2>Customer Details</h2>
+        <div class="row row-2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <input type="text" id="name" placeholder="Full Name" required>
+          <input type="email" id="email" placeholder="Email" required>
+          <input type="tel" id="phone" placeholder="Phone (8 digits starting with 5)" required>
+          <input type="text" id="address" placeholder="Delivery Address (for Delivery/Postage)">
+        </div>
+
+        <h2 style="margin-top:14px;">Payment Method</h2>
+        <label><input type="radio" name="payment" value="Juice" required> Juice Payment (via account transfer)</label><br>
+        <label><input type="radio" name="payment" value="Pick Up Payment"> Payment at Pick Up</label><br><br>
+
+        <div id="juice-section" class="juice-box" style="display:none;">
+          <h3 style="margin:6px 0 8px;">Juice Payment Instructions</h3>
+          <p>1) Open your Juice app</p>
+          <p>2) Transfer the total amount to <strong>Account: 000450702685</strong></p>
+          <p>3) Send your payment screenshot to <strong>+230 58195560</strong></p>
+          <p>4) Press “Confirm Order” once payment is completed</p>
+        </div>
+
+        <div style="margin-top:12px;">
+          <button type="submit" class="btn-primary">Confirm Order</button>
+        </div>
       </div>
-
-      <h2 class="pad">Payment Method</h2>
-      <label><input type="radio" name="payment" value="Juice" required> Juice Payment (via account transfer)</label><br>
-      <label><input type="radio" name="payment" value="Pick Up Payment"> Payment at Pick Up</label><br><br>
-
-      <div id="juice-section" style="display:none; text-align:center;" class="card">
-        <h3>Juice Payment Instructions</h3>
-        <p>1. Open your Juice app</p>
-        <p>2. Transfer the total amount to:</p>
-        <p><strong>Account Number: 000450702685</strong></p>
-        <p>3. Send your payment receipt to <strong>+230 58195560</strong></p>
-        <p>4. Press "Confirm Order" once payment is completed</p>
-      </div>
-
-      <button type="submit" class="btn btn-primary" id="confirm">Confirm Order</button>
-      <p id="order-status" class="muted" style="margin-top:8px"></p>
-    </div>
-  </form>
-</section>
+    </form>
+  </section>
+</main>
 
 <footer class="site-footer">
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
+<!-- Your global navbar/cart helpers (hamburger toggle etc.) -->
+<script src="script.js" defer></script>
+
 <script>
-  // Navbar toggle
-  (function(){
-    const burger = document.querySelector('.hamburger');
-    const links  = document.querySelector('.nav-links');
-    const overlay= document.getElementById('nav-overlay');
-    if(!burger) return;
-    function close(){ links.classList.remove('show'); overlay.classList.remove('show'); burger.setAttribute('aria-expanded','false'); }
-    burger.addEventListener('click', ()=>{
-      const open = links.classList.toggle('show');
-      overlay.classList.toggle('show', open);
-      burger.setAttribute('aria-expanded', String(open));
-    });
-    overlay.addEventListener('click', close);
-    window.addEventListener('resize', ()=>{ if(window.innerWidth>=1024) close(); });
-  })();
+/* ---------- Cart helpers ---------- */
+function getCart() {
+  try { return JSON.parse(localStorage.getItem('cart')) || []; }
+  catch { return []; }
+}
+function setCart(c) { localStorage.setItem('cart', JSON.stringify(c)); }
+function cartCount(c) { return c.reduce((s,i)=> s + Number(i.quantity||0), 0); }
 
-  // --- Cart render ---
-  let baseTotal = 0, extraCharge = 0;
+let baseTotal = 0;
+let extraCharge = 0;
 
-  function getCart(){
-    return JSON.parse(localStorage.getItem("cart")) || [];
+function formatRs(n){ return 'Rs' + Number(n||0).toFixed(0); }
+
+function renderCart() {
+  const cart = getCart();
+  const list = document.getElementById('cart-list');
+  list.innerHTML = '';
+
+  if (!cart.length) {
+    list.innerHTML = '<p class="muted">Your cart is empty.</p>';
+    document.getElementById('total').textContent = 'Total: Rs0';
+    return;
   }
-  function setCart(cart){
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }
-  function updateBadge(){
-    const cart = getCart();
-    const count = cart.reduce((s,i)=>s+(Number(i.qty || i.quantity || 1)||1),0);
-    const b = document.getElementById('cart-count'); if(b) b.textContent = count;
-  }
-  function money(n){ return 'Rs'+Number(n||0).toFixed(0); }
 
-  function loadCart() {
-    const cart = getCart();
-    const container = document.getElementById("cart-items");
-    container.innerHTML = "";
-    baseTotal = 0;
+  cart.forEach((it, idx) => {
+    const line = document.createElement('div');
+    line.className = 'cart-item';
+    const unit = Number(it.price || 0);
+    const qty  = Math.max(1, Number(it.quantity || 1));
+    const lineTotal = unit * qty;
 
-    if(cart.length===0){
-      container.innerHTML = '<p class="muted">Your cart is empty.</p>';
-      document.getElementById("subtotal").textContent = money(0);
-      document.getElementById("total").textContent    = money(0);
-      document.getElementById("shipping").textContent = money(0);
-      return;
-    }
-
-    cart.forEach((item, index)=>{
-      const line = Number(item.price||0) * Number(item.qty||item.quantity||1);
-      baseTotal += line;
-      container.insertAdjacentHTML('beforeend', `
-        <div class="cart-row">
-          <img class="cart-thumb" src="${item.imageURL||'https://via.placeholder.com/80'}" alt="">
-          <div>
-            <div class="cart-title">${item.name||'Item'}</div>
-            <div class="cart-meta">${money(item.price)} × ${item.qty||1}</div>
-          </div>
-          <div class="cart-actions">
-            <button class="qty-btn" onclick="changeQty(${index},-1)">–</button>
-            <span class="qty-val">${item.qty||1}</span>
-            <button class="qty-btn" onclick="changeQty(${index},1)">+</button>
-          </div>
-          <div class="cart-line">${money(line)}</div>
-          <button class="btn danger" onclick="removeItem(${index})">Remove</button>
+    line.innerHTML = `
+      <img class="cart-thumb" src="${it.imageURL || 'https://via.placeholder.com/100x100?text=Image'}" alt="">
+      <div>
+        <div class="cart-line">
+          <b>${it.name}</b>
+          <span class="muted">Unit: ${formatRs(unit)}</span>
         </div>
-      `);
-    });
+        <div class="qty-ctrl">
+          <button class="minus" aria-label="decrease">−</button>
+          <input class="q" type="number" value="${qty}" min="1" step="1">
+          <button class="plus" aria-label="increase">+</button>
+          <button class="btn-danger remove" style="margin-left:8px;">Remove</button>
+        </div>
+      </div>
+      <div class="line-total">${formatRs(lineTotal)}</div>
+    `;
 
-    document.getElementById("subtotal").textContent = money(baseTotal);
-    updateTotal();
-    updateBadge();
-  }
+    const minus = line.querySelector('.minus');
+    const plus  = line.querySelector('.plus');
+    const qIn   = line.querySelector('.q');
+    const rm    = line.querySelector('.remove');
 
-  window.removeItem = function(index){
-    const cart = getCart();
-    cart.splice(index,1);
-    setCart(cart);
-    loadCart();
-  }
-  window.changeQty = function(index, delta){
-    const cart = getCart();
-    const item = cart[index];
-    const q = Math.max(1, Number(item.qty||1)+delta);
-    item.qty = q;
-    setCart(cart);
-    loadCart();
-  }
-
-  function updateTotal(){
-    document.getElementById("shipping").textContent = money(extraCharge);
-    document.getElementById("total").textContent    = money(baseTotal+extraCharge);
-  }
-
-  // Delivery & Payment UI logic
-  const deliveryRadios = document.querySelectorAll('input[name="delivery"]');
-  const paymentRadios  = document.querySelectorAll('input[name="payment"]');
-  const customerInfo   = document.getElementById("customer-info");
-  const addressSection = document.getElementById("address-section");
-  const juiceSection   = document.getElementById("juice-section");
-
-  deliveryRadios.forEach(radio=>{
-    radio.addEventListener("change",()=>{
-      customerInfo.style.display="block";
-      if(radio.value === "Postage"){ 
-        extraCharge = 125; addressSection.style.display="block";
-      } else if(radio.value === "Delivery"){ 
-        extraCharge = 150; addressSection.style.display="block";
-      } else { 
-        extraCharge = 0;   addressSection.style.display="none";
-      }
-      updateTotal();
-      paymentRadios.forEach(pay=>{
-        if(radio.value !== "Pick Up"){
-          pay.disabled = (pay.value === "Pick Up Payment");
-          if(pay.value === "Juice") pay.checked = true;
-        } else {
-          pay.disabled = false;
-        }
-      });
-      juiceSection.style.display = (document.querySelector('input[name="payment"]:checked')?.value === "Juice") ? "block" : "none";
-    });
-  });
-  paymentRadios.forEach(radio=>{
-    radio.addEventListener("change",()=>{ juiceSection.style.display = (radio.value === "Juice") ? "block" : "none"; });
-  });
-
-  function validateForm(){
-    const phone = document.getElementById("phone").value.trim();
-    const email = document.getElementById("email").value.trim();
-    const delivery = document.querySelector('input[name="delivery"]:checked').value;
-    if(!/^5\d{7}$/.test(phone)){ alert("Phone number must start with 5 and be exactly 8 digits."); return false; }
-    if(!email.includes("@")){ alert("Please enter a valid email address."); return false; }
-    if(delivery !== "Pick Up"){
-      const payment = document.querySelector('input[name="payment"]:checked').value;
-      if(payment !== "Juice"){ alert("For Postage and Delivery, payment must be made via Juice."); return false; }
-    }
-    return true;
-  }
-
-  // ---------- STOCK CHECK + DECREMENT (Firestore transaction) ----------
-  async function verifyAndDecrementStock(cart){
-    // Each cart item should have: id (product doc id), qty, price, sizeLabel (optional)
-    return db.runTransaction(async (tx)=>{
-      for(const item of cart){
-        if(!item.id){ continue; } // legacy items without id -> skip stock check
-        const ref = db.collection('products').doc(item.id);
-        const snap = await tx.get(ref);
-        if(!snap.exists) throw new Error(`Product not found: ${item.name||item.id}`);
-
-        const p = snap.data();
-        let sizes = Array.isArray(p.sizes) ? [...p.sizes] : [];
-        const label = item.sizeLabel || (/\(([^)]+)\)$/.exec(item.name||'')?.[1]) || null; // detect "(100ml)" if needed
-        const req = Number(item.qty||1);
-
-        if(sizes.length){
-          // match size by label
-          const idx = sizes.findIndex(s => String(s.label||'').toLowerCase() === String(label||'').toLowerCase());
-          if(idx === -1){
-            // if size not found, treat as no stock tracking for this item
-            continue;
-          }
-          const cur = typeof sizes[idx].stock === 'number' ? sizes[idx].stock : null;
-          if(cur !== null){
-            if(cur < req) throw new Error(`${p.name} (${sizes[idx].label}) has only ${cur} left`);
-            sizes[idx] = {...sizes[idx], stock: cur - req};
-            tx.update(ref, { sizes });
-          }
-        } else {
-          // single stock
-          const cur = typeof p.stock === 'number' ? p.stock : null;
-          if(cur !== null){
-            if(cur < req) throw new Error(`${p.name} has only ${cur} left`);
-            tx.update(ref, { stock: cur - req });
-          }
-        }
-      }
-    });
-  }
-
-  // ---------- Submit order ----------
-  document.getElementById("delivery-form").addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    const status = document.getElementById('order-status'); status.textContent = '';
-
-    if(!validateForm()) return;
-
-    const cart = getCart();
-    if(cart.length===0){ alert("Cart is empty."); return; }
-
-    const selectedDelivery = document.querySelector('input[name="delivery"]:checked').value;
-    const order = {
-      items: cart.map(i=>({
-        id: i.id || null,
-        name: i.name,
-        quantity: Number(i.qty||1),
-        price: Number(i.price||0),
-        imageURL: i.imageURL || null
-      })),
-      delivery: selectedDelivery === "Delivery" ? "Delivery" : null,
-      postage: selectedDelivery === "Postage" ? "Postage" : null,
-      pickup: selectedDelivery === "Pick Up" ? "Pick Up" : null,
-      shipping: extraCharge,
-      payment: document.querySelector('input[name="payment"]:checked').value,
-      name: document.getElementById("name").value.trim(),
-      email: document.getElementById("email").value.trim(),
-      phone: document.getElementById("phone").value.trim(),
-      address: document.getElementById("address").value.trim() || "N/A",
-      subtotal: baseTotal,
-      total: baseTotal+extraCharge,
-      timestamp: new Date().toISOString()
+    minus.onclick = () => {
+      const c = getCart();
+      c[idx].quantity = Math.max(1, Number(c[idx].quantity||1) - 1);
+      setCart(c); refresh();
+    };
+    plus.onclick = () => {
+      const c = getCart();
+      c[idx].quantity = Math.max(1, Number(c[idx].quantity||1) + 1);
+      setCart(c); refresh();
+    };
+    qIn.onchange = () => {
+      const v = Math.max(1, Number(qIn.value || 1));
+      const c = getCart();
+      c[idx].quantity = v;
+      setCart(c); refresh();
+    };
+    rm.onclick = () => {
+      const c = getCart();
+      c.splice(idx, 1);
+      setCart(c); refresh();
     };
 
-    // Verify stock + decrement
-    try{
-      document.getElementById('confirm').disabled = true;
-      status.textContent = 'Checking stock…';
-      await verifyAndDecrementStock(cart);
-    }catch(err){
-      document.getElementById('confirm').disabled = false;
-      alert("Stock error: " + err.message);
-      return;
-    }
-
-    // Save order to Realtime DB
-    try{
-      status.textContent = 'Placing order…';
-      const newOrderRef = firebase.database().ref('orders').push();
-      await newOrderRef.set(order);
-      alert("Order confirmed! Thank you for shopping with B's Beauty Blossom.");
-
-      localStorage.removeItem("cart");
-      loadCart();
-      updateBadge();
-      window.location.href="index.html";
-    }catch(err){
-      alert("Error saving order: " + err.message);
-      document.getElementById('confirm').disabled = false;
-    }
+    list.appendChild(line);
   });
 
-  // Init
-  loadCart();
-  updateBadge();
+  recalcTotals();
+}
+
+function recalcTotals(){
+  const cart = getCart();
+  baseTotal = cart.reduce((sum, it) => sum + Number(it.price||0) * Number(it.quantity||1), 0);
+  document.getElementById('total').textContent = 'Total: ' + formatRs(baseTotal + extraCharge);
+
+  // badge
+  const badge = document.getElementById('cart-count');
+  if (badge) badge.textContent = String(cartCount(cart));
+}
+
+function refresh(){ renderCart(); }
+
+/* ---------- Delivery / Payment logic ---------- */
+const deliveryForm     = document.getElementById('delivery-form');
+const customerInfo     = document.getElementById('customer-info');
+const addressSectionEl = document.getElementById('address'); // we will just toggle required
+const juiceSection     = document.getElementById('juice-section');
+
+document.querySelectorAll('input[name="delivery"]').forEach(r => {
+  r.addEventListener('change', () => {
+    customerInfo.style.display = 'block';
+
+    if (r.value === 'Postage') {
+      extraCharge = 125;
+      addressSectionEl.required = true;
+    } else if (r.value === 'Delivery') {
+      extraCharge = 150;
+      addressSectionEl.required = true;
+    } else {
+      extraCharge = 0;
+      addressSectionEl.required = false;
+    }
+    recalcTotals();
+
+    // Restrict payment when shipping
+    document.querySelectorAll('input[name="payment"]').forEach(p => {
+      if (r.value !== 'Pick Up' && p.value === 'Pick Up Payment') {
+        p.checked = false; p.disabled = true;
+      } else {
+        p.disabled = false;
+      }
+    });
+
+    const checked = document.querySelector('input[name="payment"]:checked');
+    juiceSection.style.display = (checked && checked.value === 'Juice') ? 'block' : 'none';
+  });
+});
+
+document.querySelectorAll('input[name="payment"]').forEach(p => {
+  p.addEventListener('change', () => {
+    juiceSection.style.display = (p.value === 'Juice') ? 'block' : 'none';
+  });
+});
+
+/* ---------- Validation ---------- */
+function validateForm(){
+  const phone = document.getElementById("phone").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const delivery = document.querySelector('input[name="delivery"]:checked')?.value;
+  const payment  = document.querySelector('input[name="payment"]:checked')?.value;
+
+  if(!/^5\d{7}$/.test(phone)){
+    alert("Phone must start with 5 and be 8 digits.");
+    return false;
+  }
+  if(!email.includes("@")){
+    alert("Enter a valid email.");
+    return false;
+  }
+  if ((delivery === "Postage" || delivery === "Delivery") && payment !== "Juice") {
+    alert("For Postage/Delivery, payment must be Juice.");
+    return false;
+  }
+  return true;
+}
+
+/* ---------- Submit Order to RTDB (/orders) ---------- */
+deliveryForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  if(!validateForm()) return;
+
+  const cart = getCart();
+  if(!cart.length){ alert("Cart is empty."); return; }
+
+  const delivery = document.querySelector('input[name="delivery"]:checked').value;
+  const payment  = document.querySelector('input[name="payment"]:checked').value;
+
+  const order = {
+    items: cart.map(i => ({
+      name: i.name,
+      qty: Number(i.quantity||1),
+      unitPrice: Number(i.price||0),
+      imageURL: i.imageURL || null
+    })),
+    shipping: (delivery === 'Delivery') ? 150 : (delivery === 'Postage') ? 125 : 0,
+    total: baseTotal + extraCharge,
+    timestamp: new Date().toISOString(),
+
+    // customer
+    name: document.getElementById("name").value.trim(),
+    email: document.getElementById("email").value.trim(),
+    phone: document.getElementById("phone").value.trim(),
+    address: document.getElementById("address").value.trim() || "N/A",
+
+    // convenience flags
+    delivery: delivery === 'Delivery' ? 'Delivery' : null,
+    postage:  delivery === 'Postage'  ? 'Postage'  : null,
+    pickup:   delivery === 'Pick Up'  ? 'Pick Up'  : null,
+    payment
+  };
+
+  try {
+    const ref = firebase.database().ref('orders').push();
+    await ref.set(order);
+
+    alert("Order confirmed! Thank you for shopping with B’s Beauty Blossom.");
+    localStorage.removeItem("cart");
+    window.location.href = "index.html";
+  } catch (err) {
+    console.error(err);
+    alert("Could not confirm order: " + (err?.message || err));
+  }
+});
+
+/* ---------- Init ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+  // hamburger open/close
+  const hamburger = document.querySelector('.hamburger');
+  const nav = document.querySelector('.nav-links');
+  if (hamburger && nav) {
+    hamburger.addEventListener('click', () => {
+      nav.classList.toggle('show');
+      const expanded = nav.classList.contains('show');
+      hamburger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    });
+  }
+
+  renderCart();
+});
 </script>
 </body>
 </html>
