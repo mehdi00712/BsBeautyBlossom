@@ -1,4 +1,4 @@
-// product-detail.js
+// product-detail.js — product page with stock control + gallery
 (function(){
   const $ = (s)=>document.querySelector(s);
   const params = new URLSearchParams(location.search);
@@ -16,13 +16,36 @@
   const btnDec = $('#qty-dec');
   const btnInc = $('#qty-inc');
 
+  const stockBadgeId = 'pd-oos-msg';
+  const money = (n)=>'Rs'+Number(n||0).toFixed(0);
+
   if (!id) {
     nameEl.textContent = 'Product not found';
     hero.src = 'https://via.placeholder.com/800x800?text=Not+Found';
+    addBtn.disabled = true;
     return;
   }
 
-  const money = (n)=>'Rs'+Number(n||0).toFixed(0);
+  function mountOOS(msg){
+    let el = document.getElementById(stockBadgeId);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = stockBadgeId;
+      el.style.marginTop = '8px';
+      el.className = 'muted';
+      addBtn.insertAdjacentElement('beforebegin', el);
+    }
+    el.textContent = msg;
+  }
+  function clearOOS(){
+    const el = document.getElementById(stockBadgeId);
+    if (el) el.textContent = '';
+  }
+
+  function setQty(n, max) {
+    const v = Math.max(1, Math.min(Number(n||1), Number(max||9999)));
+    qtyVal.textContent = v;
+  }
 
   function renderSizes(p){
     sizeSel.innerHTML = '';
@@ -31,28 +54,100 @@
       sizes.forEach(s=>{
         const opt = document.createElement('option');
         opt.value = s.label;
-        opt.textContent = `${s.label} — ${money(s.price)}`;
+        opt.textContent = s.stock === 0
+          ? `${s.label} — Out of stock`
+          : `${s.label} — ${money(s.price)}` + (typeof s.stock === 'number' ? ` — ${s.stock} left` : '');
         opt.dataset.price = Number(s.price||0);
+        if (typeof s.stock === 'number') opt.dataset.stock = String(s.stock);
         sizeSel.appendChild(opt);
       });
     } else {
-      // single price fallback
       const opt = document.createElement('option');
       opt.value = 'default';
-      opt.textContent = money(p.basePrice||0);
+      opt.textContent = `${money(p.basePrice||0)}` + (typeof p.stock === 'number' ? ` — ${p.stock} left` : '');
       opt.dataset.price = Number(p.basePrice||0);
+      if (typeof p.stock === 'number') opt.dataset.stock = String(p.stock);
       sizeSel.appendChild(opt);
     }
-    // update price display
-    const firstPrice = Number(sizeSel.options[0]?.dataset.price||0);
-    priceEl.textContent = money(firstPrice);
+    updatePriceAndStock();
   }
 
+  function currentStock(){
+    const opt = sizeSel.selectedOptions[0];
+    const s = opt?.dataset?.stock;
+    return (s === undefined) ? null : Number(s);
+  }
+  function currentPrice(){
+    return Number(sizeSel.selectedOptions[0]?.dataset?.price || 0);
+  }
+
+  function updatePriceAndStock(){
+    const st = currentStock();
+    priceEl.textContent = money(currentPrice());
+
+    if (st !== null) {
+      if (st <= 0) {
+        addBtn.disabled = true;
+        addBtn.classList.add('disabled');
+        mountOOS('Out of stock');
+        setQty(1, 1);
+      } else {
+        addBtn.disabled = false;
+        addBtn.classList.remove('disabled');
+        clearOOS();
+        setQty(1, st);
+      }
+    } else {
+      addBtn.disabled = false;
+      addBtn.classList.remove('disabled');
+      clearOOS();
+      setQty(1, 9999);
+    }
+  }
+
+  sizeSel.addEventListener('change', updatePriceAndStock);
+
+  btnDec.addEventListener('click', ()=>{
+    const st = currentStock();
+    setQty(Number(qtyVal.textContent) - 1, st ?? 9999);
+  });
+  btnInc.addEventListener('click', ()=>{
+    const st = currentStock();
+    setQty(Number(qtyVal.textContent) + 1, st ?? 9999);
+  });
+
+  addBtn.addEventListener('click', ()=>{
+    if (addBtn.disabled) return;
+
+    const qty = Number(qtyVal.textContent||1) || 1;
+    const st = currentStock();
+    if (st !== null && qty > st) {
+      alert('Not enough stock.');
+      return;
+    }
+
+    const label = sizeSel.value;
+    const unitPrice = currentPrice();
+
+    const item = {
+      id,
+      name: `${nameEl.textContent}${label && label!=='default' ? ' ('+label+')' : ''}`,
+      price: unitPrice,
+      qty,
+      imageURL: hero.src
+    };
+    const cart = JSON.parse(localStorage.getItem('cart')||'[]');
+    cart.push(item);
+    localStorage.setItem('cart', JSON.stringify(cart));
+    const count = cart.reduce((s,i)=>s+(Number(i.qty || i.quantity || 1)||1),0);
+    const badge = document.getElementById('cart-count');
+    if (badge) badge.textContent = count;
+    alert('Added to cart!');
+  });
+
   function renderGallery(imgs){
-    // imgs = array of urls
     if (!imgs.length) {
-      const ph = 'https://via.placeholder.com/900x900?text=No+Image';
-      hero.src = ph;
+      hero.src = 'https://via.placeholder.com/900x900?text=No+Image';
       thumbs.innerHTML = '';
       return;
     }
@@ -71,47 +166,13 @@
     });
   }
 
-  function setQty(n){
-    const v = Math.max(1, Number(n||1));
-    qtyVal.textContent = v;
-  }
-
-  btnDec.addEventListener('click', ()=>setQty(Number(qtyVal.textContent)-1));
-  btnInc.addEventListener('click', ()=>setQty(Number(qtyVal.textContent)+1));
-
-  sizeSel.addEventListener('change', ()=>{
-    const p = Number(sizeSel.selectedOptions[0]?.dataset.price||0);
-    priceEl.textContent = money(p);
-  });
-
-  addBtn.addEventListener('click', ()=>{
-    const qty = Number(qtyVal.textContent||1) || 1;
-    const label = sizeSel.value;
-    const unitPrice = Number(sizeSel.selectedOptions[0]?.dataset.price||0) || 0;
-
-    const item = {
-      id,
-      name: `${nameEl.textContent}${label && label!=='default' ? ' ('+label+')' : ''}`,
-      price: unitPrice,
-      qty,
-      imageURL: hero.src
-    };
-    const cart = JSON.parse(localStorage.getItem('cart')||'[]');
-    cart.push(item);
-    localStorage.setItem('cart', JSON.stringify(cart));
-    const count = cart.reduce((s,i)=>s+(Number(i.qty || i.quantity || 1)||1),0);
-    const badge = document.getElementById('cart-count');
-    if (badge) badge.textContent = count;
-    alert('Added to cart!');
-  });
-
-  // Fetch product
-  async function load(){
+  async function load() {
     try {
       const doc = await db.collection('products').doc(id).get();
       if (!doc.exists) {
         nameEl.textContent = 'Product not found';
         hero.src = 'https://via.placeholder.com/800x800?text=Not+Found';
+        addBtn.disabled = true;
         return;
       }
       const p = doc.data();
@@ -119,22 +180,18 @@
       nameEl.textContent = p.name || 'Product';
       brandEl.textContent = p.brand ? p.brand : '';
       descEl.textContent = p.description || '—';
+
       renderSizes(p);
 
-      // Build gallery images list: array 'images' + main 'imageURL'
       const gallery = [];
-      if (Array.isArray(p.images)) {
-        p.images.filter(Boolean).forEach(u=>gallery.push(u));
-      }
-      if (p.imageURL) {
-        // put the main image first if not already included
-        if (!gallery.length || gallery[0] !== p.imageURL) gallery.unshift(p.imageURL);
-      }
+      if (Array.isArray(p.images)) p.images.filter(Boolean).forEach(u=>gallery.push(u));
+      if (p.imageURL && (!gallery.length || gallery[0] !== p.imageURL)) gallery.unshift(p.imageURL);
       renderGallery(gallery);
     } catch (e) {
       console.error('Load product error:', e);
       nameEl.textContent = 'Product not found';
       hero.src = 'https://via.placeholder.com/800x800?text=Error';
+      addBtn.disabled = true;
     }
   }
 
