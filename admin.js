@@ -15,9 +15,12 @@
 
   // Allow ANY signed-in user by default. Flip to true + add UIDs to restrict.
   const requireWhitelist = false;
-  const ALLOWED_ADMIN_UIDS = new Set([
-    // "w5jtigflSVezQwUvnsgM7AY4ZK73"  // add your UID if you want to restrict
-  ]);
+// admin.js
+const ALLOWED_ADMIN_UIDS = new Set([
+  "w5jtigflSVezQwUvnsgM7AY4ZK73",     // your current UID
+  "nyQYzolZI2fLFqIkAPNHHbcSJ2p1"      // NEW admin UID
+]);
+
 
   function showHelp(message, hint){
     authHelp.textContent = message + (hint? " — " + hint : "");
