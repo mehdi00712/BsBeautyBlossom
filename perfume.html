@@ -4,13 +4,18 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Perfume – B’s Beauty Blossom</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
+
 <header>
   <nav class="navbar">
-    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
+    <div class="logo">
+      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
+    </div>
     <ul class="nav-links">
+      <li class="nav-close" aria-label="Close menu">&times;</li>
       <li><a href="index.html">Home</a></li>
       <li><a class="active" href="perfume.html">Perfume</a></li>
       <li><a href="body.html">Body</a></li>
@@ -23,28 +28,33 @@
     </ul>
     <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
   </nav>
-  <div id="nav-overlay"></div>
 </header>
-
-<div class="search-container">
-  <input id="search-bar" type="text" placeholder="Search by brand or product name…">
-</div>
 
 <section class="section">
   <div class="section-header">
     <h1 class="page-title">Perfume</h1>
+
+    <!-- Optional: a simple sort (not required for grouping) -->
+    <!--
     <div class="sort-wrap">
       <label for="sort">Sort</label>
       <select id="sort">
-        <option value="rec">Recommended</option>
-        <option value="az">Name A–Z</option>
-        <option value="za">Name Z–A</option>
-        <option value="low">Price low→high</option>
-        <option value="high">Price high→low</option>
+        <option value="recommended">Recommended</option>
+        <option value="price-asc">Price: Low → High</option>
+        <option value="price-desc">Price: High → Low</option>
       </select>
     </div>
+    -->
   </div>
-  <div id="product-grid" class="product-grid"><p>Loading…</p></div>
+
+  <!-- Search (optional, if you use global search.js) -->
+  <div class="search-container" style="margin:0 0 14px">
+    <input type="text" id="search-bar" placeholder="Search by brand or product name…">
+    <ul id="search-suggestions" class="search-suggestions"></ul>
+  </div>
+
+  <!-- BRAND GROUPS WILL RENDER HERE -->
+  <div id="brand-container"></div>
 </section>
 
 <footer class="site-footer">
@@ -56,8 +66,15 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<script>window.PRODUCT_CATEGORY = 'perfume';</script>
-<script src="products.js"></script>
-<script src="script.js"></script>
+<!-- Navbar + cart badge -->
+<script src="script.js" defer></script>
+
+<!-- Category renderer (group by brand) -->
+<script>window.PRODUCT_CATEGORY='perfume';</script>
+<script src="products.js" defer></script>
+
+<!-- Optional: your global search/autocomplete -->
+<!-- <script src="search.js" defer></script> -->
+
 </body>
 </html>
