@@ -1,361 +1,247 @@
-// admin.js — full admin (auth + site settings + product CRUD + Cloudinary upload)
-
-// ---------- Guards ----------
-if (!window.firebase || !window.db || !window.auth) {
-  throw new Error("❌ Firebase not initialized: make sure firebase-*-compat.js + firebase-config.js are loaded BEFORE admin.js");
-}
-if (!window.CLOUDINARY_CLOUD_NAME || !window.CLOUDINARY_UPLOAD_PRESET) {
-  console.warn("ℹ️ Cloudinary config missing; image uploads will be skipped.");
-}
-
-// ---------- Allowed Admins ----------
-const ALLOWED_ADMIN_UIDS = new Set([
-  "w5jtigflSVezQwUvnsgM7AY4ZK73",
-  "nyQYzolZI2fLFqIkAPNHHbcSJ2p1",
-]);
-
-// ---------- Shortcuts ----------
-const $  = (s) => document.querySelector(s);
-const $$ = (s) => Array.from(document.querySelectorAll(s));
-
-// ---------- Auth UI ----------
-const emailEl   = $("#email");
-const passEl    = $("#password");
-const loginBtn  = $("#loginBtn");
-const logoutBtn = $("#logoutBtn");
-const statusEl  = $("#auth-status");
-
-// Sections
-const siteSection    = $("#site-section");
-const productSection = $("#product-section");
-const listSection    = $("#list-section");
-
-// Product form
-const categoryEl = $("#category");
-const nameEl     = $("#name");
-const priceEl    = $("#price");
-const brandEl    = $("#brand");
-const sizesEl    = $("#sizes");
-const descEl     = $("#description");
-const imagesEl   = $("#images");
-const activeEl   = $("#active");
-const saveBtn    = $("#saveBtn");
-const resetBtn   = $("#resetBtn");
-const docIdEl    = $("#docId");
-
-// Product list
-const tableBody      = $("#tableBody");
-const filterCategory = $("#filterCategory");
-const refreshBtn     = $("#refreshBtn");
-
-// Site settings
-const siteHeroTitle      = $("#site-heroTitle");
-const siteHeroSubtitle   = $("#site-heroSubtitle");
-const siteFeaturedCat    = $("#site-featuredCategory");
-const siteShowFeatured   = $("#site-showFeatured");
-const siteBannerInput    = $("#site-banner");
-const siteGalleryInput   = $("#site-gallery");
-const siteBannerPreview  = $("#site-banner-preview");
-const siteGalleryPreview = $("#site-gallery-preview");
-const siteSaveBtn        = $("#site-save");
-const siteReloadBtn      = $("#site-reload");
-const siteStatus         = $("#site-status");
-
-// ---------- Helpers ----------
-const parseSizes = (t) =>
-  String(t || "")
-    .split("\n")
-    .map(l => l.trim())
-    .filter(Boolean)
-    .map(line => {
-      const [labelRaw, priceRaw] = line.split("|").map(x => String(x || "").trim());
-      const price = Number(priceRaw || 0);
-      return { label: labelRaw || "", price: isNaN(price) ? 0 : price };
-    });
-
-const renderSizes = (sizesArr=[]) =>
-  sizesArr.map(s => `${s.label} (Rs${Number(s.price||0)})`).join(", ");
-
-const resetForm = () => {
-  docIdEl.value = "";
-  nameEl.value = "";
-  priceEl.value = "";
-  brandEl.value = "";
-  sizesEl.value = "";
-  descEl.value = "";
-  imagesEl.value = "";
-  activeEl.checked = true;
-  categoryEl.value = "perfume";
-};
-
-const nowTs = () => firebase.firestore.FieldValue.serverTimestamp();
-
-// Cloudinary unsigned upload (returns array of URLs)
-async function uploadImagesIfAny(files) {
-  const urls = [];
-  if (!files || !files.length) return urls;
-
-  if (!window.CLOUDINARY_CLOUD_NAME || !window.CLOUDINARY_UPLOAD_PRESET) {
-    alert("Cloudinary not configured; images will not be uploaded.");
-    return urls;
+// admin.js — no-login version
+(function () {
+  if (!window.db) {
+    console.error("❌ Firebase not initialized: ensure firebase-app-compat.js + firebase-config.js loaded first.");
+    alert("Firebase not initialized. Check firebase-config.js.");
+    return;
   }
 
-  for (const file of files) {
+  // ---------- Helpers ----------
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => Array.from(document.querySelectorAll(s));
+
+  const toNumber = (v) => (v === "" || v == null ? 0 : Number(v));
+  const parseSizes = (t) =>
+    String(t || "")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((l) => {
+        let [label, p] = l.split("|").map((x) => (x || "").trim());
+        return { label, price: Number(p || 0) };
+      });
+
+  const renderSizes = (arr) =>
+    (arr || []).map((s) => `${s.label} (${isFinite(s.price) ? "Rs" + s.price : "-"})`).join(", ");
+
+  const cloudName = window.CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = window.CLOUDINARY_UPLOAD_PRESET;
+
+  async function uploadToCloudinary(file) {
+    const url = `https://api.cloudinary.com/v1_1/${cloudName}/upload`;
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("upload_preset", window.CLOUDINARY_UPLOAD_PRESET);
-    try {
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${window.CLOUDINARY_CLOUD_NAME}/upload`, {
-        method: "POST",
-        body: fd,
-      });
-      const json = await res.json();
-      if (json.secure_url) {
-        urls.push(json.secure_url);
-      } else {
-        console.error("Cloudinary upload error:", json);
-        alert("An image failed to upload. Check console for details.");
-      }
-    } catch (e) {
-      console.error("Cloudinary upload failed:", e);
-      alert("Network error while uploading image.");
-    }
+    fd.append("upload_preset", uploadPreset);
+    const res = await fetch(url, { method: "POST", body: fd });
+    if (!res.ok) throw new Error("Cloudinary upload failed");
+    const data = await res.json();
+    return data.secure_url;
   }
-  return urls;
-}
 
-// ---------- Auth Events ----------
-loginBtn?.addEventListener("click", async () => {
-  const email = emailEl.value.trim();
-  const pass  = passEl.value.trim();
-  try {
-    await auth.signInWithEmailAndPassword(email, pass);
-  } catch (e) {
-    alert("Login failed: " + e.message);
-  }
-});
+  // ---------- Site Settings ----------
+  const siteDocRef = db.collection("site").doc("home");
+  const site = {
+    heroTitle: $("#site-heroTitle"),
+    heroSubtitle: $("#site-heroSubtitle"),
+    featuredCategory: $("#site-featuredCategory"),
+    showFeatured: $("#site-showFeatured"),
+    wa: $("#site-wa"),
+    ig: $("#site-ig"),
+    tt: $("#site-tt"),
+    banner: $("#site-banner"),
+    bannerPreview: $("#site-banner-preview"),
+    gallery: $("#site-gallery"),
+    galleryPreview: $("#site-gallery-preview"),
+    saveBtn: $("#site-save"),
+    reloadBtn: $("#site-reload"),
+    status: $("#site-status"),
+  };
 
-logoutBtn?.addEventListener("click", () => auth.signOut());
-
-auth.onAuthStateChanged((user) => {
-  const ok = !!(user && ALLOWED_ADMIN_UIDS.has(user.uid));
-  statusEl.textContent = user
-    ? (ok ? `Signed in as ${user.email || user.uid}` : "Not authorized")
-    : "Please log in.";
-
-  loginBtn.style.display  = user ? "none" : "inline-block";
-  logoutBtn.style.display = user ? "inline-block" : "none";
-
-  siteSection.style.display    = ok ? "block" : "none";
-  productSection.style.display = ok ? "block" : "none";
-  listSection.style.display    = ok ? "block" : "none";
-
-  if (ok) {
-    loadProducts();
-    loadSiteSettings();
-  }
-});
-
-// ---------- Site Settings (load/save) ----------
-async function loadSiteSettings() {
-  try {
-    siteStatus.textContent = "Loading site settings…";
-    const snap = await db.collection("site").doc("home").get();
+  async function loadSite() {
+    site.status.textContent = "Loading…";
+    const snap = await siteDocRef.get();
     const data = snap.exists ? snap.data() : {};
+    site.heroTitle.value = data.heroTitle || "";
+    site.heroSubtitle.value = data.heroSubtitle || "";
+    site.featuredCategory.value = (data.featuredCategory || "perfume").toLowerCase();
+    site.showFeatured.checked = !!data.showFeatured;
+    site.wa.value = data.whatsapp || "https://wa.me/23058195560";
+    site.ig.value = data.instagram || "https://www.instagram.com/yourusername";
+    site.tt.value = data.tiktok || "https://www.tiktok.com/@yourusername";
 
-    siteHeroTitle.value    = data.heroTitle || "";
-    siteHeroSubtitle.value = data.heroSubtitle || "";
-    siteFeaturedCat.value  = data.featuredCategory || "perfume";
-    siteShowFeatured.checked = !!data.showFeatured;
-
-    // Previews (not editable until upload)
-    siteBannerPreview.innerHTML = data.bannerImage
-      ? `<img src="${data.bannerImage}" alt="banner" style="width:120px;height:120px;object-fit:cover;border:1px solid #eee;border-radius:8px">`
-      : `<div class="muted">No banner set.</div>`;
-
-    siteGalleryPreview.innerHTML = (Array.isArray(data.gallery) && data.gallery.length)
-      ? data.gallery.map(u => `<img src="${u}" alt="g" style="width:80px;height:80px;object-fit:cover;border:1px solid #eee;border-radius:8px">`).join("")
-      : `<div class="muted">No gallery images.</div>`;
-
-    siteStatus.textContent = "Ready.";
-  } catch (e) {
-    console.error(e);
-    siteStatus.textContent = "Failed to load site settings.";
+    site.bannerPreview.innerHTML = data.bannerImage ? `<img src="${data.bannerImage}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">` : "";
+    site.galleryPreview.innerHTML = Array.isArray(data.gallery)
+      ? data.gallery
+          .map((u) => `<img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`)
+          .join("")
+      : "";
+    site.status.textContent = "Ready.";
   }
-}
 
-siteReloadBtn?.addEventListener("click", loadSiteSettings);
+  site.reloadBtn.addEventListener("click", loadSite);
 
-siteSaveBtn?.addEventListener("click", async () => {
-  try {
-    siteStatus.textContent = "Saving…";
-    let bannerURL = null;
-    let galleryURLs = null;
+  site.saveBtn.addEventListener("click", async () => {
+    try {
+      site.status.textContent = "Saving…";
+      let bannerURL;
+      if (site.banner.files[0]) {
+        bannerURL = await uploadToCloudinary(site.banner.files[0]);
+      }
+      let galleryURLs = null;
+      if (site.gallery.files.length) {
+        const uploads = [];
+        for (const f of site.gallery.files) uploads.push(uploadToCloudinary(f));
+        galleryURLs = await Promise.all(uploads);
+      }
 
-    // upload banner (replace)
-    if (siteBannerInput.files && siteBannerInput.files[0]) {
-      const [u] = await uploadImagesIfAny([siteBannerInput.files[0]]);
-      bannerURL = u || null;
+      const payload = {
+        heroTitle: site.heroTitle.value.trim(),
+        heroSubtitle: site.heroSubtitle.value.trim(),
+        featuredCategory: site.featuredCategory.value,
+        showFeatured: site.showFeatured.checked,
+        whatsapp: site.wa.value.trim(),
+        instagram: site.ig.value.trim(),
+        tiktok: site.tt.value.trim(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+      if (bannerURL) payload.bannerImage = bannerURL;
+      if (galleryURLs) payload.gallery = galleryURLs;
+
+      await siteDocRef.set(payload, { merge: true });
+      site.status.textContent = "Saved ✓";
+      await loadSite();
+    } catch (e) {
+      console.error(e);
+      site.status.textContent = "Error saving site settings.";
+      alert("Error: " + e.message);
     }
+  });
 
-    // upload gallery (overwrite)
-    if (siteGalleryInput.files && siteGalleryInput.files.length) {
-      galleryURLs = await uploadImagesIfAny(siteGalleryInput.files);
-    }
+  loadSite();
 
-    const update = {
-      heroTitle: siteHeroTitle.value.trim(),
-      heroSubtitle: siteHeroSubtitle.value.trim(),
-      featuredCategory: siteFeaturedCat.value,
-      showFeatured: !!siteShowFeatured.checked,
-      updatedAt: nowTs(),
-    };
-    if (bannerURL !== null) update.bannerImage = bannerURL;
-    if (galleryURLs !== null) update.gallery = galleryURLs;
+  // ---------- Products ----------
+  const nameEl = $("#name"),
+    priceEl = $("#price"),
+    brandEl = $("#brand"),
+    sizesEl = $("#sizes"),
+    descEl = $("#description"),
+    categoryEl = $("#category"),
+    activeEl = $("#active"),
+    imagesEl = $("#images"),
+    tableBody = $("#tableBody"),
+    filterCategory = $("#filterCategory"),
+    refreshBtn = $("#refreshBtn"),
+    resetBtn = $("#resetBtn"),
+    saveBtn = $("#saveBtn"),
+    docIdEl = $("#docId");
 
-    await db.collection("site").doc("home").set(update, { merge: true });
-    siteStatus.textContent = "Saved!";
-    await loadSiteSettings();
-  } catch (e) {
-    console.error(e);
-    siteStatus.textContent = "Save failed.";
-    alert("Site settings save failed: " + e.message);
+  function resetForm() {
+    docIdEl.value =
+      nameEl.value =
+      priceEl.value =
+      brandEl.value =
+      sizesEl.value =
+      descEl.value =
+        "";
+    categoryEl.value = "perfume";
+    activeEl.checked = true;
+    imagesEl.value = "";
   }
-});
 
-// ---------- Product Save ----------
-saveBtn?.addEventListener("click", async () => {
-  try {
-    saveBtn.disabled = true;
+  resetBtn.addEventListener("click", resetForm);
 
-    const sizes = parseSizes(sizesEl.value);
-    const basePriceNum = Number(priceEl.value || 0) || 0;
-
-    // upload images
-    const imgs = await uploadImagesIfAny(imagesEl.files);
-    const payload = {
-      name: nameEl.value.trim(),
-      basePrice: basePriceNum,
-      brand: brandEl.value.trim(),
-      sizes,
-      description: descEl.value.trim(),
-      active: !!activeEl.checked,
-      category: String(categoryEl.value || "").toLowerCase(),
-      updatedAt: nowTs(),
-    };
-    if (imgs.length) {
-      // keep first as imageURL, store array in images
-      payload.imageURL = imgs[0];
-      payload.images = imgs;
-    }
-
-    const id = docIdEl.value || db.collection("products").doc().id;
-
-    if (docIdEl.value) {
-      // update
-      await db.collection("products").doc(id).set(payload, { merge: true });
-    } else {
-      // create
-      payload.createdAt = nowTs();
-      await db.collection("products").doc(id).set(payload);
-    }
-
-    alert("Saved!");
-    resetForm();
-    await loadProducts();
-  } catch (e) {
-    console.error("Save error:", e);
-    alert("Save failed: " + e.message);
-  } finally {
-    saveBtn.disabled = false;
-  }
-});
-
-resetBtn?.addEventListener("click", resetForm);
-
-// ---------- Product List (load, edit, delete) ----------
-async function loadProducts() {
-  try {
-    tableBody.innerHTML = `<tr><td colspan="6">Loading…</td></tr>`;
-    const cat = String(filterCategory.value || "perfume").toLowerCase();
-    const snap = await db.collection("products").where("category", "==", cat).get();
-
+  async function loadProducts() {
+    tableBody.innerHTML = "<tr><td colspan='6'>Loading…</td></tr>";
+    const snap = await db.collection("products").where("category", "==", filterCategory.value).get();
     if (snap.empty) {
-      tableBody.innerHTML = `<tr><td colspan="6">No products</td></tr>`;
+      tableBody.innerHTML = "<tr><td colspan='6'>No products</td></tr>";
       return;
     }
-
-    const rows = [];
+    tableBody.innerHTML = "";
     snap.forEach((doc) => {
-      const p = doc.data() || {};
-      rows.push({
-        id: doc.id,
-        name: p.name || "",
-        sizes: Array.isArray(p.sizes) ? p.sizes : [],
-        base: Number(p.basePrice || 0) || 0,
-        active: !!p.active,
-        img: p.imageURL || (Array.isArray(p.images) && p.images[0]) || "",
-      });
+      const p = doc.data();
+      const img = p.imageURL || (Array.isArray(p.images) && p.images[0]) || "";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${img ? `<img src="${img}" width="60" height="60" style="object-fit:cover;border-radius:6px;border:1px solid #e5e5e5">` : ""}</td>
+        <td>${p.name || ""}${p.brand ? `<div class="muted">${p.brand}</div>` : ""}</td>
+        <td>${renderSizes(p.sizes)}</td>
+        <td>Rs${Number(p.basePrice || 0).toFixed(2)}</td>
+        <td>${p.active ? "Yes" : "No"}</td>
+        <td>
+          <button class="btn edit" data-id="${doc.id}">Edit</button>
+          <button class="btn danger delete" data-id="${doc.id}">Delete</button>
+        </td>
+      `;
+      tableBody.appendChild(tr);
     });
 
-    tableBody.innerHTML = rows.map(r => `
-      <tr>
-        <td>${r.img ? `<img src="${r.img}" width="60" height="60" style="object-fit:cover;border-radius:6px;border:1px solid #eee">` : ""}</td>
-        <td>${r.name}</td>
-        <td>${renderSizes(r.sizes)}</td>
-        <td>Rs${r.base.toFixed(2)}</td>
-        <td>${r.active ? "Yes" : "No"}</td>
-        <td>
-          <button class="btn edit" data-id="${r.id}">Edit</button>
-          <button class="btn danger delete" data-id="${r.id}">Delete</button>
-        </td>
-      </tr>
-    `).join("");
-
-    // wire buttons
-    $$(".edit").forEach(b => b.addEventListener("click", () => editProduct(b.dataset.id)));
-    $$(".delete").forEach(b => b.addEventListener("click", () => deleteProduct(b.dataset.id)));
-  } catch (e) {
-    console.error("Load products error:", e);
-    tableBody.innerHTML = `<tr><td colspan="6">Error loading products</td></tr>`;
+    // bind actions
+    $$(".edit").forEach((b) =>
+      b.addEventListener("click", async () => {
+        const d = await db.collection("products").doc(b.dataset.id).get();
+        if (!d.exists) return;
+        const p = d.data();
+        docIdEl.value = d.id;
+        nameEl.value = p.name || "";
+        priceEl.value = p.basePrice || 0;
+        brandEl.value = p.brand || "";
+        sizesEl.value = (p.sizes || []).map((s) => `${s.label} | ${s.price}`).join("\n");
+        descEl.value = p.description || "";
+        categoryEl.value = p.category || "perfume";
+        activeEl.checked = !!p.active;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      })
+    );
+    $$(".delete").forEach((b) =>
+      b.addEventListener("click", async () => {
+        if (!confirm("Delete this product?")) return;
+        await db.collection("products").doc(b.dataset.id).delete();
+        loadProducts();
+      })
+    );
   }
-}
 
-async function editProduct(id) {
-  try {
-    const doc = await db.collection("products").doc(id).get();
-    if (!doc.exists) return alert("Product not found");
-    const p = doc.data();
+  refreshBtn.addEventListener("click", loadProducts);
+  filterCategory.addEventListener("change", loadProducts);
 
-    docIdEl.value = doc.id;
-    categoryEl.value = p.category || "perfume";
-    nameEl.value = p.name || "";
-    priceEl.value = Number(p.basePrice || 0) || 0;
-    brandEl.value = p.brand || "";
-    sizesEl.value = (Array.isArray(p.sizes) ? p.sizes : []).map(s => `${s.label} | ${s.price}`).join("\n");
-    descEl.value = p.description || "";
-    activeEl.checked = !!p.active;
+  async function saveProduct() {
+    try {
+      const id = docIdEl.value || db.collection("products").doc().id;
+      const sizes = parseSizes(sizesEl.value);
+      const data = {
+        name: nameEl.value.trim(),
+        basePrice: toNumber(priceEl.value),
+        brand: brandEl.value.trim(),
+        sizes,
+        description: (descEl.value || "").trim(),
+        category: categoryEl.value,
+        active: !!activeEl.checked,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+      if (!docIdEl.value) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
 
-    window.scrollTo({ top: productSection.offsetTop - 12, behavior: "smooth" });
-  } catch (e) {
-    console.error(e);
-    alert("Failed to load product for editing.");
+      // image uploads (optional)
+      if (imagesEl.files.length) {
+        const urls = [];
+        for (const f of imagesEl.files) urls.push(uploadToCloudinary(f));
+        const uploaded = await Promise.all(urls);
+        data.images = uploaded;
+        if (!data.imageURL && uploaded[0]) data.imageURL = uploaded[0];
+      }
+
+      await db.collection("products").doc(id).set(data, { merge: true });
+      alert("Saved ✓");
+      resetForm();
+      await loadProducts();
+    } catch (e) {
+      console.error(e);
+      alert("Save failed: " + e.message);
+    }
   }
-}
 
-async function deleteProduct(id) {
-  if (!confirm("Delete this product?")) return;
-  try {
-    await db.collection("products").doc(id).delete();
-    await loadProducts();
-  } catch (e) {
-    console.error(e);
-    alert("Delete failed: " + e.message);
-  }
-}
+  saveBtn.addEventListener("click", saveProduct);
 
-refreshBtn?.addEventListener("click", loadProducts);
-filterCategory?.addEventListener("change", loadProducts);
-
-// ---------- DONE ----------
-console.log("✅ Admin ready");
+  // initial load
+  loadProducts();
+})();
