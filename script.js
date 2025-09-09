@@ -1,21 +1,17 @@
-// script.js — slide-in mobile nav (no overlay) + cart badge
+// script.js — slide-in mobile nav (with ✖ close) + cart badge
 (function () {
   const hamburger = document.querySelector(".hamburger");
   const navLinks  = document.querySelector(".nav-links");
+  const navClose  = document.querySelector(".nav-close");
 
   function openMenu() {
     navLinks?.classList.add("show");
     hamburger?.setAttribute("aria-expanded", "true");
-    // optional: keep page scrollable; if you want to lock, uncomment:
-    // document.documentElement.style.overflow = "hidden";
-    // document.body.style.overflow = "hidden";
   }
 
   function closeMenu() {
     navLinks?.classList.remove("show");
     hamburger?.setAttribute("aria-expanded", "false");
-    // document.documentElement.style.overflow = "";
-    // document.body.style.overflow = "";
   }
 
   function toggleMenu() {
@@ -24,8 +20,9 @@
   }
 
   hamburger?.addEventListener("click", toggleMenu);
+  navClose?.addEventListener("click", closeMenu);
 
-  // Close when tapping a link
+  // Close when tapping any link inside the panel
   navLinks?.addEventListener("click", (e) => {
     if (e.target.closest("a")) closeMenu();
   });
@@ -38,7 +35,7 @@
     lastW = w;
   });
 
-  // ESC to close (optional)
+  // ESC to close
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeMenu();
   });
