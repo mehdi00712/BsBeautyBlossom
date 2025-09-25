@@ -13,7 +13,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="firebase-config.js"></script>
 
-  <!-- Cloudinary config (if you upload images from admin) -->
+  <!-- Cloudinary (if you upload product images from admin) -->
   <script>
     window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
     window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
@@ -73,7 +73,7 @@
     <span id="auth-status" class="muted"></span>
   </div>
 
-  <!-- Visible while logged OUT (or anytime) -->
+  <!-- Login form (always visible; admin sections appear only after allowed login) -->
   <section id="auth-section" class="card">
     <h2>Admin Login</h2>
     <div class="row row-2">
@@ -89,7 +89,7 @@
     <p class="muted" style="margin-top:8px">Tip: leave email/password empty to sign in with Google popup.</p>
   </section>
 
-  <!-- DASHBOARD CONTENT (hidden when logged out or when viewing Orders-only) -->
+  <!-- ADMIN SECTIONS (shown only when signed-in UID is allowlisted) -->
   <div id="dashboard-sections" class="hide">
     <!-- Site Settings -->
     <section id="site-section" class="card">
@@ -260,7 +260,7 @@
 <script src="admin.js" defer></script>
 <script src="script.js" defer></script>
 
-<!-- Filters + CSV (used by Orders) -->
+<!-- Orders: filters + CSV -->
 <script>
   (function(){
     const q = document.getElementById('orderSearch');
