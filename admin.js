@@ -1,4 +1,4 @@
-/* admin.js — Auth (login/logout with hide class toggling), allowlist-gated admin UI, Products/Site (Firestore), Orders (Realtime DB) */
+/* admin.js — Auth (login/logout), allowlist-gated admin UI, Products/Site (Firestore), Orders (Realtime DB with delete) */
 
 if (!window.firebase) throw new Error("❌ Firebase SDK missing");
 const auth = firebase.auth();
@@ -65,7 +65,6 @@ loginBtn?.addEventListener("click", async () => {
       await auth.signInWithPopup(provider);
     }
     authStatus && (authStatus.textContent = "✅ Logged in");
-    hide(loginBtn); show(logoutBtn);
   } catch (e) {
     authStatus && (authStatus.textContent = "❌ " + (e?.message || e));
     console.error(e);
@@ -74,11 +73,12 @@ loginBtn?.addEventListener("click", async () => {
 logoutBtn?.addEventListener("click", async () => {
   try { await auth.signOut(); authStatus && (authStatus.textContent = "Logged out"); }
   catch(e){ console.error(e); }
-  show(loginBtn); hide(logoutBtn);
 });
 
-/* ---------- Orders view toggle ---------- */
+/* ---------- Orders view toggle (guarded) ---------- */
 btnSeeOrders?.addEventListener("click", () => {
+  const u = auth.currentUser;
+  if (!canSeeAdmin(u)) return; // safety
   hide(dashboardWrap);
   show(ordersSection);
   show(btnBack);
@@ -95,7 +95,7 @@ btnBack?.addEventListener("click", () => {
 
 /* ---------- Orders (Realtime DB) ---------- */
 let ordersListenerAttached = false;
-function renderOrderRow(id, order){
+function rowHTML(id, order){
   const itemsText = Array.isArray(order.items)
     ? order.items.map(i=>`${i.name||i.title||'item'} x${i.qty||i.quantity||1}`).join(", ")
     : (order.items && typeof order.items==="object"
@@ -103,8 +103,7 @@ function renderOrderRow(id, order){
         : String(order.items||""));
   const status = (order.status || "pending").toLowerCase();
   const cls = {pending:"status pending", shipped:"status shipped", completed:"status completed"}[status] || "status";
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
+  return `
     <td data-col="id">${id}</td>
     <td data-col="name">${esc(order.name)}</td>
     <td data-col="email">${esc(order.email)}</td>
@@ -118,9 +117,9 @@ function renderOrderRow(id, order){
         <button class="btn sm" data-set-status="pending"   data-id="${id}">Pending</button>
         <button class="btn sm" data-set-status="shipped"   data-id="${id}">Shipped</button>
         <button class="btn sm" data-set-status="completed" data-id="${id}">Completed</button>
+        <button class="btn sm danger" data-delete-id="${id}">Delete</button>
       </div>
     </td>`;
-  return tr;
 }
 function attachOrdersListener(){
   if (ordersListenerAttached) return;
@@ -132,7 +131,11 @@ function attachOrdersListener(){
     ordersBody.innerHTML = "";
     const val = snap.val() || {};
     const rows = [];
-    Object.entries(val).forEach(([id, order])=> rows.push([order.timestamp||0, renderOrderRow(id, order||{})]));
+    Object.entries(val).forEach(([id, order])=> {
+      const tr = document.createElement("tr");
+      tr.innerHTML = rowHTML(id, order || {});
+      rows.push([order.timestamp||0, tr]);
+    });
     rows.sort((a,b)=>(new Date(b[0]).getTime()||0)-(new Date(a[0]).getTime()||0));
     rows.forEach(([,tr])=>ordersBody.appendChild(tr));
     ordersStatus && (ordersStatus.textContent = rows.length ? `Loaded ${rows.length} order(s).` : "No orders yet.");
@@ -143,22 +146,34 @@ function attachOrdersListener(){
   });
   ordersListenerAttached = true;
 }
-/* status buttons (delegated) */
+
+/* status + delete actions (delegated) */
 document.addEventListener("click", async (e)=>{
-  const b = e.target.closest("[data-set-status]");
-  if (!b) return;
-  const id = b.getAttribute("data-id");
-  const next = b.getAttribute("data-set-status");
-  try{
-    await firebase.database().ref(`orders/${id}`).update({ status: next, adminUpdatedAt: new Date().toISOString() });
-    const cell = b.closest("tr")?.querySelector('[data-col="status"]');
-    if (cell) {
-      const cls = {pending:"status pending", shipped:"status shipped", completed:"status completed"}[next] || "status";
-      cell.dataset.status = next;
-      cell.innerHTML = `<span class="${cls}">${next[0].toUpperCase()+next.slice(1)}</span>`;
-    }
-    window.__applyOrderFilters?.();
-  }catch(err){ console.error(err); alert("Failed to update status: " + (err?.message || err)); }
+  const setBtn = e.target.closest("[data-set-status]");
+  const delBtn = e.target.closest("[data-delete-id]");
+  if (setBtn){
+    const id = setBtn.getAttribute("data-id");
+    const next = setBtn.getAttribute("data-set-status");
+    try{
+      await firebase.database().ref(`orders/${id}`).update({ status: next, adminUpdatedAt: new Date().toISOString() });
+      const cell = setBtn.closest("tr")?.querySelector('[data-col="status"]');
+      if (cell) {
+        const cls = {pending:"status pending", shipped:"status shipped", completed:"status completed"}[next] || "status";
+        cell.dataset.status = next;
+        cell.innerHTML = `<span class="${cls}">${next[0].toUpperCase()+next.slice(1)}</span>`;
+      }
+      window.__applyOrderFilters?.();
+    }catch(err){ console.error(err); alert("Failed to update status: " + (err?.message || err)); }
+    return;
+  }
+  if (delBtn){
+    const id = delBtn.getAttribute("data-delete-id");
+    if (!confirm("Delete this order? This cannot be undone.")) return;
+    try{
+      await firebase.database().ref(`orders/${id}`).remove();
+      delBtn.closest("tr")?.remove();
+    }catch(err){ console.error(err); alert("Failed to delete: " + (err?.message || err)); }
+  }
 });
 
 /* ---------- Site Settings (Firestore) ---------- */
@@ -295,14 +310,15 @@ saveBtn?.addEventListener("click", async ()=>{
   }catch(e){ console.error(e); alert("Save failed: " + (e?.message || e)); }
 });
 
-/* ---------- Auth state: gate admin UI ---------- */
+/* ---------- Auth state: gate admin UI & See Orders ---------- */
 auth.onAuthStateChanged((user)=>{
   const loggedIn = !!user;
 
-  // Use class toggles so .hide !important is respected
+  // Toggle login/logout
   loggedIn ? hide(loginBtn) : show(loginBtn);
   loggedIn ? show(logoutBtn) : hide(logoutBtn);
 
+  // Status text
   if (authStatus) {
     if (!loggedIn) authStatus.textContent = "Please sign in.";
     else if (canSeeAdmin(user)) authStatus.textContent = `Signed in as ${user.email || user.uid}`;
@@ -310,6 +326,10 @@ auth.onAuthStateChanged((user)=>{
   }
 
   const allowed = loggedIn && canSeeAdmin(user);
+
+  // See Orders is ONLY visible for allowed admins
+  allowed ? show(btnSeeOrders) : hide(btnSeeOrders);
+
   if (allowed) {
     if (dashboardWrap) dashboardWrap.style.display = "block";
     if (siteSection)    siteSection.style.display    = "block";
@@ -324,6 +344,5 @@ auth.onAuthStateChanged((user)=>{
     if (listSection)    listSection.style.display    = "none";
     hide(ordersSection);
     hide(btnBack);
-    show(btnSeeOrders);
   }
 });
