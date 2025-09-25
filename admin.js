@@ -1,16 +1,22 @@
-/* admin.js — login present, safe DOM guards, Cloudinary uploads, Firestore CRUD + Orders toggle */
+/* admin.js — Auth, Site & Products (Firestore), Orders (Realtime DB) with toggle + status + CSV */
 
 if (!window.firebase) throw new Error("❌ Firebase SDK missing");
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ====================== Admin-only UIDs ====================== */
-const ALLOWED = [
+/* ====================== Admin allowlist ====================== */
+/* TIP: If you're seeing "Access denied", sign in and OPEN DevTools Console.
+   This script logs your UID so you can copy it below. */
+const ALLOWED_UIDS = [
   "RhMAQ5ey7zYdRLwtr5fxjqVrfgN2",
   "uufregjJNyXeLfjZ9bb0Aj8kzSh1"
 ];
+// Optional: allow by email too (easier when testing)
+const ALLOWED_EMAILS = [
+  // "you@example.com"
+];
 
-/* ====================== Tiny helpers ====================== */
+/* ====================== DOM helpers ====================== */
 const $  = (id) => document.getElementById(id);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const elExists = (...els) => els.every(Boolean);
@@ -58,67 +64,103 @@ async function uploadToCloudinary(file) {
   return data.secure_url;
 }
 
-/* ====================== Auth UI ====================== */
+/* ====================== UI refs ====================== */
 const loginBtn   = $("loginBtn");
 const logoutBtn  = $("logoutBtn");
 const authStatus = $("auth-status");
 const emailEl    = $("email");
 const passEl     = $("password");
 
-if (loginBtn) {
-  loginBtn.addEventListener("click", async () => {
-    try {
-      if (emailEl && passEl && emailEl.value && passEl.value) {
-        await auth.signInWithEmailAndPassword(emailEl.value.trim(), passEl.value.trim());
-      } else {
-        // Fallback to Google popup if no email/pass provided
-        const provider = new firebase.auth.GoogleAuthProvider();
-        await auth.signInWithPopup(provider);
-      }
-      authStatus && (authStatus.textContent = "✅ Logged in");
-    } catch (e) {
-      authStatus && (authStatus.textContent = "❌ " + (e && e.message ? e.message : e));
-    }
-  });
-}
-if (logoutBtn) {
-  logoutBtn.addEventListener("click", async () => {
-    await auth.signOut();
-    authStatus && (authStatus.textContent = "Logged out");
-  });
-}
-
-/* ====================== Sections (may be missing) ====================== */
 const siteSection    = $("site-section");
 const productSection = $("product-section");
 const listSection    = $("list-section");
 
-/* ====================== Dashboard ↔ Orders toggle ====================== */
-const dashboardWrap  = $("dashboard-sections");    // wrapper for all normal admin blocks
-const ordersSection  = $("orders-section");        // orders-only container (table)
+const dashboardWrap  = $("dashboard-sections");
+const ordersSection  = $("orders-section");
 const ordersStatus   = $("orders-status");
 const ordersBody     = $("orders-body");
 const btnSeeOrders   = $("btnSeeOrders");
 const btnBack        = $("btnBack");
 
-// Attach handlers if present
-if (btnSeeOrders) btnSeeOrders.addEventListener("click", () => {
-  if (dashboardWrap) dashboardWrap.classList.add("hide");
-  if (ordersSection) ordersSection.classList.remove("hide");
-  if (btnBack) btnBack.classList.remove("hide");
-  if (btnSeeOrders) btnSeeOrders.classList.add("hide");
-  if (ordersStatus) ordersStatus.textContent = "Loading orders…";
-  attachOrdersListener();
-});
-if (btnBack) btnBack.addEventListener("click", () => {
-  if (ordersSection) ordersSection.classList.add("hide");
-  if (dashboardWrap) dashboardWrap.classList.remove("hide");
-  if (btnBack) btnBack.classList.add("hide");
-  if (btnSeeOrders) btnSeeOrders.classList.remove("hide");
-});
+const orderSearch    = $("orderSearch");
+const orderStatusFilter = $("orderStatusFilter");
+const exportCsvBtn   = $("exportCsvBtn");
 
-/* ====================== Orders listener (Realtime DB) ====================== */
+/* ====================== Auth UI ====================== */
+if (loginBtn) {
+  loginBtn.addEventListener("click", async () => {
+    try {
+      if (emailEl?.value && passEl?.value) {
+        await auth.signInWithEmailAndPassword(emailEl.value.trim(), passEl.value.trim());
+      } else {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await auth.signInWithPopup(provider);
+      }
+      authStatus && (authStatus.textContent = "✅ Logged in");
+    } catch (e) {
+      authStatus && (authStatus.textContent = "❌ " + (e?.message || e));
+      console.error(e);
+    }
+  });
+}
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", async () => {
+    try {
+      await auth.signOut();
+      authStatus && (authStatus.textContent = "Logged out");
+    } catch (e) {
+      console.error(e);
+    }
+  });
+}
+
+/* ====================== Orders (Realtime DB) ====================== */
 let ordersListenerAttached = false;
+
+function canSeeAdmin(user){
+  if (!user) return false;
+  const allowedByUID = ALLOWED_UIDS.includes(user.uid);
+  const allowedByEmail = user.email && ALLOWED_EMAILS.map(e=>e.toLowerCase()).includes(user.email.toLowerCase());
+  return allowedByUID || allowedByEmail;
+}
+
+function renderOrderRow(id, order){
+  const itemsText = Array.isArray(order.items)
+    ? order.items.map(i => `${i.name || i.title || 'item'} x${i.qty || i.quantity || 1}`).join(", ")
+    : (order.items && typeof order.items === "object"
+        ? Object.values(order.items).map(i => `${i.name || i.title || 'item'} x${i.qty || i.quantity || 1}`).join(", ")
+        : String(order.items || ""));
+
+  const status = (order.status || "pending").toLowerCase();
+  const classes = {
+    pending: "status pending",
+    shipped: "status shipped",
+    completed: "status completed"
+  }[status] || "status";
+
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td data-col="id">${id}</td>
+    <td data-col="name">${esc(order.name)}</td>
+    <td data-col="email">${esc(order.email)}</td>
+    <td data-col="items">${esc(itemsText)}</td>
+    <td data-col="total">${fmtMoney(order.total)}</td>
+    <td data-col="address">${esc(order.address)}</td>
+    <td data-col="time">${fmtTime(order.timestamp)}</td>
+    <td data-col="status" data-status="${status}">
+      <span class="${classes}">${status[0].toUpperCase()+status.slice(1)}</span>
+    </td>
+    <td data-col="action">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn sm" data-set-status="pending"   data-id="${id}">Pending</button>
+        <button class="btn sm" data-set-status="shipped"   data-id="${id}">Shipped</button>
+        <button class="btn sm" data-set-status="completed" data-id="${id}">Completed</button>
+      </div>
+    </td>
+  `;
+  return tr;
+}
+
 function attachOrdersListener(){
   if (ordersListenerAttached) return;
   if (!firebase.database) {
@@ -126,33 +168,21 @@ function attachOrdersListener(){
     return;
   }
   const rtdb = firebase.database();
-  const ref = rtdb.ref("orders").limitToLast(300);
+  const ref = rtdb.ref("orders").limitToLast(500);
   ref.on("value", (snap)=>{
     if (!ordersBody) return;
     ordersBody.innerHTML = "";
     const val = snap.val() || {};
     const rows = [];
     Object.entries(val).forEach(([id, order])=>{
-      const itemsText = Array.isArray(order.items)
-        ? order.items.map(i => `${i.name || i.title || 'item'} x${i.qty || i.quantity || 1}`).join(", ")
-        : (order.items && typeof order.items === "object"
-            ? Object.values(order.items).map(i => `${i.name || i.title || 'item'} x${i.qty || i.quantity || 1}`).join(", ")
-            : String(order.items || ""));
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${id}</td>
-        <td>${esc(order.name)}</td>
-        <td>${esc(order.email)}</td>
-        <td>${esc(itemsText)}</td>
-        <td>${fmtMoney(order.total)}</td>
-        <td>${esc(order.address)}</td>
-        <td>${fmtTime(order.timestamp)}</td>
-      `;
-      rows.push([order.timestamp || 0, tr]);
+      rows.push([order.timestamp || 0, renderOrderRow(id, order || {})]);
     });
     rows.sort((a,b)=>(new Date(b[0]).getTime()||0)-(new Date(a[0]).getTime()||0));
     rows.forEach(([,tr])=>ordersBody.appendChild(tr));
     ordersStatus && (ordersStatus.textContent = rows.length ? `Loaded ${rows.length} order(s).` : "No orders yet.");
+
+    // Wire status buttons each refresh
+    $("[data-col='action']") // not a valid selector; do via querySelectorAll below
   }, (err)=>{
     console.error(err);
     ordersStatus && (ordersStatus.textContent = "Permission error or missing rules.");
@@ -160,7 +190,53 @@ function attachOrdersListener(){
   ordersListenerAttached = true;
 }
 
-/* ====================== Site Settings block ====================== */
+/* Add event delegation for status buttons */
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-set-status]");
+  if (!b) return;
+  const id = b.getAttribute("data-id");
+  const next = b.getAttribute("data-set-status");
+  if (!id || !next) return;
+  try {
+    const rtdb = firebase.database();
+    await rtdb.ref(`orders/${id}`).update({
+      status: next,
+      adminUpdatedAt: new Date().toISOString()
+    });
+    // Update the row in place (optional — listener will also update it)
+    const row = b.closest("tr");
+    const cell = row?.querySelector('[data-col="status"]');
+    if (cell) {
+      cell.dataset.status = next;
+      const cls = {pending:"status pending", shipped:"status shipped", completed:"status completed"}[next] || "status";
+      cell.innerHTML = `<span class="${cls}">${next[0].toUpperCase()+next.slice(1)}</span>`;
+    }
+    // Re-apply filters if active
+    window.__applyOrderFilters?.();
+  } catch (err) {
+    console.error(err);
+    alert("Failed to update status: " + (err?.message || err));
+  }
+});
+
+/* ====================== Toggle views ====================== */
+if (btnSeeOrders) btnSeeOrders.addEventListener("click", () => {
+  dashboardWrap?.classList.add("hide");
+  ordersSection?.classList.remove("hide");
+  btnBack?.classList.remove("hide");
+  btnSeeOrders?.classList.add("hide");
+  ordersStatus && (ordersStatus.textContent = "Loading orders…");
+  attachOrdersListener();
+});
+
+if (btnBack) btnBack.addEventListener("click", () => {
+  ordersSection?.classList.add("hide");
+  dashboardWrap?.classList.remove("hide");
+  btnBack?.classList.add("hide");
+  btnSeeOrders?.classList.remove("hide");
+});
+
+/* ====================== Site Settings (Firestore) ====================== */
 const site = {
   heroTitle: $("site-heroTitle"),
   heroSubtitle: $("site-heroSubtitle"),
@@ -225,12 +301,12 @@ if (site.saveBtn) {
       if (site.status) site.status.textContent = "Saving…";
 
       let bannerURL;
-      if (site.banner && site.banner.files && site.banner.files[0]) {
+      if (site.banner?.files?.[0]) {
         bannerURL = await uploadToCloudinary(site.banner.files[0]);
       }
 
       let galleryURLs = null;
-      if (site.gallery && site.gallery.files && site.gallery.files.length) {
+      if (site.gallery?.files?.length) {
         const uploads = [];
         for (const f of site.gallery.files) uploads.push(uploadToCloudinary(f));
         galleryURLs = await Promise.all(uploads);
@@ -260,7 +336,7 @@ if (site.saveBtn) {
   });
 }
 
-/* ====================== Products block ====================== */
+/* ====================== Products (Firestore) ====================== */
 const nameEl   = $("name");
 const priceEl  = $("price");
 const brandEl  = $("brand");
@@ -373,7 +449,7 @@ if (saveBtn) {
       };
       if (!docIdEl || !docIdEl.value) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
 
-      if (imagesEl && imagesEl.files && imagesEl.files.length) {
+      if (imagesEl?.files?.length) {
         const uploads = [];
         for (const f of imagesEl.files) uploads.push(uploadToCloudinary(f));
         const urls = await Promise.all(uploads);
@@ -387,7 +463,7 @@ if (saveBtn) {
       await loadProducts();
     } catch (e) {
       console.error(e);
-      alert("Save failed: " + (e && e.message ? e.message : e));
+      alert("Save failed: " + (e?.message || e));
     }
   });
 }
@@ -395,29 +471,41 @@ if (saveBtn) {
 /* ====================== Auth gate (show/hide UI & protect page) ====================== */
 auth.onAuthStateChanged((user) => {
   const loggedIn = !!user;
+
+  // Always allow page to load so you can log in
   if (loginBtn)  loginBtn.style.display  = loggedIn ? "none" : "inline-block";
   if (logoutBtn) logoutBtn.style.display = loggedIn ? "inline-block" : "none";
 
-  // Restrict to admins
-  if (loggedIn && !ALLOWED.includes(user.uid)) {
-    alert("Access denied for this account.");
-    window.location.href = "index.html";
-    return;
+  if (loggedIn) {
+    console.log("✅ Signed in. UID:", user.uid, "Email:", user.email);
   }
 
-  // Show dashboard sections only for logged-in admins
-  const canSeeAdmin = loggedIn && ALLOWED.includes(user?.uid || "");
-  if (siteSection)    siteSection.style.display    = canSeeAdmin ? "block" : "none";
-  if (productSection) productSection.style.display = canSeeAdmin ? "block" : "none";
-  if (listSection)    listSection.style.display    = canSeeAdmin ? "block" : "none";
+  const allowed = canSeeAdmin(user);
 
-  if (authStatus) authStatus.textContent = loggedIn
-    ? `Signed in as ${user.email || user.uid}`
-    : "Please sign in.";
+  // Show dashboard sections only for allowed admins
+  const show = loggedIn && allowed;
+  if (siteSection)    siteSection.style.display    = show ? "block" : "none";
+  if (productSection) productSection.style.display = show ? "block" : "none";
+  if (listSection)    listSection.style.display    = show ? "block" : "none";
+  if (dashboardWrap)  dashboardWrap.style.display  = show ? "block" : "none";
 
-  // Only load data when logged-in admin (to match rules)
-  if (canSeeAdmin) {
+  // Orders page is protected as well (but we don't force redirect; user can Log Out)
+  if (!allowed && loggedIn) {
+    authStatus && (authStatus.textContent = "Access denied for this account. Ask admin to add your UID.");
+    // Keep logout visible; do not redirect so you can see the message and log out
+  } else {
+    authStatus && (authStatus.textContent = loggedIn
+      ? `Signed in as ${user.email || user.uid}`
+      : "Please sign in.");
+  }
+
+  // Load data only for allowed admins
+  if (show) {
     loadSite();
     loadProducts();
   }
 });
+
+/* ====================== Orders filters & CSV (hooks) ====================== */
+/* These work with the helpers injected in admin.html to filter & export */
+window.__applyOrderFilters?.();
