@@ -1,4 +1,4 @@
-/* admin.js — Auth (login/logout), allowlist-gated admin UI, Products/Site (Firestore), Orders (Realtime DB) */
+/* admin.js — Auth (login/logout with hide class toggling), allowlist-gated admin UI, Products/Site (Firestore), Orders (Realtime DB) */
 
 if (!window.firebase) throw new Error("❌ Firebase SDK missing");
 const auth = firebase.auth();
@@ -10,9 +10,11 @@ const ALLOWED_UIDS = [
   "w5jtigflSVezQwUvnsgM7AY4ZK73"
 ];
 
-/* -------------- helpers -------------- */
+/* ---------- helpers ---------- */
 const $  = (id) => document.getElementById(id);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+const show = (el) => el && el.classList.remove("hide");
+const hide = (el) => el && el.classList.add("hide");
 const toNumber = (v) => (v === "" || v == null ? 0 : Number(v));
 const parseSizes = (t) => String(t || "").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{
   const [label, p] = l.split("|").map(x => (x||"").trim());
@@ -24,7 +26,7 @@ function fmtMoney(v){ const n = Number(v); return isFinite(n)? new Intl.NumberFo
 function fmtTime(t){ if(!t) return "-"; const d = new Date(t); return isNaN(d)? String(t): d.toLocaleString(); }
 const canSeeAdmin = (user) => !!user && ALLOWED_UIDS.includes(user.uid);
 
-/* -------------- Cloudinary -------------- */
+/* ---------- Cloudinary (optional) ---------- */
 const CLOUD_NAME    = window.CLOUDINARY_CLOUD_NAME || "";
 const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET || "";
 async function uploadToCloudinary(file){
@@ -35,7 +37,7 @@ async function uploadToCloudinary(file){
   return (await r.json()).secure_url;
 }
 
-/* -------------- UI refs -------------- */
+/* ---------- UI refs ---------- */
 const loginBtn   = $("loginBtn");
 const logoutBtn  = $("logoutBtn");
 const authStatus = $("auth-status");
@@ -53,7 +55,7 @@ const ordersSection= $("orders-section");
 const ordersStatus = $("orders-status");
 const ordersBody   = $("orders-body");
 
-/* -------------- Auth buttons -------------- */
+/* ---------- Login / Logout ---------- */
 loginBtn?.addEventListener("click", async () => {
   try {
     if (emailEl?.value && passEl?.value) {
@@ -63,6 +65,7 @@ loginBtn?.addEventListener("click", async () => {
       await auth.signInWithPopup(provider);
     }
     authStatus && (authStatus.textContent = "✅ Logged in");
+    hide(loginBtn); show(logoutBtn);
   } catch (e) {
     authStatus && (authStatus.textContent = "❌ " + (e?.message || e));
     console.error(e);
@@ -71,25 +74,26 @@ loginBtn?.addEventListener("click", async () => {
 logoutBtn?.addEventListener("click", async () => {
   try { await auth.signOut(); authStatus && (authStatus.textContent = "Logged out"); }
   catch(e){ console.error(e); }
+  show(loginBtn); hide(logoutBtn);
 });
 
-/* -------------- Orders view toggle -------------- */
+/* ---------- Orders view toggle ---------- */
 btnSeeOrders?.addEventListener("click", () => {
-  dashboardWrap?.classList.add("hide");
-  ordersSection?.classList.remove("hide");
-  btnBack?.classList.remove("hide");
-  btnSeeOrders?.classList.add("hide");
+  hide(dashboardWrap);
+  show(ordersSection);
+  show(btnBack);
+  hide(btnSeeOrders);
   ordersStatus && (ordersStatus.textContent = "Loading orders…");
   attachOrdersListener();
 });
 btnBack?.addEventListener("click", () => {
-  ordersSection?.classList.add("hide");
-  dashboardWrap?.classList.remove("hide");
-  btnBack?.classList.add("hide");
-  btnSeeOrders?.classList.remove("hide");
+  show(dashboardWrap);
+  hide(ordersSection);
+  hide(btnBack);
+  show(btnSeeOrders);
 });
 
-/* -------------- Orders (Realtime DB) -------------- */
+/* ---------- Orders (Realtime DB) ---------- */
 let ordersListenerAttached = false;
 function renderOrderRow(id, order){
   const itemsText = Array.isArray(order.items)
@@ -157,7 +161,7 @@ document.addEventListener("click", async (e)=>{
   }catch(err){ console.error(err); alert("Failed to update status: " + (err?.message || err)); }
 });
 
-/* -------------- Site Settings (Firestore) -------------- */
+/* ---------- Site Settings (Firestore) ---------- */
 const site = {
   heroTitle: $("site-heroTitle"), heroSubtitle: $("site-heroSubtitle"),
   featuredCategory: $("site-featuredCategory"), showFeatured: $("site-showFeatured"),
@@ -208,7 +212,7 @@ site.saveBtn?.addEventListener("click", async ()=>{
   }catch(e){ console.error(e); site.status && (site.status.textContent="Error saving site settings."); alert("Error: "+(e?.message||e)); }
 });
 
-/* -------------- Products (Firestore) -------------- */
+/* ---------- Products (Firestore) ---------- */
 const nameEl=$("name"), priceEl=$("price"), brandEl=$("brand"), sizesEl=$("sizes"), descEl=$("description"),
       categoryEl=$("category"), activeEl=$("active"), imagesEl=$("images");
 const tableBody=$("tableBody"), filterCategory=$("filterCategory"), refreshBtn=$("refreshBtn"),
@@ -291,35 +295,35 @@ saveBtn?.addEventListener("click", async ()=>{
   }catch(e){ console.error(e); alert("Save failed: " + (e?.message || e)); }
 });
 
-/* -------------- Auth state: gate admin UI -------------- */
+/* ---------- Auth state: gate admin UI ---------- */
 auth.onAuthStateChanged((user)=>{
   const loggedIn = !!user;
 
-  // Toggle buttons
-  if (loginBtn)  loginBtn.style.display  = loggedIn ? "none" : "inline-block";
-  if (logoutBtn) logoutBtn.style.display = loggedIn ? "inline-block" : "none";
+  // Use class toggles so .hide !important is respected
+  loggedIn ? hide(loginBtn) : show(loginBtn);
+  loggedIn ? show(logoutBtn) : hide(logoutBtn);
 
-  // Status text
   if (authStatus) {
     if (!loggedIn) authStatus.textContent = "Please sign in.";
     else if (canSeeAdmin(user)) authStatus.textContent = `Signed in as ${user.email || user.uid}`;
     else authStatus.textContent = "Access denied for this account. Ask admin to add your UID.";
   }
 
-  // Show admin features only for allowlisted UIDs
-  const showAdmin = loggedIn && canSeeAdmin(user);
-  if (dashboardWrap)  dashboardWrap.style.display  = showAdmin ? "block" : "none";
-  if (siteSection)    siteSection.style.display    = showAdmin ? "block" : "none";
-  if (productSection) productSection.style.display = showAdmin ? "block" : "none";
-  if (listSection)    listSection.style.display    = showAdmin ? "block" : "none";
-
-  if (showAdmin) {
+  const allowed = loggedIn && canSeeAdmin(user);
+  if (allowed) {
+    if (dashboardWrap) dashboardWrap.style.display = "block";
+    if (siteSection)    siteSection.style.display    = "block";
+    if (productSection) productSection.style.display = "block";
+    if (listSection)    listSection.style.display    = "block";
     loadSite();
     loadProducts();
   } else {
-    // If orders view was open or user not allowed, ensure it's hidden
-    ordersSection?.classList.add("hide");
-    btnBack?.classList.add("hide");
-    btnSeeOrders?.classList.remove("hide");
+    if (dashboardWrap) dashboardWrap.style.display = "none";
+    if (siteSection)    siteSection.style.display    = "none";
+    if (productSection) productSection.style.display = "none";
+    if (listSection)    listSection.style.display    = "none";
+    hide(ordersSection);
+    hide(btnBack);
+    show(btnSeeOrders);
   }
 });
