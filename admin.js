@@ -1,10 +1,16 @@
-/* admin.js — login present, safe DOM guards, Cloudinary uploads, Firestore CRUD */
+/* admin.js — login present, safe DOM guards, Cloudinary uploads, Firestore CRUD + Orders toggle */
 
 if (!window.firebase) throw new Error("❌ Firebase SDK missing");
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ----------------- Tiny helpers ----------------- */
+/* ====================== Admin-only UIDs ====================== */
+const ALLOWED = [
+  "RhMAQ5ey7zYdRLwtr5fxjqVrfgN2",
+  "uufregjJNyXeLfjZ9bb0Aj8kzSh1"
+];
+
+/* ====================== Tiny helpers ====================== */
 const $  = (id) => document.getElementById(id);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const elExists = (...els) => els.every(Boolean);
@@ -21,10 +27,23 @@ const parseSizes = (t) =>
 const renderSizes = (arr) =>
   (arr || []).map((s) => `${s.label} (Rs${isFinite(s.price) ? s.price : 0})`).join(", ");
 
+function esc(v){ return String(v ?? "-").replace(/[&<>"']/g, s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s])); }
+function fmtMoney(v){
+  const n = Number(v);
+  if (!isFinite(n)) return "-";
+  try { return new Intl.NumberFormat(undefined, {style:"currency", currency:"MUR"}).format(n); }
+  catch { return n.toFixed(2); }
+}
+function fmtTime(t){
+  if (!t) return "-";
+  const d = new Date(t);
+  return isNaN(d) ? String(t) : d.toLocaleString();
+}
+
+/* ====================== Cloudinary upload ====================== */
 const CLOUD_NAME    = window.CLOUDINARY_CLOUD_NAME || "";
 const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET || "";
 
-/* ----------------- Cloudinary upload ----------------- */
 async function uploadToCloudinary(file) {
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
     throw new Error("Cloudinary not configured (CLOUDINARY_CLOUD_NAME / CLOUDINARY_UPLOAD_PRESET).");
@@ -39,7 +58,7 @@ async function uploadToCloudinary(file) {
   return data.secure_url;
 }
 
-/* ----------------- Auth UI ----------------- */
+/* ====================== Auth UI ====================== */
 const loginBtn   = $("loginBtn");
 const logoutBtn  = $("logoutBtn");
 const authStatus = $("auth-status");
@@ -49,26 +68,99 @@ const passEl     = $("password");
 if (loginBtn) {
   loginBtn.addEventListener("click", async () => {
     try {
-      await auth.signInWithEmailAndPassword(emailEl.value.trim(), passEl.value.trim());
-      authStatus.textContent = "✅ Logged in";
+      if (emailEl && passEl && emailEl.value && passEl.value) {
+        await auth.signInWithEmailAndPassword(emailEl.value.trim(), passEl.value.trim());
+      } else {
+        // Fallback to Google popup if no email/pass provided
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await auth.signInWithPopup(provider);
+      }
+      authStatus && (authStatus.textContent = "✅ Logged in");
     } catch (e) {
-      authStatus.textContent = "❌ " + (e && e.message ? e.message : e);
+      authStatus && (authStatus.textContent = "❌ " + (e && e.message ? e.message : e));
     }
   });
 }
 if (logoutBtn) {
   logoutBtn.addEventListener("click", async () => {
     await auth.signOut();
-    authStatus.textContent = "Logged out";
+    authStatus && (authStatus.textContent = "Logged out");
   });
 }
 
-/* ----------------- Sections (may be missing) ----------------- */
+/* ====================== Sections (may be missing) ====================== */
 const siteSection    = $("site-section");
 const productSection = $("product-section");
 const listSection    = $("list-section");
 
-/* ----------------- Site Settings block ----------------- */
+/* ====================== Dashboard ↔ Orders toggle ====================== */
+const dashboardWrap  = $("dashboard-sections");    // wrapper for all normal admin blocks
+const ordersSection  = $("orders-section");        // orders-only container (table)
+const ordersStatus   = $("orders-status");
+const ordersBody     = $("orders-body");
+const btnSeeOrders   = $("btnSeeOrders");
+const btnBack        = $("btnBack");
+
+// Attach handlers if present
+if (btnSeeOrders) btnSeeOrders.addEventListener("click", () => {
+  if (dashboardWrap) dashboardWrap.classList.add("hide");
+  if (ordersSection) ordersSection.classList.remove("hide");
+  if (btnBack) btnBack.classList.remove("hide");
+  if (btnSeeOrders) btnSeeOrders.classList.add("hide");
+  if (ordersStatus) ordersStatus.textContent = "Loading orders…";
+  attachOrdersListener();
+});
+if (btnBack) btnBack.addEventListener("click", () => {
+  if (ordersSection) ordersSection.classList.add("hide");
+  if (dashboardWrap) dashboardWrap.classList.remove("hide");
+  if (btnBack) btnBack.classList.add("hide");
+  if (btnSeeOrders) btnSeeOrders.classList.remove("hide");
+});
+
+/* ====================== Orders listener (Realtime DB) ====================== */
+let ordersListenerAttached = false;
+function attachOrdersListener(){
+  if (ordersListenerAttached) return;
+  if (!firebase.database) {
+    ordersStatus && (ordersStatus.textContent = "Realtime Database not available.");
+    return;
+  }
+  const rtdb = firebase.database();
+  const ref = rtdb.ref("orders").limitToLast(300);
+  ref.on("value", (snap)=>{
+    if (!ordersBody) return;
+    ordersBody.innerHTML = "";
+    const val = snap.val() || {};
+    const rows = [];
+    Object.entries(val).forEach(([id, order])=>{
+      const itemsText = Array.isArray(order.items)
+        ? order.items.map(i => `${i.name || i.title || 'item'} x${i.qty || i.quantity || 1}`).join(", ")
+        : (order.items && typeof order.items === "object"
+            ? Object.values(order.items).map(i => `${i.name || i.title || 'item'} x${i.qty || i.quantity || 1}`).join(", ")
+            : String(order.items || ""));
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${id}</td>
+        <td>${esc(order.name)}</td>
+        <td>${esc(order.email)}</td>
+        <td>${esc(itemsText)}</td>
+        <td>${fmtMoney(order.total)}</td>
+        <td>${esc(order.address)}</td>
+        <td>${fmtTime(order.timestamp)}</td>
+      `;
+      rows.push([order.timestamp || 0, tr]);
+    });
+    rows.sort((a,b)=>(new Date(b[0]).getTime()||0)-(new Date(a[0]).getTime()||0));
+    rows.forEach(([,tr])=>ordersBody.appendChild(tr));
+    ordersStatus && (ordersStatus.textContent = rows.length ? `Loaded ${rows.length} order(s).` : "No orders yet.");
+  }, (err)=>{
+    console.error(err);
+    ordersStatus && (ordersStatus.textContent = "Permission error or missing rules.");
+  });
+  ordersListenerAttached = true;
+}
+
+/* ====================== Site Settings block ====================== */
 const site = {
   heroTitle: $("site-heroTitle"),
   heroSubtitle: $("site-heroSubtitle"),
@@ -88,7 +180,6 @@ const site = {
 const siteDocRef = db.collection("site").doc("home");
 
 async function loadSite() {
-  // Guard: if any of the core inputs are missing, skip safely.
   if (!elExists(site.heroTitle, site.heroSubtitle, site.featuredCategory, site.showFeatured)) {
     console.warn("Site Settings elements not found — skipping loadSite()");
     return;
@@ -169,7 +260,7 @@ if (site.saveBtn) {
   });
 }
 
-/* ----------------- Products block ----------------- */
+/* ====================== Products block ====================== */
 const nameEl   = $("name");
 const priceEl  = $("price");
 const brandEl  = $("brand");
@@ -301,18 +392,31 @@ if (saveBtn) {
   });
 }
 
-/* ----------------- Auth gate shows/hides UI ----------------- */
+/* ====================== Auth gate (show/hide UI & protect page) ====================== */
 auth.onAuthStateChanged((user) => {
   const loggedIn = !!user;
   if (loginBtn)  loginBtn.style.display  = loggedIn ? "none" : "inline-block";
   if (logoutBtn) logoutBtn.style.display = loggedIn ? "inline-block" : "none";
 
-  if (siteSection)    siteSection.style.display    = loggedIn ? "block" : "none";
-  if (productSection) productSection.style.display = loggedIn ? "block" : "none";
-  if (listSection)    listSection.style.display    = loggedIn ? "block" : "none";
+  // Restrict to admins
+  if (loggedIn && !ALLOWED.includes(user.uid)) {
+    alert("Access denied for this account.");
+    window.location.href = "index.html";
+    return;
+  }
 
-  // Only load data when logged in (to match rules)
-  if (loggedIn) {
+  // Show dashboard sections only for logged-in admins
+  const canSeeAdmin = loggedIn && ALLOWED.includes(user?.uid || "");
+  if (siteSection)    siteSection.style.display    = canSeeAdmin ? "block" : "none";
+  if (productSection) productSection.style.display = canSeeAdmin ? "block" : "none";
+  if (listSection)    listSection.style.display    = canSeeAdmin ? "block" : "none";
+
+  if (authStatus) authStatus.textContent = loggedIn
+    ? `Signed in as ${user.email || user.uid}`
+    : "Please sign in.";
+
+  // Only load data when logged-in admin (to match rules)
+  if (canSeeAdmin) {
     loadSite();
     loadProducts();
   }
