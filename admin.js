@@ -1,41 +1,41 @@
-/* admin.js — Auth, Site & Products (Firestore), Orders (Realtime DB) */
+/* admin.js — Auth, allowlist gate, Site & Products (Firestore), Orders (Realtime DB) */
 
 if (!window.firebase) throw new Error("❌ Firebase SDK missing");
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ---------- Helpers ---------- */
+/* ===== ALLOWLIST: ONLY these UIDs get admin features ===== */
+const ALLOWED_UIDS = [
+  "nyQYzolZI2fLFqIkAPNHHbcSJ2p1",
+  "w5jtigflSVezQwUvnsgM7AY4ZK73"
+];
+
+/* ----------------- Helpers ----------------- */
 const $  = (id) => document.getElementById(id);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const toNumber = (v) => (v === "" || v == null ? 0 : Number(v));
-const parseSizes = (t) =>
-  String(t || "")
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((l) => {
-      const [label, p] = l.split("|").map((x) => (x || "").trim());
-      return { label, price: Number(p || 0) };
-    });
-const renderSizes = (arr) =>
-  (arr || []).map((s) => `${s.label} (Rs${isFinite(s.price) ? s.price : 0})`).join(", ");
-function esc(v){ return String(v ?? "-").replace(/[&<>"']/g, s=>({"&":"&amp;","<":"&gt;","&quot;":"&quot;","'":"&#39;"}[s])); }
-function fmtMoney(v){ const n = Number(v); return isFinite(n) ? (new Intl.NumberFormat(undefined,{style:"currency",currency:"MUR"}).format(n)) : "-"; }
-function fmtTime(t){ if(!t) return "-"; const d = new Date(t); return isNaN(d) ? String(t) : d.toLocaleString(); }
+const parseSizes = (t) => String(t || "").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{
+  const [label, p] = l.split("|").map(x => (x||"").trim());
+  return { label, price: Number(p || 0) };
+});
+const renderSizes = (arr) => (arr||[]).map(s=>`${s.label} (Rs${isFinite(s.price)?s.price:0})`).join(", ");
+function esc(v){ return String(v ?? "-").replace(/[&<>"']/g, s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s])); }
+function fmtMoney(v){ const n = Number(v); return isFinite(n)? new Intl.NumberFormat(undefined,{style:"currency",currency:"MUR"}).format(n):"-"; }
+function fmtTime(t){ if(!t) return "-"; const d = new Date(t); return isNaN(d)? String(t): d.toLocaleString(); }
+const canSeeAdmin = (user) => !!user && ALLOWED_UIDS.includes(user.uid);
 
-/* ---------- Cloudinary ---------- */
+/* ----------------- Cloudinary ----------------- */
 const CLOUD_NAME    = window.CLOUDINARY_CLOUD_NAME || "";
 const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET || "";
 async function uploadToCloudinary(file){
   if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error("Cloudinary not configured.");
   const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`;
   const fd = new FormData(); fd.append("file", file); fd.append("upload_preset", UPLOAD_PRESET);
-  const res = await fetch(url, {method:"POST", body:fd});
-  if (!res.ok) throw new Error("Cloudinary upload failed");
-  return (await res.json()).secure_url;
+  const r = await fetch(url,{method:"POST",body:fd}); if(!r.ok) throw new Error("Cloudinary upload failed");
+  return (await r.json()).secure_url;
 }
 
-/* ---------- UI refs ---------- */
+/* ----------------- UI refs ----------------- */
 const loginBtn   = $("loginBtn");
 const logoutBtn  = $("logoutBtn");
 const authStatus = $("auth-status");
@@ -53,7 +53,7 @@ const ordersSection= $("orders-section");
 const ordersStatus = $("orders-status");
 const ordersBody   = $("orders-body");
 
-/* ---------- Auth buttons ---------- */
+/* ----------------- Auth buttons ----------------- */
 loginBtn?.addEventListener("click", async () => {
   try {
     if (emailEl?.value && passEl?.value) {
@@ -73,7 +73,7 @@ logoutBtn?.addEventListener("click", async () => {
   catch(e){ console.error(e); }
 });
 
-/* ---------- Toggle Orders-only view ---------- */
+/* ----------------- Orders view toggle ----------------- */
 btnSeeOrders?.addEventListener("click", () => {
   dashboardWrap?.classList.add("hide");
   ordersSection?.classList.remove("hide");
@@ -89,14 +89,14 @@ btnBack?.addEventListener("click", () => {
   btnSeeOrders?.classList.remove("hide");
 });
 
-/* ---------- Orders (Realtime DB) ---------- */
+/* ----------------- Orders (Realtime DB) ----------------- */
 let ordersListenerAttached = false;
 function renderOrderRow(id, order){
   const itemsText = Array.isArray(order.items)
     ? order.items.map(i=>`${i.name||i.title||'item'} x${i.qty||i.quantity||1}`).join(", ")
     : (order.items && typeof order.items==="object"
-      ? Object.values(order.items).map(i=>`${i.name||i.title||'item'} x${i.qty||i.quantity||1}`).join(", ")
-      : String(order.items||""));
+        ? Object.values(order.items).map(i=>`${i.name||i.title||'item'} x${i.qty||i.quantity||1}`).join(", ")
+        : String(order.items||""));
   const status = (order.status || "pending").toLowerCase();
   const cls = {pending:"status pending", shipped:"status shipped", completed:"status completed"}[status] || "status";
   const tr = document.createElement("tr");
@@ -115,8 +115,7 @@ function renderOrderRow(id, order){
         <button class="btn sm" data-set-status="shipped"   data-id="${id}">Shipped</button>
         <button class="btn sm" data-set-status="completed" data-id="${id}">Completed</button>
       </div>
-    </td>
-  `;
+    </td>`;
   return tr;
 }
 function attachOrdersListener(){
@@ -129,7 +128,7 @@ function attachOrdersListener(){
     ordersBody.innerHTML = "";
     const val = snap.val() || {};
     const rows = [];
-    Object.entries(val).forEach(([id, order])=> rows.push([order.timestamp || 0, renderOrderRow(id, order||{})]));
+    Object.entries(val).forEach(([id, order])=> rows.push([order.timestamp||0, renderOrderRow(id, order||{})]));
     rows.sort((a,b)=>(new Date(b[0]).getTime()||0)-(new Date(a[0]).getTime()||0));
     rows.forEach(([,tr])=>ordersBody.appendChild(tr));
     ordersStatus && (ordersStatus.textContent = rows.length ? `Loaded ${rows.length} order(s).` : "No orders yet.");
@@ -148,22 +147,20 @@ document.addEventListener("click", async (e)=>{
   const next = b.getAttribute("data-set-status");
   try{
     await firebase.database().ref(`orders/${id}`).update({ status: next, adminUpdatedAt: new Date().toISOString() });
-    const row = b.closest("tr");
-    const cell = row?.querySelector('[data-col="status"]');
+    const cell = b.closest("tr")?.querySelector('[data-col="status"]');
     if (cell) {
-      cell.dataset.status = next;
       const cls = {pending:"status pending", shipped:"status shipped", completed:"status completed"}[next] || "status";
+      cell.dataset.status = next;
       cell.innerHTML = `<span class="${cls}">${next[0].toUpperCase()+next.slice(1)}</span>`;
     }
     window.__applyOrderFilters?.();
   }catch(err){ console.error(err); alert("Failed to update status: " + (err?.message || err)); }
 });
 
-/* ---------- Site Settings (Firestore) ---------- */
+/* ----------------- Site Settings (Firestore) ----------------- */
 const site = {
   heroTitle: $("site-heroTitle"), heroSubtitle: $("site-heroSubtitle"),
   featuredCategory: $("site-featuredCategory"), showFeatured: $("site-showFeatured"),
-  wa: $("site-wa"), ig: $("site-ig"), tt: $("site-tt"),
   banner: $("site-banner"), bannerPreview: $("site-banner-preview"),
   gallery: $("site-gallery"), galleryPreview: $("site-gallery-preview"),
   saveBtn: $("site-save"), reloadBtn: $("site-reload"), status: $("site-status"),
@@ -190,8 +187,7 @@ site.reloadBtn?.addEventListener("click", loadSite);
 site.saveBtn?.addEventListener("click", async ()=>{
   try{
     site.status && (site.status.textContent = "Saving…");
-    let bannerURL;
-    if (site.banner?.files?.[0]) bannerURL = await uploadToCloudinary(site.banner.files[0]);
+    let bannerURL; if (site.banner?.files?.[0]) bannerURL = await uploadToCloudinary(site.banner.files[0]);
     let galleryURLs = null;
     if (site.gallery?.files?.length) {
       const ups = []; for (const f of site.gallery.files) ups.push(uploadToCloudinary(f));
@@ -206,13 +202,13 @@ site.saveBtn?.addEventListener("click", async ()=>{
     };
     if (bannerURL)  payload.bannerImage = bannerURL;
     if (galleryURLs)payload.gallery = galleryURLs;
-    await siteDocRef.set(payload, {merge:true});
-    site.status && (site.status.textContent = "Saved ✓");
+    await siteDocRef.set(payload,{merge:true});
+    site.status && (site.status.textContent="Saved ✓");
     await loadSite();
   }catch(e){ console.error(e); site.status && (site.status.textContent="Error saving site settings."); alert("Error: "+(e?.message||e)); }
 });
 
-/* ---------- Products (Firestore) ---------- */
+/* ----------------- Products (Firestore) ----------------- */
 const nameEl=$("name"), priceEl=$("price"), brandEl=$("brand"), sizesEl=$("sizes"), descEl=$("description"),
       categoryEl=$("category"), activeEl=$("active"), imagesEl=$("images");
 const tableBody=$("tableBody"), filterCategory=$("filterCategory"), refreshBtn=$("refreshBtn"),
@@ -295,23 +291,33 @@ saveBtn?.addEventListener("click", async ()=>{
   }catch(e){ console.error(e); alert("Save failed: " + (e?.message || e)); }
 });
 
-/* ---------- Auth state: show/hide UI ---------- */
+/* ----------------- Auth state: show/hide UI ----------------- */
 auth.onAuthStateChanged((user)=>{
   const loggedIn = !!user;
-  loginBtn && (loginBtn.style.display = loggedIn ? "none" : "inline-block");
-  logoutBtn && (logoutBtn.style.display = loggedIn ? "inline-block" : "none");
 
-  authStatus && (authStatus.textContent = loggedIn
-    ? `Signed in as ${user.email || user.uid}`
-    : "Please sign in.");
+  // Buttons
+  if (loginBtn)  loginBtn.style.display  = loggedIn ? "none" : "inline-block";
+  if (logoutBtn) logoutBtn.style.display = loggedIn ? "inline-block" : "none";
 
-  if (loggedIn){
-    dashboardWrap?.classList.remove("hide");
+  // Status text
+  if (authStatus) {
+    if (!loggedIn) authStatus.textContent = "Please sign in.";
+    else if (canSeeAdmin(user)) authStatus.textContent = `Signed in as ${user.email || user.uid}`;
+    else authStatus.textContent = "Access denied for this account. Ask admin to add your UID.";
+  }
+
+  // Only allowlisted users see/edit admin sections
+  const showAdmin = loggedIn && canSeeAdmin(user);
+  if (dashboardWrap)  dashboardWrap.style.display  = showAdmin ? "block" : "none";
+  if (siteSection)    siteSection.style.display    = showAdmin ? "block" : "none";
+  if (productSection) productSection.style.display = showAdmin ? "block" : "none";
+  if (listSection)    listSection.style.display    = showAdmin ? "block" : "none";
+
+  if (showAdmin) {
     loadSite();
     loadProducts();
   } else {
-    dashboardWrap?.classList.add("hide");
-    // also hide Orders view if it was open
+    // Hide Orders view if not allowed
     ordersSection?.classList.add("hide");
     btnBack?.classList.add("hide");
     btnSeeOrders?.classList.remove("hide");
