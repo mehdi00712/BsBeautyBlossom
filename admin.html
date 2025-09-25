@@ -10,13 +10,26 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <!-- Realtime DB for orders -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="firebase-config.js"></script>
 
-  <!-- Cloudinary config -->
+  <!-- Cloudinary config (keep yours) -->
   <script>
     window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
     window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
   </script>
+
+  <style>
+    .hide{display:none!important}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+    .btn{padding:.6rem .9rem;border:1px solid #ccc;border-radius:10px;cursor:pointer}
+    .btn.primary{border-color:#111}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #ddd;padding:8px;text-align:left}
+    .card{padding:16px;border:1px solid #eee;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:16px}
+  </style>
 </head>
 <body>
 <header>
@@ -39,37 +52,28 @@
   </nav>
 </header>
 
-<main class="admin-wrap">
+<main class="admin-wrap" style="padding:18px">
   <h1>Admin Dashboard</h1>
 
-  <!-- 🔑 Auth -->
-  <section id="auth-section" class="card">
-    <h2>Admin Login</h2>
+  <!-- Top toolbar -->
+  <div class="toolbar">
+    <button id="btnSeeOrders" class="btn primary">📦 See Orders</button>
+    <button id="btnBack" class="btn hide">⬅ Back to Dashboard</button>
+    <button id="loginBtn" class="btn">Log In</button>
+    <button id="logoutBtn" class="btn hide">Log Out</button>
+    <span id="auth-status" class="muted"></span>
+  </div>
 
-    <div class="row row-2">
-      <div>
-        <label for="email">Admin email</label>
-        <input id="email" type="email" placeholder="Email">
-      </div>
-      <div>
-        <label for="password">Password</label>
-        <input id="password" type="password" placeholder="Password">
-      </div>
-    </div>
+  <!-- DASHBOARD CONTENT (hidden when viewing Orders-only) -->
+  <div id="dashboard-sections">
+    <!-- 🔐 Auth helper note -->
+    <section class="card">
+      <p>Use the buttons above to log in. Only authorised admins can access this page.</p>
+    </section>
 
-    <div style="display:flex;gap:8px;margin:8px 0">
-      <button id="loginBtn" class="btn">Log In</button>
-      <button id="logoutBtn" class="btn danger" style="display:none">Log Out</button>
-    </div>
-
-    <p id="auth-status" class="muted"></p>
-  </section>
-
-  <div class="admin-grid">
     <!-- Site Settings -->
-    <section id="site-section" class="card" style="display:none">
+    <section id="site-section" class="card">
       <h2>Site Settings (Homepage)</h2>
-
       <div class="row row-2">
         <div>
           <label for="site-heroTitle">Hero Title</label>
@@ -80,7 +84,6 @@
           <input id="site-heroSubtitle" type="text">
         </div>
       </div>
-
       <div class="row row-2">
         <div>
           <label for="site-featuredCategory">Featured Category</label>
@@ -97,28 +100,25 @@
           <label><input id="site-showFeatured" type="checkbox"> Show Featured Products</label>
         </div>
       </div>
-
       <div class="row">
         <label for="site-banner">Banner Image</label>
         <input id="site-banner" type="file" accept="image/*">
         <div id="site-banner-preview" class="preview"></div>
       </div>
-
       <div class="row">
         <label for="site-gallery">Gallery Images</label>
         <input id="site-gallery" type="file" accept="image/*" multiple>
         <div id="site-gallery-preview" class="preview"></div>
       </div>
-
       <div style="display:flex;gap:8px;margin-top:8px">
         <button id="site-save" class="btn">Save</button>
-        <button id="site-reload" class="btn muted">Reload</button>
+        <button id="site-reload" class="btn">Reload</button>
       </div>
       <p id="site-status" class="muted"></p>
     </section>
 
     <!-- Product Form -->
-    <section id="product-section" class="card" style="display:none">
+    <section id="product-section" class="card">
       <h2>Add / Edit Product</h2>
       <div class="row">
         <label for="category">Category</label>
@@ -164,13 +164,13 @@
       </div>
       <div style="display:flex;gap:8px">
         <button id="saveBtn" class="btn">Save Product</button>
-        <button id="resetBtn" class="btn muted">Reset</button>
+        <button id="resetBtn" class="btn">Reset</button>
       </div>
       <input type="hidden" id="docId">
     </section>
 
     <!-- Product List -->
-    <section id="list-section" class="card" style="display:none">
+    <section id="list-section" class="card">
       <h2>Products</h2>
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <select id="filterCategory">
@@ -181,7 +181,7 @@
           <option value="jewellery">Jewellery</option>
           <option value="gift">Gift</option>
         </select>
-        <button id="refreshBtn" class="btn muted">Refresh</button>
+        <button id="refreshBtn" class="btn">Refresh</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -192,7 +192,29 @@
         </table>
       </div>
     </section>
-  </div>
+  </div><!-- /#dashboard-sections -->
+
+  <!-- ORDERS-ONLY VIEW (hidden until “See Orders”) -->
+  <section id="orders-section" class="card hide">
+    <h2>Orders</h2>
+    <p><span id="orders-status">Connecting…</span></p>
+    <div class="table-wrap">
+      <table id="orders-table">
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Customer</th>
+            <th>Email</th>
+            <th>Items</th>
+            <th>Total</th>
+            <th>Address</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody id="orders-body"></tbody>
+      </table>
+    </div>
+  </section>
 </main>
 
 <footer class="site-footer">
