@@ -14,14 +14,14 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="firebase-config.js"></script>
 
-  <!-- Cloudinary config -->
+  <!-- Cloudinary config (keep if you upload images from admin) -->
   <script>
     window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
     window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
   </script>
 
   <style>
-    /* small helpers */
+    /* Small utility styles for admin UI */
     .hide{display:none!important}
     .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
     .btn{padding:.6rem .9rem;border:1px solid #ccc;border-radius:10px;cursor:pointer;background:#fff}
@@ -258,13 +258,13 @@
   <p>© 2025 B’s Beauty Blossom • Admin</p>
 </footer>
 
-<!-- Scripts -->
+<!-- Main scripts -->
 <script src="admin.js" defer></script>
 <script src="script.js" defer></script>
 
-<!-- Lightweight add-ons: search + CSV export (works with the updated admin.js rows) -->
+<!-- Lightweight add-ons: search + CSV export (work with updated admin.js) -->
 <script>
-  // Filter rows by text and status
+  // Text + status filter for Orders
   (function(){
     const q = document.getElementById('orderSearch');
     const f = document.getElementById('orderStatusFilter');
@@ -287,11 +287,11 @@
     }
     q && q.addEventListener('input', apply);
     f && f.addEventListener('change', apply);
-    // expose so admin.js can call after it rewrites rows
+    // Expose so admin.js can re-apply after it re-renders rows
     window.__applyOrderFilters = apply;
   })();
 
-  // Export current table to CSV (only visible rows)
+  // Export visible Orders table to CSV
   (function(){
     const btn = document.getElementById('exportCsvBtn');
     const body = document.getElementById('orders-body');
