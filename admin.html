@@ -6,7 +6,7 @@
   <title>Admin – B’s Beauty Blossom</title>
   <link rel="stylesheet" href="style.css"/>
 
-  <!-- Firebase (ORDER MATERS) -->
+  <!-- Firebase (ORDER MATTERS) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -38,6 +38,9 @@
     .status.completed{background:#eaffea;border-color:#7bc47f}
     .filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
     .filters input, .filters select{padding:.45rem .6rem;border:1px solid #ddd;border-radius:8px}
+    .row{margin-bottom:10px}
+    .row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    input,textarea,select{width:100%;padding:.6rem;border:1px solid #ddd;border-radius:10px}
   </style>
 </head>
 <body>
@@ -64,9 +67,9 @@
 <main class="admin-wrap" style="padding:18px">
   <h1>Admin Dashboard</h1>
 
-  <!-- Toolbar -->
+  <!-- Toolbar (See Orders hidden until allow-listed admin is signed in) -->
   <div class="toolbar">
-    <button id="btnSeeOrders" class="btn primary">📦 See Orders</button>
+    <button id="btnSeeOrders" class="btn primary hide">📦 See Orders</button>
     <button id="btnBack" class="btn hide">⬅ Back to Dashboard</button>
     <button id="loginBtn" class="btn">Log In</button>
     <button id="logoutBtn" class="btn hide">Log Out</button>
