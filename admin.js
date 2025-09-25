@@ -1,16 +1,16 @@
-/* admin.js — Auth, allowlist gate, Site & Products (Firestore), Orders (Realtime DB) */
+/* admin.js — Auth (login/logout), allowlist-gated admin UI, Products/Site (Firestore), Orders (Realtime DB) */
 
 if (!window.firebase) throw new Error("❌ Firebase SDK missing");
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-/* ===== ALLOWLIST: ONLY these UIDs get admin features ===== */
+/* ===== ONLY THESE UIDs GET ADMIN FEATURES ===== */
 const ALLOWED_UIDS = [
   "nyQYzolZI2fLFqIkAPNHHbcSJ2p1",
   "w5jtigflSVezQwUvnsgM7AY4ZK73"
 ];
 
-/* ----------------- Helpers ----------------- */
+/* -------------- helpers -------------- */
 const $  = (id) => document.getElementById(id);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const toNumber = (v) => (v === "" || v == null ? 0 : Number(v));
@@ -24,7 +24,7 @@ function fmtMoney(v){ const n = Number(v); return isFinite(n)? new Intl.NumberFo
 function fmtTime(t){ if(!t) return "-"; const d = new Date(t); return isNaN(d)? String(t): d.toLocaleString(); }
 const canSeeAdmin = (user) => !!user && ALLOWED_UIDS.includes(user.uid);
 
-/* ----------------- Cloudinary ----------------- */
+/* -------------- Cloudinary -------------- */
 const CLOUD_NAME    = window.CLOUDINARY_CLOUD_NAME || "";
 const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET || "";
 async function uploadToCloudinary(file){
@@ -35,7 +35,7 @@ async function uploadToCloudinary(file){
   return (await r.json()).secure_url;
 }
 
-/* ----------------- UI refs ----------------- */
+/* -------------- UI refs -------------- */
 const loginBtn   = $("loginBtn");
 const logoutBtn  = $("logoutBtn");
 const authStatus = $("auth-status");
@@ -53,7 +53,7 @@ const ordersSection= $("orders-section");
 const ordersStatus = $("orders-status");
 const ordersBody   = $("orders-body");
 
-/* ----------------- Auth buttons ----------------- */
+/* -------------- Auth buttons -------------- */
 loginBtn?.addEventListener("click", async () => {
   try {
     if (emailEl?.value && passEl?.value) {
@@ -73,7 +73,7 @@ logoutBtn?.addEventListener("click", async () => {
   catch(e){ console.error(e); }
 });
 
-/* ----------------- Orders view toggle ----------------- */
+/* -------------- Orders view toggle -------------- */
 btnSeeOrders?.addEventListener("click", () => {
   dashboardWrap?.classList.add("hide");
   ordersSection?.classList.remove("hide");
@@ -89,7 +89,7 @@ btnBack?.addEventListener("click", () => {
   btnSeeOrders?.classList.remove("hide");
 });
 
-/* ----------------- Orders (Realtime DB) ----------------- */
+/* -------------- Orders (Realtime DB) -------------- */
 let ordersListenerAttached = false;
 function renderOrderRow(id, order){
   const itemsText = Array.isArray(order.items)
@@ -157,7 +157,7 @@ document.addEventListener("click", async (e)=>{
   }catch(err){ console.error(err); alert("Failed to update status: " + (err?.message || err)); }
 });
 
-/* ----------------- Site Settings (Firestore) ----------------- */
+/* -------------- Site Settings (Firestore) -------------- */
 const site = {
   heroTitle: $("site-heroTitle"), heroSubtitle: $("site-heroSubtitle"),
   featuredCategory: $("site-featuredCategory"), showFeatured: $("site-showFeatured"),
@@ -208,7 +208,7 @@ site.saveBtn?.addEventListener("click", async ()=>{
   }catch(e){ console.error(e); site.status && (site.status.textContent="Error saving site settings."); alert("Error: "+(e?.message||e)); }
 });
 
-/* ----------------- Products (Firestore) ----------------- */
+/* -------------- Products (Firestore) -------------- */
 const nameEl=$("name"), priceEl=$("price"), brandEl=$("brand"), sizesEl=$("sizes"), descEl=$("description"),
       categoryEl=$("category"), activeEl=$("active"), imagesEl=$("images");
 const tableBody=$("tableBody"), filterCategory=$("filterCategory"), refreshBtn=$("refreshBtn"),
@@ -291,11 +291,11 @@ saveBtn?.addEventListener("click", async ()=>{
   }catch(e){ console.error(e); alert("Save failed: " + (e?.message || e)); }
 });
 
-/* ----------------- Auth state: show/hide UI ----------------- */
+/* -------------- Auth state: gate admin UI -------------- */
 auth.onAuthStateChanged((user)=>{
   const loggedIn = !!user;
 
-  // Buttons
+  // Toggle buttons
   if (loginBtn)  loginBtn.style.display  = loggedIn ? "none" : "inline-block";
   if (logoutBtn) logoutBtn.style.display = loggedIn ? "inline-block" : "none";
 
@@ -306,7 +306,7 @@ auth.onAuthStateChanged((user)=>{
     else authStatus.textContent = "Access denied for this account. Ask admin to add your UID.";
   }
 
-  // Only allowlisted users see/edit admin sections
+  // Show admin features only for allowlisted UIDs
   const showAdmin = loggedIn && canSeeAdmin(user);
   if (dashboardWrap)  dashboardWrap.style.display  = showAdmin ? "block" : "none";
   if (siteSection)    siteSection.style.display    = showAdmin ? "block" : "none";
@@ -317,7 +317,7 @@ auth.onAuthStateChanged((user)=>{
     loadSite();
     loadProducts();
   } else {
-    // Hide Orders view if not allowed
+    // If orders view was open or user not allowed, ensure it's hidden
     ordersSection?.classList.add("hide");
     btnBack?.classList.add("hide");
     btnSeeOrders?.classList.remove("hide");
