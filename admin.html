@@ -10,18 +10,16 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <!-- Realtime DB for orders -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="firebase-config.js"></script>
 
-  <!-- Cloudinary config -->
+  <!-- Cloudinary config (if you upload images from admin) -->
   <script>
     window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
     window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
   </script>
 
   <style>
-    /* small helpers */
     .hide{display:none!important}
     .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
     .btn{padding:.6rem .9rem;border:1px solid #ccc;border-radius:10px;cursor:pointer;background:#fff}
@@ -66,7 +64,7 @@
 <main class="admin-wrap" style="padding:18px">
   <h1>Admin Dashboard</h1>
 
-  <!-- Top toolbar -->
+  <!-- Toolbar -->
   <div class="toolbar">
     <button id="btnSeeOrders" class="btn primary">📦 See Orders</button>
     <button id="btnBack" class="btn hide">⬅ Back to Dashboard</button>
@@ -75,24 +73,24 @@
     <span id="auth-status" class="muted"></span>
   </div>
 
-  <!-- DASHBOARD CONTENT (hidden when viewing Orders-only) -->
-  <div id="dashboard-sections">
-    <!-- 🔑 Auth block -->
-    <section id="auth-section" class="card">
-      <h2>Admin Login</h2>
-      <div class="row row-2">
-        <div>
-          <label for="email">Admin email</label>
-          <input id="email" type="email" placeholder="Email">
-        </div>
-        <div>
-          <label for="password">Password</label>
-          <input id="password" type="password" placeholder="Password">
-        </div>
+  <!-- Visible while logged OUT (or anytime) -->
+  <section id="auth-section" class="card">
+    <h2>Admin Login</h2>
+    <div class="row row-2">
+      <div>
+        <label for="email">Admin email</label>
+        <input id="email" type="email" placeholder="Email">
       </div>
-      <p class="muted" style="margin-top:8px">Tip: leave email/password empty to sign in with Google popup.</p>
-    </section>
+      <div>
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Password">
+      </div>
+    </div>
+    <p class="muted" style="margin-top:8px">Tip: leave email/password empty to sign in with Google popup.</p>
+  </section>
 
+  <!-- DASHBOARD CONTENT (hidden when logged out or when viewing Orders-only) -->
+  <div id="dashboard-sections" class="hide">
     <!-- Site Settings -->
     <section id="site-section" class="card">
       <h2>Site Settings (Homepage)</h2>
@@ -216,7 +214,7 @@
     </section>
   </div><!-- /#dashboard-sections -->
 
-  <!-- ORDERS-ONLY VIEW (hidden until “See Orders”) -->
+  <!-- ORDERS-ONLY VIEW -->
   <section id="orders-section" class="card hide">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <h2>Orders</h2>
@@ -262,9 +260,8 @@
 <script src="admin.js" defer></script>
 <script src="script.js" defer></script>
 
-<!-- Lightweight add-ons: search + CSV export (works with the updated admin.js rows) -->
+<!-- Filters + CSV (used by Orders) -->
 <script>
-  // Filter rows by text and status
   (function(){
     const q = document.getElementById('orderSearch');
     const f = document.getElementById('orderStatusFilter');
@@ -287,11 +284,9 @@
     }
     q && q.addEventListener('input', apply);
     f && f.addEventListener('change', apply);
-    // expose so admin.js can call after it rewrites rows
     window.__applyOrderFilters = apply;
   })();
 
-  // Export current table to CSV (only visible rows)
   (function(){
     const btn = document.getElementById('exportCsvBtn');
     const body = document.getElementById('orders-body');
