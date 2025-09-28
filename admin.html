@@ -41,6 +41,10 @@
     .row{margin-bottom:10px}
     .row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     input,textarea,select{width:100%;padding:.6rem;border:1px solid #ddd;border-radius:10px}
+
+    /* Clients section tweaks */
+    .pill{display:inline-block;border:1px solid #ddd;border-radius:999px;padding:.15rem .55rem;font-size:.8rem;background:#f7f7f7}
+    .nowrap{white-space:nowrap}
   </style>
 </head>
 <body>
@@ -67,7 +71,7 @@
 <main class="admin-wrap" style="padding:18px">
   <h1>Admin Dashboard</h1>
 
-  <!-- Toolbar (See Orders hidden until allow-listed admin is signed in) -->
+  <!-- Toolbar -->
   <div class="toolbar">
     <button id="btnSeeOrders" class="btn primary hide">📦 See Orders</button>
     <button id="btnBack" class="btn hide">⬅ Back to Dashboard</button>
@@ -215,6 +219,34 @@
         </table>
       </div>
     </section>
+
+    <!-- Clients (Phone Number Grid) -->
+    <section id="clients-section" class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <h2>Clients (by Phone)</h2>
+        <div class="filters">
+          <input id="clientSearch" type="search" placeholder="Search phone / name / email…">
+          <button id="clientsRefresh" class="btn sm">↻ Refresh</button>
+          <button id="clientsExport" class="btn sm">⬇ Export CSV</button>
+        </div>
+      </div>
+      <p id="clients-status" class="muted">Loading clients…</p>
+      <div class="table-wrap">
+        <table id="clients-table">
+          <thead>
+            <tr>
+              <th>Phone</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th># Orders</th>
+              <th>Total Spent (Rs)</th>
+              <th>Last Order</th>
+            </tr>
+          </thead>
+          <tbody id="clients-body"></tbody>
+        </table>
+      </div>
+    </section>
   </div><!-- /#dashboard-sections -->
 
   <!-- ORDERS-ONLY VIEW -->
@@ -308,6 +340,127 @@
     }
     btn && btn.addEventListener('click', toCSV);
   })();
+</script>
+
+<!-- CLIENTS: build phone-number grid from Realtime Database /orders -->
+<script>
+(function(){
+  const bodyEl = document.getElementById('clients-body');
+  const statusEl = document.getElementById('clients-status');
+  const searchEl = document.getElementById('clientSearch');
+  const refreshBtn = document.getElementById('clientsRefresh');
+  const exportBtn = document.getElementById('clientsExport');
+
+  function rupee(n){ return (Number(n)||0).toFixed(2); }
+
+  function aggregateClients(snapshot){
+    const byPhone = new Map();
+    snapshot.forEach(child=>{
+      const o = child.val() || {};
+      const phone = (o.phone||"").trim();
+      const name  = (o.name||"").trim();
+      const email = (o.email||"").trim();
+      const total = Number(o.total || o.items?.reduce((s,it)=>s + (Number(it.price)||0) * (Number(it.quantity)||0), 0) || 0);
+      const ts    = new Date(o.timestamp || Date.now());
+
+      if(!phone) return; // skip orders with no phone
+
+      if(!byPhone.has(phone)){
+        byPhone.set(phone, {
+          phone, name, email,
+          orders: 0,
+          total: 0,
+          lastOrder: new Date(0)
+        });
+      }
+      const entry = byPhone.get(phone);
+      entry.orders += 1;
+      entry.total  += total;
+      // prefer latest non-empty name/email
+      if (name && !entry.name) entry.name = name;
+      if (email && !entry.email) entry.email = email;
+      if (ts > entry.lastOrder) entry.lastOrder = ts;
+    });
+
+    // Convert to array & sort by last order desc
+    const rows = Array.from(byPhone.values()).sort((a,b)=>b.lastOrder - a.lastOrder);
+    return rows;
+  }
+
+  function renderRows(rows){
+    bodyEl.innerHTML = "";
+    if(rows.length === 0){
+      bodyEl.innerHTML = '<tr><td colspan="6">No clients found.</td></tr>';
+      return;
+    }
+    for(const r of rows){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="nowrap"><span class="pill">${r.phone}</span></td>
+        <td>${r.name || '-'}</td>
+        <td>${r.email || '-'}</td>
+        <td>${r.orders}</td>
+        <td class="nowrap">Rs ${rupee(r.total)}</td>
+        <td class="nowrap">${r.lastOrder.toLocaleString()}</td>
+      `;
+      bodyEl.appendChild(tr);
+    }
+  }
+
+  let cacheRows = [];
+
+  function loadClients(){
+    statusEl.textContent = 'Loading clients…';
+    firebase.database().ref('orders').once('value')
+      .then(snap=>{
+        cacheRows = aggregateClients(snap);
+        renderRows(cacheRows);
+        statusEl.textContent = `Loaded ${cacheRows.length} client${cacheRows.length===1?'':'s'}.`;
+      })
+      .catch(err=>{
+        statusEl.textContent = 'Error loading clients: ' + err.message;
+      });
+  }
+
+  function applyClientSearch(){
+    const txt = (searchEl?.value || "").toLowerCase().trim();
+    const filtered = cacheRows.filter(r=>{
+      return (
+        (r.phone||"").toLowerCase().includes(txt) ||
+        (r.name||"").toLowerCase().includes(txt)  ||
+        (r.email||"").toLowerCase().includes(txt)
+      );
+    });
+    renderRows(filtered);
+    statusEl.textContent = `Showing ${filtered.length} of ${cacheRows.length} client${cacheRows.length===1?'':'s'}.`;
+  }
+
+  function exportClientsCSV(){
+    const head = ["Phone","Name","Email","# Orders","Total Spent (Rs)","Last Order"];
+    const visibleRows = Array.from(bodyEl.querySelectorAll('tr'))
+      .map(tr => Array.from(tr.children).map(td => td.innerText.trim()))
+      .filter(arr => arr.length === head.length); // skip "No clients found."
+
+    const csvRows = [
+      head.map(h=>('"'+h.replaceAll('"','""')+'"')).join(',')
+    ];
+    for(const row of visibleRows){
+      csvRows.push(row.map(c => '"'+c.replaceAll('"','""')+'"').join(','));
+    }
+    const blob = new Blob([csvRows.join('\n')], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'clients.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  searchEl && searchEl.addEventListener('input', applyClientSearch);
+  refreshBtn && refreshBtn.addEventListener('click', loadClients);
+  exportBtn && exportBtn.addEventListener('click', exportClientsCSV);
+
+  // Initial load (after Firebase config is present)
+  loadClients();
+})();
 </script>
 </body>
 </html>
