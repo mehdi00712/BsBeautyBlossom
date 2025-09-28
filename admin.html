@@ -41,9 +41,9 @@
     .row{margin-bottom:10px}
     .row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     input,textarea,select{width:100%;padding:.6rem;border:1px solid #ddd;border-radius:10px}
-    .nowrap{white-space:nowrap}
-    .pill{display:inline-block;padding:2px 8px;border:1px solid #ddd;border-radius:999px;background:#f7f7f7}
     .logo .logo-mark{font-weight:700}
+    .badge{display:inline-flex;align-items:center;gap:6px;background:#f6f6f6;border:1px solid #ddd;border-radius:999px;padding:4px 10px;font-size:.9rem}
+    .badge b{font-weight:700}
   </style>
 </head>
 <body>
@@ -70,10 +70,9 @@
 <main class="admin-wrap" style="padding:18px">
   <h1>Admin Dashboard</h1>
 
-  <!-- Toolbar (buttons shown after login/allowlist as you do in admin.js) -->
+  <!-- Toolbar (shown after login/allowlist via your admin.js) -->
   <div class="toolbar">
     <button id="btnSeeOrders" class="btn primary hide">📦 See Orders</button>
-    <button id="btnSeeClients" class="btn primary hide">📱 See Clients</button>
     <button id="btnBack" class="btn hide">⬅ Back to Dashboard</button>
     <button id="loginBtn" class="btn">Log In</button>
     <button id="logoutBtn" class="btn hide">Log Out</button>
@@ -98,7 +97,6 @@
 
   <!-- ADMIN SECTIONS (shown only for allowlisted UIDs) -->
   <div id="dashboard-sections" class="hide">
-
     <!-- Site Settings -->
     <section id="site-section" class="card">
       <h2>Site Settings (Homepage)</h2>
@@ -220,43 +218,15 @@
         </table>
       </div>
     </section>
-
-    <!-- Clients (by phone) -->
-    <section id="clients-section" class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <h2>Clients (by Phone)</h2>
-        <div class="filters">
-          <input id="clientSearch" type="search" placeholder="Search phone/name/email…">
-          <button id="clientsRefresh" class="btn sm">⟳ Refresh</button>
-          <button id="clientsExport" class="btn sm">⬇ Export CSV</button>
-        </div>
-      </div>
-      <p><span id="clients-status">Connecting…</span></p>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Phone</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th># Orders</th>
-              <th>Total Spent</th>
-              <th>Last Order</th>
-            </tr>
-          </thead>
-          <tbody id="clients-body">
-            <tr><td colspan="6">Loading…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
   </div><!-- /#dashboard-sections -->
 
-  <!-- ORDERS-ONLY VIEW -->
+  <!-- ORDERS VIEW (with Clients badge) -->
   <section id="orders-section" class="card hide">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-      <h2>Orders</h2>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <h2>Orders</h2>
+        <span class="badge">Clients: <b id="orders-clients-count">0</b></span>
+      </div>
       <div class="filters">
         <input id="orderSearch" type="search" placeholder="Search name/email/id…">
         <select id="orderStatusFilter">
@@ -299,7 +269,7 @@
 <script src="admin.js" defer></script>
 <script src="script.js" defer></script>
 
-<!-- Orders: filters + CSV (kept from your previous version) -->
+<!-- Orders: filters + CSV -->
 <script>
   (function(){
     const q = document.getElementById('orderSearch');
@@ -346,17 +316,15 @@
   })();
 </script>
 
-<!-- Clients grid: live listener + search + CSV -->
+<!-- Clients COUNT (inside Orders) -->
 <script>
 (function(){
-  // ---- Simple view toggles (Orders vs Clients vs Dashboard) ----
   const btnSeeOrders  = document.getElementById('btnSeeOrders');
-  const btnSeeClients = document.getElementById('btnSeeClients');
   const btnBack       = document.getElementById('btnBack');
-
-  const dashWrap   = document.getElementById('dashboard-sections'); // site/product/clients
-  const ordersWrap = document.getElementById('orders-section');
-  const clientsSec = document.getElementById('clients-section');
+  const dashWrap      = document.getElementById('dashboard-sections');
+  const ordersWrap    = document.getElementById('orders-section');
+  const clientsCountEl= document.getElementById('orders-clients-count');
+  const ordersStatus  = document.getElementById('orders-status');
 
   function showDashboard(){
     ordersWrap?.classList.add('hide');
@@ -369,160 +337,47 @@
     btnBack?.classList.remove('hide');
     window.__applyOrderFilters && window.__applyOrderFilters();
   }
-  function showClients(){
-    ordersWrap?.classList.add('hide');
-    dashWrap?.classList.remove('hide'); // clients lives inside dashboard
-    btnBack?.classList.remove('hide');
-    clientsSec?.scrollIntoView({behavior:'smooth', block:'start'});
-  }
 
   btnBack      && btnBack.addEventListener('click', showDashboard);
   btnSeeOrders && btnSeeOrders.addEventListener('click', showOrders);
-  btnSeeClients&& btnSeeClients.addEventListener('click', showClients);
 
-  // If your admin.js unhides buttons on login, great; otherwise make sure Clients is visible:
-  btnSeeClients && btnSeeClients.classList.remove('hide');
+  // Make sure the See Orders button is visible after login in your admin.js,
+  // but also unhide here so you can test quickly:
+  btnSeeOrders && btnSeeOrders.classList.remove('hide');
 
-  // ---- Clients (phone-number grid) ----
-  const bodyEl     = document.getElementById('clients-body');
-  const statusEl   = document.getElementById('clients-status');
-  const searchEl   = document.getElementById('clientSearch');
-  const refreshBtn = document.getElementById('clientsRefresh');
-  const exportBtn  = document.getElementById('clientsExport');
-
-  let detach = null;     // to stop the listener if needed
-  let cacheRows = [];    // current rows in memory
-
-  function log(...args){ console.log('[Clients]', ...args); }
-  function rupee(n){ return (Number(n)||0).toFixed(2); }
-
-  function renderRows(rows){
-    bodyEl.innerHTML = "";
-    if(!rows || rows.length === 0){
-      bodyEl.innerHTML = '<tr><td colspan="6">No clients found.</td></tr>';
-      return;
-    }
-    for(const r of rows){
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="nowrap"><span class="pill">${r.phone}</span></td>
-        <td>${r.name || '-'}</td>
-        <td>${r.email || '-'}</td>
-        <td>${r.orders}</td>
-        <td class="nowrap">Rs ${rupee(r.total)}</td>
-        <td class="nowrap">${r.lastOrder.toLocaleString()}</td>
-      `;
-      bodyEl.appendChild(tr);
-    }
-  }
-
-  function aggregateClients(snapshot){
-    const byPhone = new Map();
-    snapshot.forEach(child=>{
-      const o = child.val() || {};
-      const phone = (o.phone||"").trim();
-      const name  = (o.name||"").trim();
-      const email = (o.email||"").trim();
-      const savedTotal = (o.total!=null) ? Number(o.total) : NaN;
-      const itemsArray = Array.isArray(o.items) ? o.items : (o.items ? Object.values(o.items) : []);
-      const computedTotal = itemsArray.reduce((s,it)=> s + (Number(it.price)||0) * (Number(it.quantity)||0), 0);
-      const total = Number.isFinite(savedTotal) ? savedTotal : computedTotal;
-      const ts    = new Date(o.timestamp || Date.now());
-
-      if(!phone) return; // skip orders with no phone
-
-      if(!byPhone.has(phone)){
-        byPhone.set(phone, {
-          phone, name, email,
-          orders: 0,
-          total: 0,
-          lastOrder: new Date(0)
-        });
-      }
-      const entry = byPhone.get(phone);
-      entry.orders += 1;
-      entry.total  += total;
-      // prefer latest non-empty name/email
-      if (name)  entry.name  = name;
-      if (email) entry.email = email;
-      if (ts > entry.lastOrder) entry.lastOrder = ts;
-    });
-
-    // Convert to array & sort by last order desc
-    return Array.from(byPhone.values()).sort((a,b)=>b.lastOrder - a.lastOrder);
-  }
-
-  function applySearch(){
-    const txt = (searchEl?.value || "").toLowerCase().trim();
-    const filtered = !txt ? cacheRows : cacheRows.filter(r=>{
-      return (
-        (r.phone||"").toLowerCase().includes(txt) ||
-        (r.name||"").toLowerCase().includes(txt)  ||
-        (r.email||"").toLowerCase().includes(txt)
-      );
-    });
-    renderRows(filtered);
-    statusEl.textContent = `Showing ${filtered.length} of ${cacheRows.length} client${cacheRows.length===1?'':'s'}.`;
-  }
-
-  function exportCSV(){
-    const head = ["Phone","Name","Email","# Orders","Total Spent (Rs)","Last Order"];
-    const visibleRows = Array.from(bodyEl.querySelectorAll('tr'))
-      .map(tr => Array.from(tr.children).map(td => td.innerText.trim()))
-      .filter(arr => arr.length === head.length); // skip placeholder rows
-
-    const csvRows = [
-      head.map(h=>('"'+h.replaceAll('"','""')+'"')).join(',')
-    ];
-    for(const row of visibleRows){
-      csvRows.push(row.map(c => '"'+c.replaceAll('"','""')+'"').join(','));
-    }
-    const blob = new Blob([csvRows.join('\n')], {type:'text/csv'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'clients.csv'; a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  searchEl   && searchEl.addEventListener('input', applySearch);
-  exportBtn  && exportBtn.addEventListener('click', exportCSV);
-  refreshBtn && refreshBtn.addEventListener('click', () => {
-    detach && detach();
-    attachListener();
-  });
-
-  function attachListener(){
+  // Live listener to compute unique clients by phone, update the badge
+  let off = null;
+  function attachCount(){
     try{
       if (!firebase?.apps?.length) {
-        statusEl.textContent = 'Firebase is not initialized (check firebase-config.js).';
-        log('Firebase app missing'); return;
+        ordersStatus.textContent = 'Firebase is not initialized (check firebase-config.js).';
+        return;
       }
       const ref = firebase.database().ref('orders');
-      statusEl.textContent = 'Loading clients…';
-      log('Attaching /orders listener');
+      ordersStatus.textContent = 'Connecting…';
       const cb = ref.on('value', snap=>{
         if(!snap.exists()){
-          statusEl.textContent = 'No orders yet.';
-          bodyEl.innerHTML = '<tr><td colspan="6">No clients found.</td></tr>';
-          cacheRows = [];
+          clientsCountEl.textContent = '0';
+          ordersStatus.textContent = 'No orders yet.';
           return;
         }
-        cacheRows = aggregateClients(snap);
-        renderRows(cacheRows);
-        statusEl.textContent = `Loaded ${cacheRows.length} client${cacheRows.length===1?'':'s'}.`;
+        const phones = new Set();
+        snap.forEach(child=>{
+          const o = child.val() || {};
+          const phone = (o.phone||'').trim();
+          if (phone) phones.add(phone);
+        });
+        clientsCountEl.textContent = String(phones.size);
+        ordersStatus.textContent = `Loaded ${snap.size || Object.keys(snap.val()||{}).length} orders.`;
       }, err=>{
-        log('DB error:', err);
-        statusEl.textContent = 'Error loading clients: ' + (err?.message || err);
+        ordersStatus.textContent = 'Error loading orders: ' + (err?.message || err);
       });
-      detach = () => { ref.off('value', cb); };
+      off = ()=>ref.off('value', cb);
     }catch(e){
-      log('Attach listener failed:', e);
-      statusEl.textContent = 'Error: ' + e.message;
+      ordersStatus.textContent = 'Error: ' + e.message;
     }
   }
-
-  // Start listening right away
-  attachListener();
+  attachCount();
 })();
 </script>
 </body>
