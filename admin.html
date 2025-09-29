@@ -11,6 +11,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Your firebase-config.js must call: firebase.initializeApp({...}); -->
   <script src="firebase-config.js"></script>
 
   <style>
@@ -19,15 +20,24 @@
     .btn{padding:.6rem .9rem;border:1px solid #ccc;border-radius:10px;cursor:pointer;background:#fff}
     .btn.primary{border-color:#111}
     .btn.sm{padding:.35rem .6rem;border-radius:8px}
+    .btn.google{border-color:#4285F4}
     .muted{opacity:.7}
     .card{padding:16px;border:1px solid #eee;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:16px}
     .table-wrap{overflow:auto}
     table{width:100%;border-collapse:collapse}
     th,td{border:1px solid #eee;padding:8px;text-align:left;vertical-align:top}
     th{background:#fafafa}
+    .status{display:inline-block;padding:.25rem .5rem;border-radius:999px;border:1px solid #ddd;font-size:.85rem}
+    .status.pending{background:#fff7e6;border-color:#f0c36d}
+    .status.shipped{background:#e6f7ff;border-color:#82c4f8}
+    .status.completed{background:#eaffea;border-color:#7bc47f}
     .filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
     .filters input, .filters select{padding:.45rem .6rem;border:1px solid #ddd;border-radius:8px}
     .logo .logo-mark{font-weight:700}
+    .row{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+    .row > div{display:flex;flex-direction:column;gap:6px}
+    input,textarea,select{padding:.6rem;border:1px solid #ddd;border-radius:10px}
+    @media (max-width:640px){.row{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -57,19 +67,43 @@
   <div class="toolbar">
     <button id="btnSeeOrders" class="btn primary hide">📦 See Orders</button>
     <button id="btnBack" class="btn hide">⬅ Back to Dashboard</button>
-    <button id="loginBtn" class="btn">Log In</button>
     <button id="logoutBtn" class="btn hide">Log Out</button>
     <span id="auth-status" class="muted"></span>
   </div>
 
-  <!-- (Your login + product sections can stay the same; omitted for brevity) -->
+  <!-- Login -->
+  <section id="auth-section" class="card">
+    <h2>Admin Login</h2>
+    <div class="row" style="margin-top:8px">
+      <div>
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="admin@example.com">
+      </div>
+      <div>
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Your password">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <button id="loginEmailBtn" class="btn">Login with Email</button>
+      <button id="loginGoogleBtn" class="btn google">Login with Google</button>
+    </div>
+    <p class="muted" id="auth-help" style="margin-top:8px">
+      Tip: Make sure the sign-in method is enabled in Firebase Console and your domain is allow-listed.
+    </p>
+  </section>
 
-  <!-- ORDERS VIEW (now includes Phone column after Email) -->
+  <!-- Your other admin sections (Site settings, Products, etc.) stay as you have them -->
+  <div id="dashboard-sections" class="hide">
+    <!-- keep your existing sections here (omitted to keep this file shorter) -->
+  </div>
+
+  <!-- Orders (includes Phone column right after Email) -->
   <section id="orders-section" class="card hide">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <h2>Orders</h2>
       <div class="filters">
-        <input id="orderSearch" type="search" placeholder="Search name/email/id…">
+        <input id="orderSearch" type="search" placeholder="Search name/email/phone/id…">
         <select id="orderStatusFilter">
           <option value="">All statuses</option>
           <option value="pending">Pending</option>
@@ -88,7 +122,7 @@
             <th>Order ID</th>
             <th>Customer</th>
             <th>Email</th>
-            <th>Phone</th><!-- 👈 NEW column -->
+            <th>Phone</th><!-- phone lives here -->
             <th>Items</th>
             <th>Total</th>
             <th>Address</th>
@@ -107,11 +141,11 @@
   <p>© 2025 B’s Beauty Blossom • Admin</p>
 </footer>
 
-<!-- Your existing logic -->
+<!-- App logic -->
 <script src="admin.js" defer></script>
 <script src="script.js" defer></script>
 
-<!-- Orders: filters + CSV (unchanged) -->
+<!-- Filters + CSV export (unchanged) -->
 <script>
   (function(){
     const q = document.getElementById('orderSearch');
@@ -156,108 +190,6 @@
     }
     btn && btn.addEventListener('click', toCSV);
   })();
-</script>
-
-<!-- 🔧 Phone column filler (works alongside your existing admin.js) -->
-<script>
-(function(){
-  const ordersBody = document.getElementById('orders-body');
-  const ordersStatus = document.getElementById('orders-status');
-
-  // 1) Ensure header has a Phone column (in case something re-renders head)
-  function ensurePhoneHeader(){
-    const ths = Array.from(document.querySelectorAll('#orders-table thead th'));
-    const hasPhone = ths.some(th => th.textContent.trim().toLowerCase() === 'phone');
-    if (!hasPhone){
-      const emailIdx = ths.findIndex(th => th.textContent.trim().toLowerCase() === 'email');
-      if (emailIdx >= 0){
-        const tr = document.querySelector('#orders-table thead tr');
-        const th = document.createElement('th');
-        th.textContent = 'Phone';
-        tr.insertBefore(th, tr.children[emailIdx + 1]);
-      }
-    }
-  }
-
-  // 2) Load all orders once; build id->phone map
-  let phoneMap = {};
-  function loadPhones(){
-    try{
-      if (!firebase?.apps?.length) {
-        ordersStatus.textContent = 'Firebase not initialized (check firebase-config.js).';
-        return;
-      }
-      const ref = firebase.database().ref('orders');
-      ref.on('value', snap=>{
-        phoneMap = {};
-        if (snap.exists()){
-          snap.forEach(child=>{
-            const id = child.key;
-            const val = child.val() || {};
-            const phone = (val.phone || '').trim();
-            phoneMap[id] = phone;
-          });
-        }
-        // After (re)load, fill table
-        fillPhonesInTable();
-      }, err=>{
-        ordersStatus.textContent = 'Error loading orders: ' + (err?.message || err);
-      });
-    }catch(e){
-      ordersStatus.textContent = 'Error: ' + e.message;
-    }
-  }
-
-  // 3) Insert a phone <td> for each row, right after the Email cell
-  function fillPhonesInTable(){
-    ensurePhoneHeader();
-    if (!ordersBody) return;
-    const rows = Array.from(ordersBody.querySelectorAll('tr'));
-    rows.forEach(tr=>{
-      const cells = Array.from(tr.children);
-      if (cells.length === 0) return;
-
-      // Order ID assumed to be in first column
-      const orderId = (cells[0]?.innerText || '').trim();
-      const phone = phoneMap[orderId] || '';
-
-      // Find Email column index, then ensure we have a Phone cell right after
-      const headThs = Array.from(document.querySelectorAll('#orders-table thead th'))
-        .map(th => th.textContent.trim().toLowerCase());
-      const emailColIndex = headThs.indexOf('email');
-      const phoneColIndex = headThs.indexOf('phone');
-
-      // If row already has enough cells, just write into phone column
-      // Otherwise insert a new <td> at phoneColIndex
-      if (phoneColIndex >= 0){
-        if (cells.length > phoneColIndex){
-          tr.children[phoneColIndex].textContent = phone;
-          tr.children[phoneColIndex].setAttribute('data-col','phone');
-        } else {
-          const td = document.createElement('td');
-          td.textContent = phone;
-          td.setAttribute('data-col','phone');
-          // Insert at correct position (after Email)
-          if (emailColIndex >= 0 && tr.children[emailColIndex]){
-            tr.insertBefore(td, tr.children[emailColIndex + 1] || null);
-          } else {
-            tr.appendChild(td);
-          }
-        }
-      }
-    });
-  }
-
-  // Re-fill if admin.js updates the table
-  const mo = new MutationObserver(() => fillPhonesInTable());
-  if (ordersBody){
-    mo.observe(ordersBody, {childList:true, subtree:false});
-  }
-
-  // Kick off
-  ensurePhoneHeader();
-  loadPhones();
-})();
 </script>
 </body>
 </html>
