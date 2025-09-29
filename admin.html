@@ -11,12 +11,13 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Your firebase-config.js must call: firebase.initializeApp({ ... }) -->
   <script src="firebase-config.js"></script>
 
-  <!-- Optional: Cloudinary (for image uploads from admin) -->
+  <!-- Cloudinary (optional uploads from admin) -->
   <script>
-    window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";      /* <- your values */
-    window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
+    window.CLOUDINARY_CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME || "dlwk13ady";
+    window.CLOUDINARY_UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET || "unsigned_bbb";
   </script>
 
   <style>
@@ -37,6 +38,7 @@
     .status.shipped{background:#e6f7ff;border-color:#82c4f8}
     .status.completed{background:#eaffea;border-color:#7bc47f}
     .filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+    .filters input, .filters select{padding:.45rem .6rem;border:1px solid #ddd;border-radius:8px}
     .row{margin-bottom:10px}
     .row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     input,textarea,select{width:100%;padding:.6rem;border:1px solid #ddd;border-radius:10px}
@@ -89,10 +91,10 @@
         <input id="password" type="password" placeholder="Password">
       </div>
     </div>
-    <p class="muted" style="margin-top:8px">Tip: leave email/password empty to sign in with Google popup (if enabled).</p>
+    <p class="muted" style="margin-top:8px">Tip: leave email/password empty to sign in with Google popup.</p>
   </section>
 
-  <!-- DASHBOARD SECTIONS (visible for allow-listed admins) -->
+  <!-- ADMIN SECTIONS (shown only for allow-listed admin) -->
   <div id="dashboard-sections" class="hide">
     <!-- Site Settings -->
     <section id="site-section" class="card">
@@ -140,7 +142,7 @@
       <p id="site-status" class="muted"></p>
     </section>
 
-    <!-- Add / Edit Product -->
+    <!-- Product Form -->
     <section id="product-section" class="card">
       <h2>Add / Edit Product</h2>
       <div class="row">
@@ -174,7 +176,7 @@
         </div>
       </div>
       <div class="row">
-        <label for="sizes">Sizes (one per line: "Label | Price")</label>
+        <label for="sizes">Sizes</label>
         <textarea id="sizes" rows="4" placeholder="100ml | 2350"></textarea>
       </div>
       <div class="row">
@@ -192,11 +194,12 @@
       <input type="hidden" id="docId">
     </section>
 
-    <!-- Products List -->
+    <!-- Product List -->
     <section id="list-section" class="card">
       <h2>Products</h2>
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <select id="filterCategory">
+          <option value="all">All</option>
           <option value="perfume">Perfume</option>
           <option value="body">Body</option>
           <option value="skincare">Skincare</option>
@@ -217,7 +220,7 @@
     </section>
   </div><!-- /#dashboard-sections -->
 
-  <!-- ORDERS VIEW -->
+  <!-- ORDERS VIEW (with Phone column) -->
   <section id="orders-section" class="card hide">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <h2>Orders</h2>
@@ -241,7 +244,7 @@
             <th>Order ID</th>
             <th>Customer</th>
             <th>Email</th>
-            <th>Phone</th><!-- phone column -->
+            <th>Phone</th><!-- NEW -->
             <th>Items</th>
             <th>Total</th>
             <th>Address</th>
@@ -264,7 +267,7 @@
 <script src="admin.js" defer></script>
 <script src="script.js" defer></script>
 
-<!-- Orders helpers (filters + CSV + phone column fill) -->
+<!-- Orders: filters + CSV -->
 <script>
   (function(){
     const q = document.getElementById('orderSearch');
@@ -308,92 +311,6 @@
       URL.revokeObjectURL(url);
     }
     btn && btn.addEventListener('click', toCSV);
-  })();
-
-  /* Ensure Phone column is filled from RTDB order.phone (works with admin.js) */
-  (function(){
-    const ordersBody = document.getElementById('orders-body');
-    const ordersStatus = document.getElementById('orders-status');
-
-    function ensurePhoneHeader(){
-      const ths = Array.from(document.querySelectorAll('#orders-table thead th'));
-      const hasPhone = ths.some(th => th.textContent.trim().toLowerCase() === 'phone');
-      if (!hasPhone){
-        const emailIdx = ths.findIndex(th => th.textContent.trim().toLowerCase() === 'email');
-        if (emailIdx >= 0){
-          const tr = document.querySelector('#orders-table thead tr');
-          const th = document.createElement('th');
-          th.textContent = 'Phone';
-          tr.insertBefore(th, tr.children[emailIdx + 1]);
-        }
-      }
-    }
-
-    let phoneMap = {};
-    function loadPhones(){
-      try{
-        if (!firebase?.apps?.length) {
-          ordersStatus.textContent = 'Firebase not initialized (check firebase-config.js).';
-          return;
-        }
-        const ref = firebase.database().ref('orders');
-        ref.on('value', snap=>{
-          phoneMap = {};
-          if (snap.exists()){
-            snap.forEach(child=>{
-              const id = child.key;
-              const val = child.val() || {};
-              phoneMap[id] = (val.phone || '').trim();
-            });
-          }
-          fillPhonesInTable();
-        }, err=>{
-          ordersStatus.textContent = 'Error loading orders: ' + (err?.message || err);
-        });
-      }catch(e){
-        ordersStatus.textContent = 'Error: ' + e.message;
-      }
-    }
-
-    function fillPhonesInTable(){
-      ensurePhoneHeader();
-      if (!ordersBody) return;
-      const rows = Array.from(ordersBody.querySelectorAll('tr'));
-      const headThs = Array.from(document.querySelectorAll('#orders-table thead th'))
-        .map(th => th.textContent.trim().toLowerCase());
-      const emailColIndex = headThs.indexOf('email');
-      const phoneColIndex = headThs.indexOf('phone');
-
-      rows.forEach(tr=>{
-        const cells = Array.from(tr.children);
-        const orderId = (cells[0]?.innerText || '').trim();
-        const phone = phoneMap[orderId] || '';
-
-        if (phoneColIndex >= 0){
-          if (cells.length > phoneColIndex){
-            tr.children[phoneColIndex].textContent = phone;
-            tr.children[phoneColIndex].setAttribute('data-col','phone');
-          } else {
-            const td = document.createElement('td');
-            td.textContent = phone;
-            td.setAttribute('data-col','phone');
-            if (emailColIndex >= 0 && tr.children[emailColIndex]){
-              tr.insertBefore(td, tr.children[emailColIndex + 1] || null);
-            } else {
-              tr.appendChild(td);
-            }
-          }
-        }
-      });
-    }
-
-    const mo = new MutationObserver(() => fillPhonesInTable());
-    if (ordersBody){
-      mo.observe(ordersBody, {childList:true, subtree:false});
-    }
-
-    ensurePhoneHeader();
-    loadPhones();
   })();
 </script>
 </body>
