@@ -21,25 +21,20 @@ const parseSizes = (t) => String(t || "").split("\n").map(l=>l.trim()).filter(Bo
   return { label, price: Number(p || 0) };
 });
 const renderSizes = (arr) => (arr||[]).map(s=>`${s.label} (Rs${isFinite(s.price)?s.price:0})`).join(", ");
-function esc(v){ return String(v ?? "-").replace(/[&<>"']/g, s=>({"&":"&amp;","<":"&lt;","&gt;":">","\"":"&quot;","'":"&#39;"}[s])); }
+function esc(v){ return String(v ?? "-").replace(/[&<>"']/g, s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s])); }
 function fmtMoney(v){ const n = Number(v); return isFinite(n)? new Intl.NumberFormat(undefined,{style:"currency",currency:"MUR"}).format(n):"-"; }
 function fmtTime(t){ if(!t) return "-"; const d = new Date(t); return isNaN(d)? String(t): d.toLocaleString(); }
 const canSeeAdmin = (user) => !!user && ALLOWED_UIDS.includes(user.uid);
 
-/* ---------- Cloudflare R2 ---------- */
-const R2_BUCKET_URL = "https://pub-debe71c65e07451f9a413f6d91c86f9a.r2.dev/";
-
-async function uploadToR2(file) {
-  if (!file) throw new Error("No file selected");
-  const fileName = encodeURIComponent(file.name.replace(/\s+/g, "_"));
-  const uploadUrl = R2_BUCKET_URL + fileName;
-  const res = await fetch(uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": file.type },
-    body: file
-  });
-  if (!res.ok) throw new Error("Failed to upload to R2: " + res.statusText);
-  return uploadUrl;
+/* ---------- Cloudinary (optional) ---------- */
+const CLOUD_NAME    = window.CLOUDINARY_CLOUD_NAME || "";
+const UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET || "";
+async function uploadToCloudinary(file){
+  if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error("Cloudinary not configured.");
+  const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`;
+  const fd = new FormData(); fd.append("file", file); fd.append("upload_preset", UPLOAD_PRESET);
+  const r = await fetch(url,{method:"POST",body:fd}); if(!r.ok) throw new Error("Cloudinary upload failed");
+  return (await r.json()).secure_url;
 }
 
 /* ---------- UI refs ---------- */
@@ -80,51 +75,111 @@ logoutBtn?.addEventListener("click", async () => {
   catch(e){ console.error(e); }
 });
 
-/* ---------- Orders ---------- */
+/* ---------- Orders view toggle (guarded) ---------- */
+btnSeeOrders?.addEventListener("click", () => {
+  const u = auth.currentUser;
+  if (!canSeeAdmin(u)) return; // safety
+  hide(dashboardWrap);
+  show(ordersSection);
+  show(btnBack);
+  hide(btnSeeOrders);
+  ordersStatus && (ordersStatus.textContent = "Loading orders…");
+  attachOrdersListener();
+});
+btnBack?.addEventListener("click", () => {
+  show(dashboardWrap);
+  hide(ordersSection);
+  hide(btnBack);
+  show(btnSeeOrders);
+});
+
+/* ---------- Orders (Realtime DB) ---------- */
 let ordersListenerAttached = false;
 function rowHTML(id, order){
   const itemsText = Array.isArray(order.items)
-    ? order.items.map(i=>`${i.name||i.title||'item'} x${i.qty||1}`).join(", ")
-    : String(order.items||"");
+    ? order.items.map(i=>`${i.name||i.title||'item'} x${i.qty||i.quantity||1}`).join(", ")
+    : (order.items && typeof order.items==="object"
+        ? Object.values(order.items).map(i=>`${i.name||i.title||'item'} x${i.qty||i.quantity||1}`).join(", ")
+        : String(order.items||""));
   const status = (order.status || "pending").toLowerCase();
   const cls = {pending:"status pending", shipped:"status shipped", completed:"status completed"}[status] || "status";
+  const phone = (order.phone || "").trim();
+  const total = (order.total != null) ? order.total : order.totalAmount; // compatibility
   return `
-    <td>${id}</td>
-    <td>${esc(order.name)}</td>
-    <td>${esc(order.email)}</td>
-    <td>${esc(order.phone || "")}</td>
-    <td>${esc(itemsText)}</td>
-    <td>${fmtMoney(order.total || 0)}</td>
-    <td>${esc(order.address)}</td>
-    <td>${fmtTime(order.timestamp)}</td>
-    <td><span class="${cls}">${status}</span></td>
-    <td>
-      <button class="btn sm" data-set-status="pending" data-id="${id}">Pending</button>
-      <button class="btn sm" data-set-status="shipped" data-id="${id}">Shipped</button>
-      <button class="btn sm" data-set-status="completed" data-id="${id}">Completed</button>
-      <button class="btn sm danger" data-delete-id="${id}">Delete</button>
+    <td data-col="id">${id}</td>
+    <td data-col="name">${esc(order.name)}</td>
+    <td data-col="email">${esc(order.email)}</td>
+    <td data-col="phone">${esc(phone)}</td>
+    <td data-col="items">${esc(itemsText)}</td>
+    <td data-col="total">${fmtMoney(total)}</td>
+    <td data-col="address">${esc(order.address)}</td>
+    <td data-col="time">${fmtTime(order.timestamp)}</td>
+    <td data-col="status" data-status="${status}"><span class="${cls}">${status[0].toUpperCase()+status.slice(1)}</span></td>
+    <td data-col="action">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn sm" data-set-status="pending"   data-id="${id}">Pending</button>
+        <button class="btn sm" data-set-status="shipped"   data-id="${id}">Shipped</button>
+        <button class="btn sm" data-set-status="completed" data-id="${id}">Completed</button>
+        <button class="btn sm danger" data-delete-id="${id}">Delete</button>
+      </div>
     </td>`;
 }
-
 function attachOrdersListener(){
   if (ordersListenerAttached) return;
+  if (!firebase.database) { ordersStatus && (ordersStatus.textContent="Realtime Database not available."); return; }
   const rtdb = firebase.database();
   const ref = rtdb.ref("orders").limitToLast(500);
-  ref.on("value",(snap)=>{
+  ref.on("value", (snap)=>{
     if (!ordersBody) return;
-    ordersBody.innerHTML="";
-    const val=snap.val()||{};
-    Object.entries(val).forEach(([id,order])=>{
-      const tr=document.createElement("tr");
-      tr.innerHTML=rowHTML(id,order);
-      ordersBody.appendChild(tr);
+    ordersBody.innerHTML = "";
+    const val = snap.val() || {};
+    const rows = [];
+    Object.entries(val).forEach(([id, order])=> {
+      const tr = document.createElement("tr");
+      tr.innerHTML = rowHTML(id, order || {});
+      rows.push([order.timestamp||0, tr]);
     });
-    ordersStatus.textContent="Loaded.";
+    rows.sort((a,b)=>(new Date(b[0]).getTime()||0)-(new Date(a[0]).getTime()||0));
+    rows.forEach(([,tr])=>ordersBody.appendChild(tr));
+    ordersStatus && (ordersStatus.textContent = rows.length ? `Loaded ${rows.length} order(s).` : "No orders yet.");
+    window.__applyOrderFilters?.();
+  }, (err)=>{
+    console.error(err);
+    ordersStatus && (ordersStatus.textContent = "Permission error or missing rules.");
   });
-  ordersListenerAttached=true;
+  ordersListenerAttached = true;
 }
 
-/* ---------- Site Settings ---------- */
+/* status + delete actions (delegated) */
+document.addEventListener("click", async (e)=>{
+  const setBtn = e.target.closest("[data-set-status]");
+  const delBtn = e.target.closest("[data-delete-id]");
+  if (setBtn){
+    const id = setBtn.getAttribute("data-id");
+    const next = setBtn.getAttribute("data-set-status");
+    try{
+      await firebase.database().ref(`orders/${id}`).update({ status: next, adminUpdatedAt: new Date().toISOString() });
+      const cell = setBtn.closest("tr")?.querySelector('[data-col="status"]');
+      if (cell) {
+        const cls = {pending:"status pending", shipped:"status shipped", completed:"status completed"}[next] || "status";
+        cell.dataset.status = next;
+        cell.innerHTML = `<span class="${cls}">${next[0].toUpperCase()+next.slice(1)}</span>`;
+      }
+      window.__applyOrderFilters?.();
+    }catch(err){ console.error(err); alert("Failed to update status: " + (err?.message || err)); }
+    return;
+  }
+  if (delBtn){
+    const id = delBtn.getAttribute("data-delete-id");
+    if (!confirm("Delete this order? This cannot be undone.")) return;
+    try{
+      await firebase.database().ref(`orders/${id}`).remove();
+      delBtn.closest("tr")?.remove();
+    }catch(err){ console.error(err); alert("Failed to delete: " + (err?.message || err)); }
+  }
+});
+
+/* ---------- Site Settings (Firestore) ---------- */
 const site = {
   heroTitle: $("site-heroTitle"), heroSubtitle: $("site-heroSubtitle"),
   featuredCategory: $("site-featuredCategory"), showFeatured: $("site-showFeatured"),
@@ -135,83 +190,178 @@ const site = {
 const siteDocRef = db.collection("site").doc("home");
 
 async function loadSite(){
-  try {
+  if(!site.heroTitle || !site.heroSubtitle || !site.featuredCategory || !site.showFeatured) return;
+  try{
+    site.status && (site.status.textContent = "Loading…");
     const snap = await siteDocRef.get();
     const data = snap.exists ? snap.data() : {};
-    site.heroTitle.value = data.heroTitle || "";
-    site.heroSubtitle.value = data.heroSubtitle || "";
+    site.heroTitle.value        = data.heroTitle || "";
+    site.heroSubtitle.value     = data.heroSubtitle || "";
     site.featuredCategory.value = (data.featuredCategory || "perfume").toLowerCase();
-    site.showFeatured.checked = !!data.showFeatured;
-    site.bannerPreview.innerHTML = data.bannerImage ? `<img src="${data.bannerImage}" width="120">` : "";
-    site.galleryPreview.innerHTML = (data.gallery || []).map(u=>`<img src="${u}" width="86">`).join("");
-  } catch (e){ console.error(e); }
+    site.showFeatured.checked   = !!data.showFeatured;
+    site.bannerPreview && (site.bannerPreview.innerHTML = data.bannerImage ? `<img src="${data.bannerImage}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">` : "");
+    site.galleryPreview && (site.galleryPreview.innerHTML = Array.isArray(data.gallery) ? data.gallery.map(u=>`<img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`).join("") : "");
+    site.status && (site.status.textContent = "Ready.");
+  }catch(e){ console.error(e); site.status && (site.status.textContent = "Error loading site settings."); }
 }
 site.reloadBtn?.addEventListener("click", loadSite);
 
-/* ---------- Products ---------- */
-const nameEl=$("name"), priceEl=$("price"), brandEl=$("brand"), sizesEl=$("sizes"),
-descEl=$("description"), categoryEl=$("category"), activeEl=$("active"), imagesEl=$("images");
+/* ---------- Products (Firestore) ---------- */
+const nameEl=$("name"), priceEl=$("price"), brandEl=$("brand"), sizesEl=$("sizes"), descEl=$("description"),
+      categoryEl=$("category"), activeEl=$("active"), imagesEl=$("images");
 const tableBody=$("tableBody"), filterCategory=$("filterCategory"), refreshBtn=$("refreshBtn"),
-resetBtn=$("resetBtn"), saveBtn=$("saveBtn"), docIdEl=$("docId");
+      resetBtn=$("resetBtn"), saveBtn=$("saveBtn"), docIdEl=$("docId");
 
-resetBtn?.addEventListener("click", ()=>{
-  nameEl.value=priceEl.value=brandEl.value=descEl.value=sizesEl.value="";
-  categoryEl.value="perfume"; activeEl.checked=true; imagesEl.value="";
-  docIdEl.value="";
-});
+function resetForm(){ if(docIdEl)docIdEl.value=""; if(nameEl)nameEl.value=""; if(priceEl)priceEl.value=""; if(brandEl)brandEl.value=""; if(sizesEl)sizesEl.value=""; if(descEl)descEl.value=""; if(categoryEl)categoryEl.value="perfume"; if(activeEl)activeEl.checked=true; if(imagesEl)imagesEl.value=""; }
+resetBtn?.addEventListener("click", resetForm);
+
+function normalizeCategory(raw) {
+  const v = String(raw || "").trim().toLowerCase();
+  if (v === "jewelry") return "jewellery"; // normalize US -> UK
+  return v;
+}
 
 async function loadProducts(){
-  const cat=(filterCategory.value||"all").toLowerCase();
-  const snap=cat==="all"?await db.collection("products").get():
-  await db.collection("products").where("category","==",cat).get();
-  tableBody.innerHTML="";
-  snap.forEach((d)=>{
-    const p=d.data(); const img=p.imageURL||(p.images&&p.images[0])||"";
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td><img src="${img}" width="60"></td>
-    <td>${esc(p.name)}<div class="muted">${esc(p.brand||"")}</div></td>
-    <td>${renderSizes(p.sizes)}</td>
-    <td>Rs${p.basePrice||0}</td>
-    <td>${p.active?"Yes":"No"}</td>
-    <td><button class="btn edit" data-id="${d.id}">Edit</button>
-    <button class="btn danger delete" data-id="${d.id}">Delete</button></td>`;
-    tableBody.appendChild(tr);
-  });
-}
-refreshBtn?.addEventListener("click",loadProducts);
-filterCategory?.addEventListener("change",loadProducts);
+  if(!tableBody || !filterCategory){
+    console.warn("⚠ loadProducts: tableBody or filterCategory missing");
+    return;
+  }
 
-saveBtn?.addEventListener("click",async()=>{
+  const requested = normalizeCategory(filterCategory.value || "all");
+  tableBody.innerHTML = "<tr><td colspan='6'>Loading…</td></tr>";
+
   try{
-    const id=docIdEl.value||db.collection("products").doc().id;
-    const sizes=parseSizes(sizesEl.value);
-    const data={
-      name:nameEl.value.trim(),
-      basePrice:toNumber(priceEl.value),
-      brand:brandEl.value.trim(),
-      sizes, description:descEl.value.trim(),
-      category:categoryEl.value.toLowerCase(),
-      active:activeEl.checked,
-      updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    let snap;
+
+    if (requested === "all") {
+      console.log("🔎 Fetching ALL products");
+      snap = await db.collection("products").get();
+    } else {
+      console.log("🔎 Fetching products in category:", requested);
+      snap = await db.collection("products")
+        .where("category","==",requested)
+        .get();
+
+      // If nothing found, try alternates/casing issues
+      if (snap.empty) {
+        console.log("…No exact matches. Trying alternates/case-insensitive…");
+        const all = await db.collection("products").get();
+        const docs = all.docs.filter(d => normalizeCategory(d.data().category) === requested);
+        // Build a mock snap-like object
+        snap = { empty: docs.length === 0, docs, forEach: (fn)=>docs.forEach(fn) };
+      }
+    }
+
+    if (snap.empty){
+      tableBody.innerHTML = `<tr><td colspan="6">No products found for <strong>${esc(requested)}</strong>. Try “All”.</td></tr>`;
+      return;
+    }
+
+    tableBody.innerHTML = "";
+    snap.forEach((doc)=>{
+      const p = doc.data() || {};
+      const img = p.imageURL || (Array.isArray(p.images) && p.images[0]) || "";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${img?`<img src="${img}" width="60" height="60" style="object-fit:cover;border-radius:6px;border:1px solid #e5e5e5">`:""}</td>
+        <td>${esc(p.name||"")}${p.brand?`<div class="muted">${esc(p.brand)}</div>`:""}</td>
+        <td>${renderSizes(p.sizes)}</td>
+        <td>Rs${Number(p.basePrice||0).toFixed(2)}</td>
+        <td>${p.active?"Yes":"No"}</td>
+        <td>
+          <button class="btn edit" data-id="${doc.id}">Edit</button>
+          <button class="btn danger delete" data-id="${doc.id}">Delete</button>
+        </td>`;
+      tableBody.appendChild(tr);
+    });
+
+    $$(".edit").forEach((b)=>b.addEventListener("click", async ()=>{
+      const d = await db.collection("products").doc(b.dataset.id).get();
+      if (!d.exists) return;
+      const p = d.data()||{};
+      if (docIdEl) docIdEl.value = d.id;
+      if (nameEl)  nameEl.value = p.name || "";
+      if (priceEl) priceEl.value = p.basePrice || 0;
+      if (brandEl) brandEl.value = p.brand || "";
+      if (sizesEl) sizesEl.value = (p.sizes||[]).map(s=>`${s.label} | ${s.price}`).join("\n");
+      if (descEl)  descEl.value = p.description || "";
+      if (categoryEl) categoryEl.value = normalizeCategory(p.category || "perfume");
+      if (activeEl) activeEl.checked = !!p.active;
+      window.scrollTo({top:0,behavior:"smooth"});
+    }));
+    $$(".delete").forEach((b)=>b.addEventListener("click", async ()=>{
+      if(!confirm("Delete this product?")) return;
+      await db.collection("products").doc(b.dataset.id).delete();
+      loadProducts();
+    }));
+
+  }catch(e){
+    console.error("❌ loadProducts error:", e);
+    tableBody.innerHTML = `<tr><td colspan="6">Error loading products: ${esc(e?.message || e)}</td></tr>`;
+  }
+}
+refreshBtn?.addEventListener("click", loadProducts);
+filterCategory?.addEventListener("change", loadProducts);
+
+saveBtn?.addEventListener("click", async ()=>{
+  try{
+    const id = (docIdEl && docIdEl.value) || db.collection("products").doc().id;
+    const sizes = parseSizes(sizesEl ? sizesEl.value : "");
+    const data = {
+      name: (nameEl && nameEl.value.trim()) || "",
+      basePrice: toNumber(priceEl ? priceEl.value : 0),
+      brand: (brandEl && brandEl.value.trim()) || "",
+      sizes,
+      description: (descEl && descEl.value.trim()) || "",
+      category: normalizeCategory(categoryEl && categoryEl.value || "perfume"), // normalized
+      active: !!(activeEl && activeEl.checked),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     };
-    if(!docIdEl.value) data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
-    if(imagesEl.files.length){
-      const urls=[];
-      for(const f of imagesEl.files) urls.push(await uploadToR2(f));
-      data.images=urls; data.imageURL=urls[0];
+    if (!docIdEl || !docIdEl.value) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+
+    if (imagesEl?.files?.length){
+      const uploads = []; for (const f of imagesEl.files) uploads.push(uploadToCloudinary(f));
+      const urls = await Promise.all(uploads);
+      data.images = urls; if (!data.imageURL && urls[0]) data.imageURL = urls[0];
     }
     await db.collection("products").doc(id).set(data,{merge:true});
-    alert("Saved ✓");
-    loadProducts();
-  }catch(e){console.error(e);alert("Save failed: "+e.message);}
+    alert("Saved ✓"); resetForm(); await loadProducts();
+  }catch(e){ console.error(e); alert("Save failed: " + (e?.message || e)); }
 });
 
-/* ---------- Auth state ---------- */
+/* ---------- Auth state: gate admin UI & See Orders ---------- */
 auth.onAuthStateChanged((user)=>{
-  const allowed=user&&ALLOWED_UIDS.includes(user.uid);
-  if(allowed){
-    show(dashboardWrap); loadSite(); loadProducts();
-  }else{
-    hide(dashboardWrap);
+  const loggedIn = !!user;
+
+  // Toggle login/logout
+  loggedIn ? hide(loginBtn) : show(loginBtn);
+  loggedIn ? show(logoutBtn) : hide(logoutBtn);
+
+  // Status text
+  if (authStatus) {
+    if (!loggedIn) authStatus.textContent = "Please sign in.";
+    else if (canSeeAdmin(user)) authStatus.textContent = `Signed in as ${user.email || user.uid}`;
+    else authStatus.textContent = "Access denied for this account. Ask admin to add your UID.";
+  }
+
+  const allowed = loggedIn && canSeeAdmin(user);
+
+  // See Orders is ONLY visible for allowed admins
+  allowed ? show(btnSeeOrders) : hide(btnSeeOrders);
+
+  if (allowed) {
+    if (dashboardWrap) dashboardWrap.style.display = "block";
+    if (siteSection)    siteSection.style.display    = "block";
+    if (productSection) productSection.style.display = "block";
+    if (listSection)    listSection.style.display    = "block";
+    loadSite();
+    loadProducts();
+  } else {
+    if (dashboardWrap) dashboardWrap.style.display = "none";
+    if (siteSection)    siteSection.style.display    = "none";
+    if (productSection) productSection.style.display = "none";
+    if (listSection)    listSection.style.display    = "none";
+    hide(ordersSection);
+    hide(btnBack);
   }
 });
