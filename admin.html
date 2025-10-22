@@ -11,13 +11,11 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <!-- Your firebase-config.js must call: firebase.initializeApp({ ... }) -->
   <script src="firebase-config.js"></script>
 
-  <!-- Cloudinary (optional uploads from admin) -->
+  <!-- Cloudflare Worker Upload URL -->
   <script>
-    window.CLOUDINARY_CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME || "dlwk13ady";
-    window.CLOUDINARY_UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET || "unsigned_bbb";
+    window.WORKER_UPLOAD_URL = "https://bbb-r2-uploader.mbhoyroo246.workers.dev";
   </script>
 
   <style>
@@ -218,9 +216,9 @@
         </table>
       </div>
     </section>
-  </div><!-- /#dashboard-sections -->
+  </div>
 
-  <!-- ORDERS VIEW (with Phone column) -->
+  <!-- ORDERS VIEW -->
   <section id="orders-section" class="card hide">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <h2>Orders</h2>
@@ -244,7 +242,7 @@
             <th>Order ID</th>
             <th>Customer</th>
             <th>Email</th>
-            <th>Phone</th><!-- NEW -->
+            <th>Phone</th>
             <th>Items</th>
             <th>Total</th>
             <th>Address</th>
@@ -263,55 +261,7 @@
   <p>© 2025 B’s Beauty Blossom • Admin</p>
 </footer>
 
-<!-- App scripts -->
 <script src="admin.js" defer></script>
 <script src="script.js" defer></script>
-
-<!-- Orders: filters + CSV -->
-<script>
-  (function(){
-    const q = document.getElementById('orderSearch');
-    const f = document.getElementById('orderStatusFilter');
-    const body = document.getElementById('orders-body');
-    function match(row, txt, status){
-      const t = row.innerText.toLowerCase();
-      const okText = !txt || t.includes(txt);
-      const stCell = row.querySelector('[data-col="status"]');
-      const rowSt = (stCell?.dataset.status || "").toLowerCase();
-      const okStatus = !status || rowSt === status;
-      return okText && okStatus;
-    }
-    function apply(){
-      const txt = (q?.value || "").toLowerCase().trim();
-      const status = (f?.value || "").toLowerCase().trim();
-      if (!body) return;
-      Array.from(body.querySelectorAll("tr")).forEach(tr=>{
-        tr.style.display = match(tr, txt, status) ? "" : "none";
-      });
-    }
-    q && q.addEventListener('input', apply);
-    f && f.addEventListener('change', apply);
-    window.__applyOrderFilters = apply;
-  })();
-
-  (function(){
-    const btn = document.getElementById('exportCsvBtn');
-    const body = document.getElementById('orders-body');
-    const head = document.querySelector('#orders-table thead');
-    function toCSV(){
-      if (!body || !head) return;
-      const visibleRows = Array.from(body.querySelectorAll('tr')).filter(tr=>tr.style.display !== 'none');
-      const headers = Array.from(head.querySelectorAll('th')).map(th=>th.innerText.trim());
-      const rows = visibleRows.map(tr=>Array.from(tr.children).map(td=>('"'+(td.innerText||'').replaceAll('"','""')+'"')));
-      const csv = [headers.map(h=>('"'+h.replaceAll('"','""')+'"')).join(','), ...rows.map(r=>r.join(','))].join('\n');
-      const blob = new Blob([csv], {type:'text/csv'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'orders.csv'; a.click();
-      URL.revokeObjectURL(url);
-    }
-    btn && btn.addEventListener('click', toCSV);
-  })();
-</script>
 </body>
 </html>
