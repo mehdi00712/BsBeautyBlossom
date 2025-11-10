@@ -10,7 +10,7 @@
 
   if (!wrap) return console.warn("products.js: missing #brand-container or #product-grid");
 
-  // Helpers
+  // ---------- Helpers ----------
   const getFromPrice = (p) => {
     const base = Number(p.basePrice || 0) || 0;
     const sizes = Array.isArray(p.sizes) ? p.sizes : [];
@@ -19,29 +19,35 @@
   };
 
   const escapeHtml = (s = "") =>
-    String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    String(s).replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
 
+  // ---------- Product Card ----------
   const productCardHTML = (id, p) => {
     const from = getFromPrice(p);
     const img = p.imageURL || (Array.isArray(p.images) && p.images[0]) || "https://via.placeholder.com/600x600?text=No+Image";
-    const stock = Number(p.stock ?? 0);
+
+    // ✅ Stock check — default to “in stock” if missing
+    const stock = (p.stock == null || isNaN(p.stock)) ? 99 : Number(p.stock);
     const out = stock <= 0;
 
     return `
-      <div class="product ${out ? 'out-of-stock' : ''}" data-name="${escapeHtml(p.name||'')}" data-brand="${escapeHtml(p.brand||'')}">
-        <a href="${out ? '#' : 'product.html?id=' + id}" ${out ? 'style="pointer-events:none;opacity:0.6;"' : ''}>
+      <div class="product ${out ? 'out-of-stock' : ''}" data-name="${escapeHtml(p.name || '')}" data-brand="${escapeHtml(p.brand || '')}">
+        <a href="product.html?id=${id}">
           <div class="img-wrap" style="position:relative">
-            <img src="${img}" alt="${escapeHtml(p.name||'')}">
+            <img src="${img}" alt="${escapeHtml(p.name || '')}">
             ${out ? `<span class="soldout-tag">Out of Stock</span>` : ""}
           </div>
         </a>
-        <h3><a href="${out ? '#' : 'product.html?id=' + id}">${escapeHtml(p.name||'')}</a></h3>
+        <h3><a href="product.html?id=${id}">${escapeHtml(p.name || '')}</a></h3>
         ${p.brand ? `<div class="muted">${escapeHtml(p.brand)}</div>` : ""}
         <p class="price">${from > 0 ? "From Rs" + from : ""}</p>
       </div>
     `;
   };
 
+  // ---------- Empty Renderer ----------
   const renderEmpty = () => {
     wrap.innerHTML = `
       <div class="card" style="text-align:center">
@@ -50,8 +56,8 @@
     `;
   };
 
+  // ---------- Group Renderer ----------
   const renderGroups = (groups) => {
-    // Clear and render each brand group
     wrap.innerHTML = "";
     const brandNames = Object.keys(groups).sort((a, b) => a.localeCompare(b));
 
@@ -63,20 +69,24 @@
         <div class="brand-grid"></div>
       `;
       const grid = section.querySelector(".brand-grid");
+
       groups[brand]
         .sort((a, b) => a.data.name.localeCompare(b.data.name))
         .forEach(item => {
           grid.insertAdjacentHTML("beforeend", productCardHTML(item.id, item.data));
         });
+
       wrap.appendChild(section);
     });
   };
 
+  // ---------- Loader ----------
   async function load() {
     if (!window.db) {
       wrap.innerHTML = `<div class="card"><p class="muted">Init error: database not ready.</p></div>`;
       return;
     }
+
     try {
       wrap.innerHTML = `<div class="card"><p class="muted">Loading…</p></div>`;
       const snap = await db.collection("products")
@@ -86,7 +96,7 @@
 
       if (snap.empty) return renderEmpty();
 
-      // Build groups by brand (fallback "Other")
+      // Group by brand (fallback “Other”)
       const groups = {};
       snap.forEach(doc => {
         const data = doc.data() || {};
