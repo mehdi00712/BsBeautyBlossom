@@ -124,6 +124,7 @@ function rowHTML(id, order){
       </div>
     </td>`;
 }
+
 function attachOrdersListener(){
   if (ordersListenerAttached) return;
   if (!firebase.database) { ordersStatus && (ordersStatus.textContent="Realtime Database not available."); return; }
@@ -147,7 +148,36 @@ function attachOrdersListener(){
     console.error(err);
     ordersStatus && (ordersStatus.textContent = "Permission error or missing rules.");
   });
+
+  // 🔹 Auto stock deduction on new orders
+  ref.on("child_added", async (snap)=>{
+    const order = snap.val();
+    if (!order?.items) return;
+    await reduceStockFromOrder(order);
+  });
+
   ordersListenerAttached = true;
+}
+
+/* Auto-reduce stock from Firestore */
+async function reduceStockFromOrder(order){
+  try {
+    const items = Array.isArray(order.items) ? order.items : Object.values(order.items || {});
+    for (const item of items){
+      const name = item.name || item.title;
+      const qty  = Number(item.qty || item.quantity || 1);
+      if (!name) continue;
+      const match = await db.collection("products").where("name","==",name).limit(1).get();
+      if (!match.empty){
+        const doc = match.docs[0];
+        const data = doc.data();
+        const newStock = Math.max(0, (data.stock || 0) - qty);
+        await doc.ref.update({ stock: newStock });
+      }
+    }
+  } catch (e) {
+    console.error("⚠ Error reducing stock:", e);
+  }
 }
 
 /* status + delete actions (delegated) */
@@ -206,36 +236,25 @@ async function loadSite(){
 }
 site.reloadBtn?.addEventListener("click", loadSite);
 
-/* 🔹 Save Site Settings (added) */
 site.saveBtn?.addEventListener("click", async ()=>{
   try {
     site.status.textContent = "Saving…";
     let bannerUrl = "";
     let galleryUrls = [];
-
-    // Upload banner image
-    if (site.banner?.files?.length) {
-      bannerUrl = await uploadToCloudinary(site.banner.files[0]);
-    }
-
-    // Upload gallery images
+    if (site.banner?.files?.length) bannerUrl = await uploadToCloudinary(site.banner.files[0]);
     if (site.gallery?.files?.length) {
       const uploads = [];
       for (const f of site.gallery.files) uploads.push(uploadToCloudinary(f));
       galleryUrls = await Promise.all(uploads);
     }
-
-    // Prepare and save data
     const data = {
       heroTitle: site.heroTitle?.value.trim() || "",
       heroSubtitle: site.heroSubtitle?.value.trim() || "",
       featuredCategory: site.featuredCategory?.value.trim().toLowerCase() || "perfume",
       showFeatured: !!site.showFeatured?.checked,
     };
-
     if (bannerUrl) data.bannerImage = bannerUrl;
     if (galleryUrls.length > 0) data.gallery = galleryUrls;
-
     await siteDocRef.set(data, { merge: true });
     site.status.textContent = "✅ Saved successfully!";
     await loadSite();
@@ -246,12 +265,24 @@ site.saveBtn?.addEventListener("click", async ()=>{
 });
 
 /* ---------- Products (Firestore) ---------- */
-const nameEl=$("name"), priceEl=$("price"), brandEl=$("brand"), sizesEl=$("sizes"), descEl=$("description"),
+const nameEl=$("name"), priceEl=$("price"), brandEl=$("brand"), stockEl=$("stock"),
+      sizesEl=$("sizes"), descEl=$("description"),
       categoryEl=$("category"), activeEl=$("active"), imagesEl=$("images");
 const tableBody=$("tableBody"), filterCategory=$("filterCategory"), refreshBtn=$("refreshBtn"),
       resetBtn=$("resetBtn"), saveBtn=$("saveBtn"), docIdEl=$("docId");
 
-function resetForm(){ if(docIdEl)docIdEl.value=""; if(nameEl)nameEl.value=""; if(priceEl)priceEl.value=""; if(brandEl)brandEl.value=""; if(sizesEl)sizesEl.value=""; if(descEl)descEl.value=""; if(categoryEl)categoryEl.value="perfume"; if(activeEl)activeEl.checked=true; if(imagesEl)imagesEl.value=""; }
+function resetForm(){
+  if(docIdEl)docIdEl.value="";
+  if(nameEl)nameEl.value="";
+  if(priceEl)priceEl.value="";
+  if(stockEl)stockEl.value="";
+  if(brandEl)brandEl.value="";
+  if(sizesEl)sizesEl.value="";
+  if(descEl)descEl.value="";
+  if(categoryEl)categoryEl.value="perfume";
+  if(activeEl)activeEl.checked=true;
+  if(imagesEl)imagesEl.value="";
+}
 resetBtn?.addEventListener("click", resetForm);
 
 function normalizeCategory(raw) {
@@ -261,25 +292,14 @@ function normalizeCategory(raw) {
 }
 
 async function loadProducts(){
-  if(!tableBody || !filterCategory){
-    console.warn("⚠ loadProducts: tableBody or filterCategory missing");
-    return;
-  }
+  if(!tableBody || !filterCategory) return;
   const requested = normalizeCategory(filterCategory.value || "all");
   tableBody.innerHTML = "<tr><td colspan='6'>Loading…</td></tr>";
 
   try{
     let snap;
-    if (requested === "all") {
-      snap = await db.collection("products").get();
-    } else {
-      snap = await db.collection("products").where("category","==",requested).get();
-      if (snap.empty) {
-        const all = await db.collection("products").get();
-        const docs = all.docs.filter(d => normalizeCategory(d.data().category) === requested);
-        snap = { empty: docs.length === 0, docs, forEach: (fn)=>docs.forEach(fn) };
-      }
-    }
+    if (requested === "all") snap = await db.collection("products").get();
+    else snap = await db.collection("products").where("category","==",requested).get();
 
     if (snap.empty){
       tableBody.innerHTML = `<tr><td colspan="6">No products found.</td></tr>`;
@@ -296,6 +316,7 @@ async function loadProducts(){
         <td>${esc(p.name||"")}${p.brand?`<div class="muted">${esc(p.brand)}</div>`:""}</td>
         <td>${renderSizes(p.sizes)}</td>
         <td>Rs${Number(p.basePrice||0).toFixed(2)}</td>
+        <td>${p.stock != null ? (p.stock > 0 ? p.stock : "<span style='color:red'>Out of Stock</span>") : "-"}</td>
         <td>${p.active?"Yes":"No"}</td>
         <td>
           <button class="btn edit" data-id="${doc.id}">Edit</button>
@@ -311,6 +332,7 @@ async function loadProducts(){
       if (docIdEl) docIdEl.value = d.id;
       if (nameEl)  nameEl.value = p.name || "";
       if (priceEl) priceEl.value = p.basePrice || 0;
+      if (stockEl) stockEl.value = p.stock || 0;
       if (brandEl) brandEl.value = p.brand || "";
       if (sizesEl) sizesEl.value = (p.sizes||[]).map(s=>`${s.label} | ${s.price}`).join("\n");
       if (descEl)  descEl.value = p.description || "";
@@ -338,6 +360,7 @@ saveBtn?.addEventListener("click", async ()=>{
     const data = {
       name: (nameEl && nameEl.value.trim()) || "",
       basePrice: toNumber(priceEl ? priceEl.value : 0),
+      stock: toNumber(stockEl ? stockEl.value : 0),
       brand: (brandEl && brandEl.value.trim()) || "",
       sizes,
       description: (descEl && descEl.value.trim()) || "",
