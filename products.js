@@ -1,116 +1,122 @@
-// products.js — Category page renderer grouped by Brand
-// Requirements:
-// - firebase compat SDK + firebase-config.js already loaded (window.db available)
-// - Each category page defines: window.PRODUCT_CATEGORY = 'perfume' | 'body' | ...
-// - HTML contains: <div id="brand-container"></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Product – B’s Beauty Blossom</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<header>
+  <nav class="navbar">
+    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
+    <ul class="nav-links">
+      <li class="nav-close" aria-label="Close menu">&times;</li>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="perfume.html">Perfume</a></li>
+      <li><a href="body.html">Body</a></li>
+      <li><a href="skincare.html">Skincare</a></li>
+      <li><a href="cosmetics.html">Cosmetics</a></li>
+      <li><a href="jewellery.html">Jewellery</a></li>
+      <li><a href="gift.html">Gift</a></li>
+      <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
+      <li><a href="admin.html">Admin</a></li>
+    </ul>
+    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
+  </nav>
+  <div id="nav-overlay"></div>
+</header>
 
-(function () {
-  const cat = String(window.PRODUCT_CATEGORY || "").toLowerCase();
-  const wrap = document.getElementById("brand-container") || document.getElementById("product-grid");
+<main class="section" id="product-main">
+  <div class="product-detail">
+    <div class="product-media">
+      <img id="product-image" src="https://via.placeholder.com/800x800?text=Product" alt="Product image">
+      <div id="product-thumbs" class="thumbs"></div>
+    </div>
 
-  if (!wrap) return console.warn("products.js: missing #brand-container or #product-grid");
+    <div class="product-info">
+      <h1 id="product-name">Product name</h1>
+      <div id="product-brand" class="muted">Brand</div>
+      <p id="product-desc" class="desc">Description</p>
 
-  // ---------- Helpers ----------
-  const getFromPrice = (p) => {
-    const base = Number(p.basePrice || 0) || 0;
+      <label for="size">Choose size</label>
+      <select id="size"></select>
+
+      <div class="price-qty">
+        <div class="price" id="price">Rs0</div>
+        <div class="qty">
+          <button id="qty-minus" type="button">–</button>
+          <input id="qty" type="number" value="1" min="1">
+          <button id="qty-plus" type="button">+</button>
+        </div>
+      </div>
+
+      <button id="add-to-cart" class="btn">Add to Cart</button>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
+</footer>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<!-- Load product from Firestore and render -->
+<script>
+(async function(){
+  if (!window.db) { console.error('Firestore not ready'); return; }
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  if (!id) { document.getElementById('product-main').innerHTML = '<p>Product not found</p>'; return; }
+
+  try {
+    const doc = await db.collection('products').doc(id).get();
+    if (!doc.exists) { document.getElementById('product-main').innerHTML = '<p>Product not found</p>'; return; }
+    const p = doc.data();
+
+    // Fill UI
+    const big = document.getElementById('product-image');
+    const thumbs = document.getElementById('product-thumbs');
+    const nameEl = document.getElementById('product-name');
+    const brandEl= document.getElementById('product-brand');
+    const descEl = document.getElementById('product-desc');
+    const sizeSel= document.getElementById('size');
+
+    nameEl.textContent = p.name || '';
+    brandEl.textContent= p.brand || '';
+    descEl.textContent = p.description || '';
+
+    const images = (p.images && p.images.length ? p.images : (p.imageURL?[p.imageURL]:[]));
+    if (images.length) {
+      big.src = images[0];
+      thumbs.innerHTML = images.map((src,i)=>`
+        <img class="${i===0?'active':''}" data-src="${src}" src="${src}" alt="thumb ${i+1}">
+      `).join('');
+    } else {
+      thumbs.innerHTML = '';
+    }
+
+    // Sizes
     const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-    const prices = sizes.map(s => Number((s && s.price) || 0)).filter(n => n > 0);
-    return prices.length ? Math.min(...prices) : base;
-  };
-
-  const escapeHtml = (s = "") =>
-    String(s).replace(/[&<>"']/g, m => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[m]));
-
-  // ---------- Product Card ----------
-  const productCardHTML = (id, p) => {
-    const from = getFromPrice(p);
-    const img = p.imageURL || (Array.isArray(p.images) && p.images[0]) || "https://via.placeholder.com/600x600?text=No+Image";
-
-    // ✅ Stock check — default to “in stock” if missing
-    const stock = (p.stock == null || isNaN(p.stock)) ? 99 : Number(p.stock);
-    const out = stock <= 0;
-
-    return `
-      <div class="product ${out ? 'out-of-stock' : ''}" data-name="${escapeHtml(p.name || '')}" data-brand="${escapeHtml(p.brand || '')}">
-        <a href="product.html?id=${id}">
-          <div class="img-wrap" style="position:relative">
-            <img src="${img}" alt="${escapeHtml(p.name || '')}">
-            ${out ? `<span class="soldout-tag">Out of Stock</span>` : ""}
-          </div>
-        </a>
-        <h3><a href="product.html?id=${id}">${escapeHtml(p.name || '')}</a></h3>
-        ${p.brand ? `<div class="muted">${escapeHtml(p.brand)}</div>` : ""}
-        <p class="price">${from > 0 ? "From Rs" + from : ""}</p>
-      </div>
-    `;
-  };
-
-  // ---------- Empty Renderer ----------
-  const renderEmpty = () => {
-    wrap.innerHTML = `
-      <div class="card" style="text-align:center">
-        <p class="muted">No products found in this category yet.</p>
-      </div>
-    `;
-  };
-
-  // ---------- Group Renderer ----------
-  const renderGroups = (groups) => {
-    wrap.innerHTML = "";
-    const brandNames = Object.keys(groups).sort((a, b) => a.localeCompare(b));
-
-    brandNames.forEach(brand => {
-      const section = document.createElement("section");
-      section.className = "brand-section";
-      section.innerHTML = `
-        <h2 class="brand-title">${escapeHtml(brand)}</h2>
-        <div class="brand-grid"></div>
-      `;
-      const grid = section.querySelector(".brand-grid");
-
-      groups[brand]
-        .sort((a, b) => a.data.name.localeCompare(b.data.name))
-        .forEach(item => {
-          grid.insertAdjacentHTML("beforeend", productCardHTML(item.id, item.data));
-        });
-
-      wrap.appendChild(section);
-    });
-  };
-
-  // ---------- Loader ----------
-  async function load() {
-    if (!window.db) {
-      wrap.innerHTML = `<div class="card"><p class="muted">Init error: database not ready.</p></div>`;
-      return;
+    if (sizes.length) {
+      sizeSel.innerHTML = sizes.map(s => `<option data-price="${Number(s.price||0)}" value="${s.label}">${s.label} - Rs${Number(s.price||0)}</option>`).join('');
+    } else {
+      const base = Number(p.basePrice || 0);
+      sizeSel.innerHTML = `<option data-price="${base}" value="">Rs${base}</option>`;
     }
-
-    try {
-      wrap.innerHTML = `<div class="card"><p class="muted">Loading…</p></div>`;
-      const snap = await db.collection("products")
-        .where("category", "==", cat)
-        .where("active", "==", true)
-        .get();
-
-      if (snap.empty) return renderEmpty();
-
-      // Group by brand (fallback “Other”)
-      const groups = {};
-      snap.forEach(doc => {
-        const data = doc.data() || {};
-        const brand = (data.brand && String(data.brand).trim()) ? String(data.brand).trim() : "Other";
-        if (!groups[brand]) groups[brand] = [];
-        groups[brand].push({ id: doc.id, data });
-      });
-
-      renderGroups(groups);
-    } catch (e) {
-      console.error("Category load error:", e);
-      wrap.innerHTML = `<div class="card"><p class="muted">Error loading products. Please try again.</p></div>`;
-    }
+  } catch (e) {
+    console.error('Load product error:', e);
+    document.getElementById('product-main').innerHTML = '<p>Error loading product.</p>';
   }
-
-  load();
 })();
+</script>
+
+<!-- Product interactions + navbar -->
+<script src="product-detail.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
