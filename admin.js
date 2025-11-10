@@ -206,6 +206,45 @@ async function loadSite(){
 }
 site.reloadBtn?.addEventListener("click", loadSite);
 
+/* 🔹 Save Site Settings (added) */
+site.saveBtn?.addEventListener("click", async ()=>{
+  try {
+    site.status.textContent = "Saving…";
+    let bannerUrl = "";
+    let galleryUrls = [];
+
+    // Upload banner image
+    if (site.banner?.files?.length) {
+      bannerUrl = await uploadToCloudinary(site.banner.files[0]);
+    }
+
+    // Upload gallery images
+    if (site.gallery?.files?.length) {
+      const uploads = [];
+      for (const f of site.gallery.files) uploads.push(uploadToCloudinary(f));
+      galleryUrls = await Promise.all(uploads);
+    }
+
+    // Prepare and save data
+    const data = {
+      heroTitle: site.heroTitle?.value.trim() || "",
+      heroSubtitle: site.heroSubtitle?.value.trim() || "",
+      featuredCategory: site.featuredCategory?.value.trim().toLowerCase() || "perfume",
+      showFeatured: !!site.showFeatured?.checked,
+    };
+
+    if (bannerUrl) data.bannerImage = bannerUrl;
+    if (galleryUrls.length > 0) data.gallery = galleryUrls;
+
+    await siteDocRef.set(data, { merge: true });
+    site.status.textContent = "✅ Saved successfully!";
+    await loadSite();
+  } catch (e) {
+    console.error(e);
+    site.status.textContent = "❌ Save failed: " + e.message;
+  }
+});
+
 /* ---------- Products (Firestore) ---------- */
 const nameEl=$("name"), priceEl=$("price"), brandEl=$("brand"), sizesEl=$("sizes"), descEl=$("description"),
       categoryEl=$("category"), activeEl=$("active"), imagesEl=$("images");
@@ -217,7 +256,7 @@ resetBtn?.addEventListener("click", resetForm);
 
 function normalizeCategory(raw) {
   const v = String(raw || "").trim().toLowerCase();
-  if (v === "jewelry") return "jewellery"; // normalize US -> UK
+  if (v === "jewelry") return "jewellery";
   return v;
 }
 
@@ -226,34 +265,24 @@ async function loadProducts(){
     console.warn("⚠ loadProducts: tableBody or filterCategory missing");
     return;
   }
-
   const requested = normalizeCategory(filterCategory.value || "all");
   tableBody.innerHTML = "<tr><td colspan='6'>Loading…</td></tr>";
 
   try{
     let snap;
-
     if (requested === "all") {
-      console.log("🔎 Fetching ALL products");
       snap = await db.collection("products").get();
     } else {
-      console.log("🔎 Fetching products in category:", requested);
-      snap = await db.collection("products")
-        .where("category","==",requested)
-        .get();
-
-      // If nothing found, try alternates/casing issues
+      snap = await db.collection("products").where("category","==",requested).get();
       if (snap.empty) {
-        console.log("…No exact matches. Trying alternates/case-insensitive…");
         const all = await db.collection("products").get();
         const docs = all.docs.filter(d => normalizeCategory(d.data().category) === requested);
-        // Build a mock snap-like object
         snap = { empty: docs.length === 0, docs, forEach: (fn)=>docs.forEach(fn) };
       }
     }
 
     if (snap.empty){
-      tableBody.innerHTML = `<tr><td colspan="6">No products found for <strong>${esc(requested)}</strong>. Try “All”.</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="6">No products found.</td></tr>`;
       return;
     }
 
@@ -294,7 +323,6 @@ async function loadProducts(){
       await db.collection("products").doc(b.dataset.id).delete();
       loadProducts();
     }));
-
   }catch(e){
     console.error("❌ loadProducts error:", e);
     tableBody.innerHTML = `<tr><td colspan="6">Error loading products: ${esc(e?.message || e)}</td></tr>`;
@@ -313,54 +341,47 @@ saveBtn?.addEventListener("click", async ()=>{
       brand: (brandEl && brandEl.value.trim()) || "",
       sizes,
       description: (descEl && descEl.value.trim()) || "",
-      category: normalizeCategory(categoryEl && categoryEl.value || "perfume"), // normalized
+      category: normalizeCategory(categoryEl && categoryEl.value || "perfume"),
       active: !!(activeEl && activeEl.checked),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     };
     if (!docIdEl || !docIdEl.value) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-
     if (imagesEl?.files?.length){
-      const uploads = []; for (const f of imagesEl.files) uploads.push(uploadToCloudinary(f));
+      const uploads = [];
+      for (const f of imagesEl.files) uploads.push(uploadToCloudinary(f));
       const urls = await Promise.all(uploads);
-      data.images = urls; if (!data.imageURL && urls[0]) data.imageURL = urls[0];
+      data.images = urls;
+      if (!data.imageURL && urls[0]) data.imageURL = urls[0];
     }
     await db.collection("products").doc(id).set(data,{merge:true});
     alert("Saved ✓"); resetForm(); await loadProducts();
   }catch(e){ console.error(e); alert("Save failed: " + (e?.message || e)); }
 });
 
-/* ---------- Auth state: gate admin UI & See Orders ---------- */
+/* ---------- Auth state ---------- */
 auth.onAuthStateChanged((user)=>{
   const loggedIn = !!user;
-
-  // Toggle login/logout
   loggedIn ? hide(loginBtn) : show(loginBtn);
   loggedIn ? show(logoutBtn) : hide(logoutBtn);
-
-  // Status text
   if (authStatus) {
     if (!loggedIn) authStatus.textContent = "Please sign in.";
     else if (canSeeAdmin(user)) authStatus.textContent = `Signed in as ${user.email || user.uid}`;
-    else authStatus.textContent = "Access denied for this account. Ask admin to add your UID.";
+    else authStatus.textContent = "Access denied for this account.";
   }
-
   const allowed = loggedIn && canSeeAdmin(user);
-
-  // See Orders is ONLY visible for allowed admins
   allowed ? show(btnSeeOrders) : hide(btnSeeOrders);
-
   if (allowed) {
     if (dashboardWrap) dashboardWrap.style.display = "block";
-    if (siteSection)    siteSection.style.display    = "block";
+    if (siteSection) siteSection.style.display = "block";
     if (productSection) productSection.style.display = "block";
-    if (listSection)    listSection.style.display    = "block";
+    if (listSection) listSection.style.display = "block";
     loadSite();
     loadProducts();
   } else {
     if (dashboardWrap) dashboardWrap.style.display = "none";
-    if (siteSection)    siteSection.style.display    = "none";
+    if (siteSection) siteSection.style.display = "none";
     if (productSection) productSection.style.display = "none";
-    if (listSection)    listSection.style.display    = "none";
+    if (listSection) listSection.style.display = "none";
     hide(ordersSection);
     hide(btnBack);
   }
