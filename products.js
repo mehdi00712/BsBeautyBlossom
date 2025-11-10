@@ -24,12 +24,18 @@
   const productCardHTML = (id, p) => {
     const from = getFromPrice(p);
     const img = p.imageURL || (Array.isArray(p.images) && p.images[0]) || "https://via.placeholder.com/600x600?text=No+Image";
+    const stock = Number(p.stock ?? 0);
+    const out = stock <= 0;
+
     return `
-      <div class="product" data-name="${escapeHtml(p.name||'')}" data-brand="${escapeHtml(p.brand||'')}">
-        <a href="product.html?id=${id}">
-          <img src="${img}" alt="${escapeHtml(p.name||'')}">
+      <div class="product ${out ? 'out-of-stock' : ''}" data-name="${escapeHtml(p.name||'')}" data-brand="${escapeHtml(p.brand||'')}">
+        <a href="${out ? '#' : 'product.html?id=' + id}" ${out ? 'style="pointer-events:none;opacity:0.6;"' : ''}>
+          <div class="img-wrap" style="position:relative">
+            <img src="${img}" alt="${escapeHtml(p.name||'')}">
+            ${out ? `<span class="soldout-tag">Out of Stock</span>` : ""}
+          </div>
         </a>
-        <h3><a href="product.html?id=${id}">${escapeHtml(p.name||'')}</a></h3>
+        <h3><a href="${out ? '#' : 'product.html?id=' + id}">${escapeHtml(p.name||'')}</a></h3>
         ${p.brand ? `<div class="muted">${escapeHtml(p.brand)}</div>` : ""}
         <p class="price">${from > 0 ? "From Rs" + from : ""}</p>
       </div>
