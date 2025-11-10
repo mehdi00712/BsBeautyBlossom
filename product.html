@@ -51,6 +51,9 @@
         </div>
       </div>
 
+      <!-- ✅ Added stock message -->
+      <p id="stock-status" class="muted"></p>
+
       <button id="add-to-cart" class="btn">Add to Cart</button>
     </div>
   </div>
@@ -71,25 +74,29 @@
   if (!window.db) { console.error('Firestore not ready'); return; }
   const params = new URLSearchParams(location.search);
   const id = params.get('id');
-  if (!id) { document.getElementById('product-main').innerHTML = '<p>Product not found</p>'; return; }
+  const main = document.getElementById('product-main');
+  if (!id) { main.innerHTML = '<p>Product not found</p>'; return; }
 
   try {
     const doc = await db.collection('products').doc(id).get();
-    if (!doc.exists) { document.getElementById('product-main').innerHTML = '<p>Product not found</p>'; return; }
+    if (!doc.exists) { main.innerHTML = '<p>Product not found</p>'; return; }
     const p = doc.data();
 
-    // Fill UI
+    // UI references
     const big = document.getElementById('product-image');
     const thumbs = document.getElementById('product-thumbs');
     const nameEl = document.getElementById('product-name');
     const brandEl= document.getElementById('product-brand');
     const descEl = document.getElementById('product-desc');
     const sizeSel= document.getElementById('size');
+    const stockMsg = document.getElementById('stock-status');
+    const addBtn = document.getElementById('add-to-cart');
 
     nameEl.textContent = p.name || '';
     brandEl.textContent= p.brand || '';
     descEl.textContent = p.description || '';
 
+    // Images
     const images = (p.images && p.images.length ? p.images : (p.imageURL?[p.imageURL]:[]));
     if (images.length) {
       big.src = images[0];
@@ -108,9 +115,23 @@
       const base = Number(p.basePrice || 0);
       sizeSel.innerHTML = `<option data-price="${base}" value="">Rs${base}</option>`;
     }
+
+    // ✅ Stock handling
+    const stock = Number(p.stock ?? 0);
+    if (stock <= 0) {
+      stockMsg.textContent = "⚠️ Out of Stock";
+      stockMsg.style.color = "red";
+      addBtn.disabled = true;
+      addBtn.style.opacity = 0.6;
+      addBtn.textContent = "Out of Stock";
+    } else {
+      stockMsg.textContent = `In Stock: ${stock}`;
+      stockMsg.style.color = "green";
+    }
+
   } catch (e) {
     console.error('Load product error:', e);
-    document.getElementById('product-main').innerHTML = '<p>Error loading product.</p>';
+    main.innerHTML = '<p>Error loading product.</p>';
   }
 })();
 </script>
