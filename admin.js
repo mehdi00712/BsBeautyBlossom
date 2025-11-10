@@ -33,7 +33,8 @@ async function uploadToCloudinary(file){
   if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error("Cloudinary not configured.");
   const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`;
   const fd = new FormData(); fd.append("file", file); fd.append("upload_preset", UPLOAD_PRESET);
-  const r = await fetch(url,{method:"POST",body:fd}); if(!r.ok) throw new Error("Cloudinary upload failed");
+  const r = await fetch(url,{method:"POST",body:fd});
+  if(!r.ok) throw new Error("Cloudinary upload failed");
   return (await r.json()).secure_url;
 }
 
@@ -78,7 +79,7 @@ logoutBtn?.addEventListener("click", async () => {
 /* ---------- Orders view toggle (guarded) ---------- */
 btnSeeOrders?.addEventListener("click", () => {
   const u = auth.currentUser;
-  if (!canSeeAdmin(u)) return; // safety
+  if (!canSeeAdmin(u)) return;
   hide(dashboardWrap);
   show(ordersSection);
   show(btnBack);
@@ -104,7 +105,7 @@ function rowHTML(id, order){
   const status = (order.status || "pending").toLowerCase();
   const cls = {pending:"status pending", shipped:"status shipped", completed:"status completed"}[status] || "status";
   const phone = (order.phone || "").trim();
-  const total = (order.total != null) ? order.total : order.totalAmount; // compatibility
+  const total = (order.total != null) ? order.total : order.totalAmount;
   return `
     <td data-col="id">${id}</td>
     <td data-col="name">${esc(order.name)}</td>
@@ -149,7 +150,7 @@ function attachOrdersListener(){
     ordersStatus && (ordersStatus.textContent = "Permission error or missing rules.");
   });
 
-  // 🔹 Auto stock deduction on new orders
+  // 🔹 Auto stock deduction
   ref.on("child_added", async (snap)=>{
     const order = snap.val();
     if (!order?.items) return;
@@ -159,7 +160,6 @@ function attachOrdersListener(){
   ordersListenerAttached = true;
 }
 
-/* Auto-reduce stock from Firestore */
 async function reduceStockFromOrder(order){
   try {
     const items = Array.isArray(order.items) ? order.items : Object.values(order.items || {});
@@ -180,7 +180,6 @@ async function reduceStockFromOrder(order){
   }
 }
 
-/* status + delete actions (delegated) */
 document.addEventListener("click", async (e)=>{
   const setBtn = e.target.closest("[data-set-status]");
   const delBtn = e.target.closest("[data-delete-id]");
@@ -201,7 +200,7 @@ document.addEventListener("click", async (e)=>{
   }
   if (delBtn){
     const id = delBtn.getAttribute("data-delete-id");
-    if (!confirm("Delete this order? This cannot be undone.")) return;
+    if (!confirm("Delete this order?")) return;
     try{
       await firebase.database().ref(`orders/${id}`).remove();
       delBtn.closest("tr")?.remove();
@@ -229,18 +228,17 @@ async function loadSite(){
     site.heroSubtitle.value     = data.heroSubtitle || "";
     site.featuredCategory.value = (data.featuredCategory || "perfume").toLowerCase();
     site.showFeatured.checked   = !!data.showFeatured;
-    site.bannerPreview && (site.bannerPreview.innerHTML = data.bannerImage ? `<img src="${data.bannerImage}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">` : "");
-    site.galleryPreview && (site.galleryPreview.innerHTML = Array.isArray(data.gallery) ? data.gallery.map(u=>`<img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`).join("") : "");
-    site.status && (site.status.textContent = "Ready.");
-  }catch(e){ console.error(e); site.status && (site.status.textContent = "Error loading site settings."); }
+    site.bannerPreview.innerHTML = data.bannerImage ? `<img src="${data.bannerImage}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">` : "";
+    site.galleryPreview.innerHTML = Array.isArray(data.gallery) ? data.gallery.map(u=>`<img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`).join("") : "";
+    site.status.textContent = "Ready.";
+  }catch(e){ console.error(e); site.status.textContent = "Error loading site settings."; }
 }
 site.reloadBtn?.addEventListener("click", loadSite);
 
 site.saveBtn?.addEventListener("click", async ()=>{
   try {
     site.status.textContent = "Saving…";
-    let bannerUrl = "";
-    let galleryUrls = [];
+    let bannerUrl = "", galleryUrls = [];
     if (site.banner?.files?.length) bannerUrl = await uploadToCloudinary(site.banner.files[0]);
     if (site.gallery?.files?.length) {
       const uploads = [];
@@ -248,10 +246,10 @@ site.saveBtn?.addEventListener("click", async ()=>{
       galleryUrls = await Promise.all(uploads);
     }
     const data = {
-      heroTitle: site.heroTitle?.value.trim() || "",
-      heroSubtitle: site.heroSubtitle?.value.trim() || "",
-      featuredCategory: site.featuredCategory?.value.trim().toLowerCase() || "perfume",
-      showFeatured: !!site.showFeatured?.checked,
+      heroTitle: site.heroTitle.value.trim() || "",
+      heroSubtitle: site.heroSubtitle.value.trim() || "",
+      featuredCategory: site.featuredCategory.value.trim().toLowerCase() || "perfume",
+      showFeatured: !!site.showFeatured.checked,
     };
     if (bannerUrl) data.bannerImage = bannerUrl;
     if (galleryUrls.length > 0) data.gallery = galleryUrls;
@@ -353,10 +351,15 @@ async function loadProducts(){
 refreshBtn?.addEventListener("click", loadProducts);
 filterCategory?.addEventListener("change", loadProducts);
 
+/* ---------- SAVE PRODUCT ---------- */
 saveBtn?.addEventListener("click", async ()=>{
-  try{
+  try {
     const id = (docIdEl && docIdEl.value) || db.collection("products").doc().id;
     const sizes = parseSizes(sizesEl ? sizesEl.value : "");
+
+    const rawCat = (categoryEl && categoryEl.value) || "perfume";
+    const category = normalizeCategory(rawCat);
+
     const data = {
       name: (nameEl && nameEl.value.trim()) || "",
       basePrice: toNumber(priceEl ? priceEl.value : 0),
@@ -364,11 +367,13 @@ saveBtn?.addEventListener("click", async ()=>{
       brand: (brandEl && brandEl.value.trim()) || "",
       sizes,
       description: (descEl && descEl.value.trim()) || "",
-      category: normalizeCategory(categoryEl && categoryEl.value || "perfume"),
+      category,
       active: !!(activeEl && activeEl.checked),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     };
+
     if (!docIdEl || !docIdEl.value) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+
     if (imagesEl?.files?.length){
       const uploads = [];
       for (const f of imagesEl.files) uploads.push(uploadToCloudinary(f));
@@ -376,9 +381,15 @@ saveBtn?.addEventListener("click", async ()=>{
       data.images = urls;
       if (!data.imageURL && urls[0]) data.imageURL = urls[0];
     }
-    await db.collection("products").doc(id).set(data,{merge:true});
-    alert("Saved ✓"); resetForm(); await loadProducts();
-  }catch(e){ console.error(e); alert("Save failed: " + (e?.message || e)); }
+
+    await db.collection("products").doc(id).set(data, { merge: true });
+    alert("✅ Product saved successfully!");
+    resetForm();
+    await loadProducts();
+  } catch (e) {
+    console.error(e);
+    alert("Save failed: " + (e?.message || e));
+  }
 });
 
 /* ---------- Auth state ---------- */
