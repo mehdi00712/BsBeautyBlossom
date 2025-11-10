@@ -33,8 +33,7 @@ async function uploadToCloudinary(file){
   if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error("Cloudinary not configured.");
   const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`;
   const fd = new FormData(); fd.append("file", file); fd.append("upload_preset", UPLOAD_PRESET);
-  const r = await fetch(url,{method:"POST",body:fd});
-  if(!r.ok) throw new Error("Cloudinary upload failed");
+  const r = await fetch(url,{method:"POST",body:fd}); if(!r.ok) throw new Error("Cloudinary upload failed");
   return (await r.json()).secure_url;
 }
 
@@ -79,7 +78,7 @@ logoutBtn?.addEventListener("click", async () => {
 /* ---------- Orders view toggle (guarded) ---------- */
 btnSeeOrders?.addEventListener("click", () => {
   const u = auth.currentUser;
-  if (!canSeeAdmin(u)) return;
+  if (!canSeeAdmin(u)) return; // safety
   hide(dashboardWrap);
   show(ordersSection);
   show(btnBack);
@@ -105,7 +104,7 @@ function rowHTML(id, order){
   const status = (order.status || "pending").toLowerCase();
   const cls = {pending:"status pending", shipped:"status shipped", completed:"status completed"}[status] || "status";
   const phone = (order.phone || "").trim();
-  const total = (order.total != null) ? order.total : order.totalAmount;
+  const total = (order.total != null) ? order.total : order.totalAmount; // compatibility
   return `
     <td data-col="id">${id}</td>
     <td data-col="name">${esc(order.name)}</td>
@@ -125,7 +124,6 @@ function rowHTML(id, order){
       </div>
     </td>`;
 }
-
 function attachOrdersListener(){
   if (ordersListenerAttached) return;
   if (!firebase.database) { ordersStatus && (ordersStatus.textContent="Realtime Database not available."); return; }
@@ -149,37 +147,10 @@ function attachOrdersListener(){
     console.error(err);
     ordersStatus && (ordersStatus.textContent = "Permission error or missing rules.");
   });
-
-  // 🔹 Auto stock deduction
-  ref.on("child_added", async (snap)=>{
-    const order = snap.val();
-    if (!order?.items) return;
-    await reduceStockFromOrder(order);
-  });
-
   ordersListenerAttached = true;
 }
 
-async function reduceStockFromOrder(order){
-  try {
-    const items = Array.isArray(order.items) ? order.items : Object.values(order.items || {});
-    for (const item of items){
-      const name = item.name || item.title;
-      const qty  = Number(item.qty || item.quantity || 1);
-      if (!name) continue;
-      const match = await db.collection("products").where("name","==",name).limit(1).get();
-      if (!match.empty){
-        const doc = match.docs[0];
-        const data = doc.data();
-        const newStock = Math.max(0, (data.stock || 0) - qty);
-        await doc.ref.update({ stock: newStock });
-      }
-    }
-  } catch (e) {
-    console.error("⚠ Error reducing stock:", e);
-  }
-}
-
+/* status + delete actions (delegated) */
 document.addEventListener("click", async (e)=>{
   const setBtn = e.target.closest("[data-set-status]");
   const delBtn = e.target.closest("[data-delete-id]");
@@ -200,7 +171,7 @@ document.addEventListener("click", async (e)=>{
   }
   if (delBtn){
     const id = delBtn.getAttribute("data-delete-id");
-    if (!confirm("Delete this order?")) return;
+    if (!confirm("Delete this order? This cannot be undone.")) return;
     try{
       await firebase.database().ref(`orders/${id}`).remove();
       delBtn.closest("tr")?.remove();
@@ -228,31 +199,43 @@ async function loadSite(){
     site.heroSubtitle.value     = data.heroSubtitle || "";
     site.featuredCategory.value = (data.featuredCategory || "perfume").toLowerCase();
     site.showFeatured.checked   = !!data.showFeatured;
-    site.bannerPreview.innerHTML = data.bannerImage ? `<img src="${data.bannerImage}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">` : "";
-    site.galleryPreview.innerHTML = Array.isArray(data.gallery) ? data.gallery.map(u=>`<img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`).join("") : "";
-    site.status.textContent = "Ready.";
-  }catch(e){ console.error(e); site.status.textContent = "Error loading site settings."; }
+    site.bannerPreview && (site.bannerPreview.innerHTML = data.bannerImage ? `<img src="${data.bannerImage}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">` : "");
+    site.galleryPreview && (site.galleryPreview.innerHTML = Array.isArray(data.gallery) ? data.gallery.map(u=>`<img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`).join("") : "");
+    site.status && (site.status.textContent = "Ready.");
+  }catch(e){ console.error(e); site.status && (site.status.textContent = "Error loading site settings."); }
 }
 site.reloadBtn?.addEventListener("click", loadSite);
 
+/* 🔹 Save Site Settings (added) */
 site.saveBtn?.addEventListener("click", async ()=>{
   try {
     site.status.textContent = "Saving…";
-    let bannerUrl = "", galleryUrls = [];
-    if (site.banner?.files?.length) bannerUrl = await uploadToCloudinary(site.banner.files[0]);
+    let bannerUrl = "";
+    let galleryUrls = [];
+
+    // Upload banner image
+    if (site.banner?.files?.length) {
+      bannerUrl = await uploadToCloudinary(site.banner.files[0]);
+    }
+
+    // Upload gallery images
     if (site.gallery?.files?.length) {
       const uploads = [];
       for (const f of site.gallery.files) uploads.push(uploadToCloudinary(f));
       galleryUrls = await Promise.all(uploads);
     }
+
+    // Prepare and save data
     const data = {
-      heroTitle: site.heroTitle.value.trim() || "",
-      heroSubtitle: site.heroSubtitle.value.trim() || "",
-      featuredCategory: site.featuredCategory.value.trim().toLowerCase() || "perfume",
-      showFeatured: !!site.showFeatured.checked,
+      heroTitle: site.heroTitle?.value.trim() || "",
+      heroSubtitle: site.heroSubtitle?.value.trim() || "",
+      featuredCategory: site.featuredCategory?.value.trim().toLowerCase() || "perfume",
+      showFeatured: !!site.showFeatured?.checked,
     };
+
     if (bannerUrl) data.bannerImage = bannerUrl;
     if (galleryUrls.length > 0) data.gallery = galleryUrls;
+
     await siteDocRef.set(data, { merge: true });
     site.status.textContent = "✅ Saved successfully!";
     await loadSite();
@@ -263,24 +246,12 @@ site.saveBtn?.addEventListener("click", async ()=>{
 });
 
 /* ---------- Products (Firestore) ---------- */
-const nameEl=$("name"), priceEl=$("price"), brandEl=$("brand"), stockEl=$("stock"),
-      sizesEl=$("sizes"), descEl=$("description"),
+const nameEl=$("name"), priceEl=$("price"), brandEl=$("brand"), sizesEl=$("sizes"), descEl=$("description"),
       categoryEl=$("category"), activeEl=$("active"), imagesEl=$("images");
 const tableBody=$("tableBody"), filterCategory=$("filterCategory"), refreshBtn=$("refreshBtn"),
       resetBtn=$("resetBtn"), saveBtn=$("saveBtn"), docIdEl=$("docId");
 
-function resetForm(){
-  if(docIdEl)docIdEl.value="";
-  if(nameEl)nameEl.value="";
-  if(priceEl)priceEl.value="";
-  if(stockEl)stockEl.value="";
-  if(brandEl)brandEl.value="";
-  if(sizesEl)sizesEl.value="";
-  if(descEl)descEl.value="";
-  if(categoryEl)categoryEl.value="perfume";
-  if(activeEl)activeEl.checked=true;
-  if(imagesEl)imagesEl.value="";
-}
+function resetForm(){ if(docIdEl)docIdEl.value=""; if(nameEl)nameEl.value=""; if(priceEl)priceEl.value=""; if(brandEl)brandEl.value=""; if(sizesEl)sizesEl.value=""; if(descEl)descEl.value=""; if(categoryEl)categoryEl.value="perfume"; if(activeEl)activeEl.checked=true; if(imagesEl)imagesEl.value=""; }
 resetBtn?.addEventListener("click", resetForm);
 
 function normalizeCategory(raw) {
@@ -290,14 +261,25 @@ function normalizeCategory(raw) {
 }
 
 async function loadProducts(){
-  if(!tableBody || !filterCategory) return;
+  if(!tableBody || !filterCategory){
+    console.warn("⚠ loadProducts: tableBody or filterCategory missing");
+    return;
+  }
   const requested = normalizeCategory(filterCategory.value || "all");
   tableBody.innerHTML = "<tr><td colspan='6'>Loading…</td></tr>";
 
   try{
     let snap;
-    if (requested === "all") snap = await db.collection("products").get();
-    else snap = await db.collection("products").where("category","==",requested).get();
+    if (requested === "all") {
+      snap = await db.collection("products").get();
+    } else {
+      snap = await db.collection("products").where("category","==",requested).get();
+      if (snap.empty) {
+        const all = await db.collection("products").get();
+        const docs = all.docs.filter(d => normalizeCategory(d.data().category) === requested);
+        snap = { empty: docs.length === 0, docs, forEach: (fn)=>docs.forEach(fn) };
+      }
+    }
 
     if (snap.empty){
       tableBody.innerHTML = `<tr><td colspan="6">No products found.</td></tr>`;
@@ -314,7 +296,6 @@ async function loadProducts(){
         <td>${esc(p.name||"")}${p.brand?`<div class="muted">${esc(p.brand)}</div>`:""}</td>
         <td>${renderSizes(p.sizes)}</td>
         <td>Rs${Number(p.basePrice||0).toFixed(2)}</td>
-        <td>${p.stock != null ? (p.stock > 0 ? p.stock : "<span style='color:red'>Out of Stock</span>") : "-"}</td>
         <td>${p.active?"Yes":"No"}</td>
         <td>
           <button class="btn edit" data-id="${doc.id}">Edit</button>
@@ -330,7 +311,6 @@ async function loadProducts(){
       if (docIdEl) docIdEl.value = d.id;
       if (nameEl)  nameEl.value = p.name || "";
       if (priceEl) priceEl.value = p.basePrice || 0;
-      if (stockEl) stockEl.value = p.stock || 0;
       if (brandEl) brandEl.value = p.brand || "";
       if (sizesEl) sizesEl.value = (p.sizes||[]).map(s=>`${s.label} | ${s.price}`).join("\n");
       if (descEl)  descEl.value = p.description || "";
@@ -351,29 +331,21 @@ async function loadProducts(){
 refreshBtn?.addEventListener("click", loadProducts);
 filterCategory?.addEventListener("change", loadProducts);
 
-/* ---------- SAVE PRODUCT ---------- */
 saveBtn?.addEventListener("click", async ()=>{
-  try {
+  try{
     const id = (docIdEl && docIdEl.value) || db.collection("products").doc().id;
     const sizes = parseSizes(sizesEl ? sizesEl.value : "");
-
-    const rawCat = (categoryEl && categoryEl.value) || "perfume";
-    const category = normalizeCategory(rawCat);
-
     const data = {
       name: (nameEl && nameEl.value.trim()) || "",
       basePrice: toNumber(priceEl ? priceEl.value : 0),
-      stock: toNumber(stockEl ? stockEl.value : 0),
       brand: (brandEl && brandEl.value.trim()) || "",
       sizes,
       description: (descEl && descEl.value.trim()) || "",
-      category,
+      category: normalizeCategory(categoryEl && categoryEl.value || "perfume"),
       active: !!(activeEl && activeEl.checked),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     };
-
     if (!docIdEl || !docIdEl.value) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-
     if (imagesEl?.files?.length){
       const uploads = [];
       for (const f of imagesEl.files) uploads.push(uploadToCloudinary(f));
@@ -381,15 +353,9 @@ saveBtn?.addEventListener("click", async ()=>{
       data.images = urls;
       if (!data.imageURL && urls[0]) data.imageURL = urls[0];
     }
-
-    await db.collection("products").doc(id).set(data, { merge: true });
-    alert("✅ Product saved successfully!");
-    resetForm();
-    await loadProducts();
-  } catch (e) {
-    console.error(e);
-    alert("Save failed: " + (e?.message || e));
-  }
+    await db.collection("products").doc(id).set(data,{merge:true});
+    alert("Saved ✓"); resetForm(); await loadProducts();
+  }catch(e){ console.error(e); alert("Save failed: " + (e?.message || e)); }
 });
 
 /* ---------- Auth state ---------- */
