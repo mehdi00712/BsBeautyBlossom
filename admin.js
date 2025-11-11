@@ -150,6 +150,101 @@ function attachOrdersListener(){
   ordersListenerAttached = true;
 }
 
+/* status + delete actions (delegated) */
+document.addEventListener("click", async (e)=>{
+  const setBtn = e.target.closest("[data-set-status]");
+  const delBtn = e.target.closest("[data-delete-id]");
+  if (setBtn){
+    const id = setBtn.getAttribute("data-id");
+    const next = setBtn.getAttribute("data-set-status");
+    try{
+      await firebase.database().ref(`orders/${id}`).update({ status: next, adminUpdatedAt: new Date().toISOString() });
+      const cell = setBtn.closest("tr")?.querySelector('[data-col="status"]');
+      if (cell) {
+        const cls = {pending:"status pending", shipped:"status shipped", completed:"status completed"}[next] || "status";
+        cell.dataset.status = next;
+        cell.innerHTML = `<span class="${cls}">${next[0].toUpperCase()+next.slice(1)}</span>`;
+      }
+      window.__applyOrderFilters?.();
+    }catch(err){ console.error(err); alert("Failed to update status: " + (err?.message || err)); }
+    return;
+  }
+  if (delBtn){
+    const id = delBtn.getAttribute("data-delete-id");
+    if (!confirm("Delete this order? This cannot be undone.")) return;
+    try{
+      await firebase.database().ref(`orders/${id}`).remove();
+      delBtn.closest("tr")?.remove();
+    }catch(err){ console.error(err); alert("Failed to delete: " + (err?.message || err)); }
+  }
+});
+
+/* ---------- Site Settings (Firestore) ---------- */
+const site = {
+  heroTitle: $("site-heroTitle"), heroSubtitle: $("site-heroSubtitle"),
+  featuredCategory: $("site-featuredCategory"), showFeatured: $("site-showFeatured"),
+  banner: $("site-banner"), bannerPreview: $("site-banner-preview"),
+  gallery: $("site-gallery"), galleryPreview: $("site-gallery-preview"),
+  saveBtn: $("site-save"), reloadBtn: $("site-reload"), status: $("site-status"),
+};
+const siteDocRef = db.collection("site").doc("home");
+
+async function loadSite(){
+  if(!site.heroTitle || !site.heroSubtitle || !site.featuredCategory || !site.showFeatured) return;
+  try{
+    site.status && (site.status.textContent = "Loading…");
+    const snap = await siteDocRef.get();
+    const data = snap.exists ? snap.data() : {};
+    site.heroTitle.value        = data.heroTitle || "";
+    site.heroSubtitle.value     = data.heroSubtitle || "";
+    site.featuredCategory.value = (data.featuredCategory || "perfume").toLowerCase();
+    site.showFeatured.checked   = !!data.showFeatured;
+    site.bannerPreview && (site.bannerPreview.innerHTML = data.bannerImage ? `<img src="${data.bannerImage}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">` : "");
+    site.galleryPreview && (site.galleryPreview.innerHTML = Array.isArray(data.gallery) ? data.gallery.map(u=>`<img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`).join("") : "");
+    site.status && (site.status.textContent = "Ready.");
+  }catch(e){ console.error(e); site.status && (site.status.textContent = "Error loading site settings."); }
+}
+site.reloadBtn?.addEventListener("click", loadSite);
+
+/* 🔹 Save Site Settings (added) */
+site.saveBtn?.addEventListener("click", async ()=>{
+  try {
+    site.status.textContent = "Saving…";
+    let bannerUrl = "";
+    let galleryUrls = [];
+
+    // Upload banner image
+    if (site.banner?.files?.length) {
+      bannerUrl = await uploadToCloudinary(site.banner.files[0]);
+    }
+
+    // Upload gallery images
+    if (site.gallery?.files?.length) {
+      const uploads = [];
+      for (const f of site.gallery.files) uploads.push(uploadToCloudinary(f));
+      galleryUrls = await Promise.all(uploads);
+    }
+
+    // Prepare and save data
+    const data = {
+      heroTitle: site.heroTitle?.value.trim() || "",
+      heroSubtitle: site.heroSubtitle?.value.trim() || "",
+      featuredCategory: site.featuredCategory?.value.trim().toLowerCase() || "perfume",
+      showFeatured: !!site.showFeatured?.checked,
+    };
+
+    if (bannerUrl) data.bannerImage = bannerUrl;
+    if (galleryUrls.length > 0) data.gallery = galleryUrls;
+
+    await siteDocRef.set(data, { merge: true });
+    site.status.textContent = "✅ Saved successfully!";
+    await loadSite();
+  } catch (e) {
+    console.error(e);
+    site.status.textContent = "❌ Save failed: " + e.message;
+  }
+});
+
 /* ---------- Products (Firestore) ---------- */
 const nameEl=$("name"), priceEl=$("price"), brandEl=$("brand"), sizesEl=$("sizes"), descEl=$("description"),
       categoryEl=$("category"), activeEl=$("active"), imagesEl=$("images");
@@ -195,13 +290,19 @@ async function loadProducts(){
     snap.forEach((doc)=>{
       const p = doc.data() || {};
       const img = p.imageURL || (Array.isArray(p.images) && p.images[0]) || "";
-      // 🔹 consider both stockStatus and numeric stock so your front-end picks it up
-      const isOut = (p.stockStatus === "out") || (typeof p.stock === "number" && p.stock <= 0);
+
+      // 🔹 Out-of-stock UI (row hint)
+      const isOut = (p.stockStatus || "").toLowerCase() === "out";
+
       const tr = document.createElement("tr");
-      tr.style.opacity = isOut ? "0.5" : "1"; // 🔹 pale row if out
+      tr.style.opacity = isOut ? "0.55" : "1";
       tr.innerHTML = `
         <td>${img?`<img src="${img}" width="60" height="60" style="object-fit:cover;border-radius:6px;border:1px solid #e5e5e5">`:""}</td>
-        <td>${esc(p.name||"")}${p.brand?`<div class="muted">${esc(p.brand)}</div>`:""}${isOut?`<div style="color:#b91c1c;font-weight:700">Out of Stock</div>`:""}</td>
+        <td>
+          ${esc(p.name||"")}
+          ${p.brand?`<div class="muted">${esc(p.brand)}</div>`:""}
+          ${isOut?`<div class="badge" style="background:#fee2e2;border-color:#fecaca;color:#991b1b;margin-top:4px">Out of Stock</div>`:""}
+        </td>
         <td>${renderSizes(p.sizes)}</td>
         <td>Rs${Number(p.basePrice||0).toFixed(2)}</td>
         <td>${p.active?"Yes":"No"}</td>
@@ -213,6 +314,7 @@ async function loadProducts(){
       tableBody.appendChild(tr);
     });
 
+    // existing edit/delete wiring
     $$(".edit").forEach((b)=>b.addEventListener("click", async ()=>{
       const d = await db.collection("products").doc(b.dataset.id).get();
       if (!d.exists) return;
@@ -233,24 +335,21 @@ async function loadProducts(){
       loadProducts();
     }));
 
-    // 🔹 Stock toggle logic (minimal, non-destructive)
-    $$(".stock").forEach((btn) => btn.addEventListener("click", async ()=>{
-      const id = btn.dataset.id;
-      const current = btn.dataset.status; // "out" | "in"
-      const newStatus = current === "out" ? "in" : "out";
-      try {
-        // also set a numeric stock so category/product pages that check "stock" behave correctly
-        const updates = {
-          stockStatus: newStatus,
-          stock: newStatus === "out" ? 0 : 1,
+    // 🔹 New: Stock toggle wiring
+    $$(".stock").forEach((btn)=>btn.addEventListener("click", async ()=>{
+      try{
+        const id = btn.dataset.id;
+        const current = btn.dataset.status; // "in" | "out"
+        const next = current === "out" ? "in" : "out";
+        await db.collection("products").doc(id).set({
+          stockStatus: next,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        };
-        await db.collection("products").doc(id).set(updates, { merge: true });
-        alert(`Product marked as ${newStatus === "out" ? "OUT OF STOCK" : "IN STOCK"}`);
-        loadProducts();
-      } catch (err) {
+        }, { merge:true });
+        alert(`Product marked as ${next === "out" ? "OUT OF STOCK" : "IN STOCK"}.`);
+        await loadProducts();
+      }catch(err){
         console.error(err);
-        alert("Failed to update stock status: " + (err?.message || err));
+        alert("Failed to toggle stock: " + (err?.message || err));
       }
     }));
 
