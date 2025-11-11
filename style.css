@@ -267,3 +267,31 @@ textarea{resize:vertical}
   display:inline-block;padding:4px 8px;background:#f1f5f9;
   border:1px solid var(--line);border-radius:999px;font-size:.85rem
 }
+
+.product.out-of-stock {
+  opacity: 0.5;
+  pointer-events: none;
+  position: relative;
+}
+
+.soldout-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(255, 23, 68, 0.9);
+  color: #fff;
+  padding: 6px 10px;
+  font-weight: 600;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+button.stock-toggle {
+  background: #222;
+  color: #fff;
+  border: 1px solid #ff1744;
+}
+button.stock-toggle:hover {
+  background: #ff1744;
+}
+
