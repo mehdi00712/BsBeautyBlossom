@@ -76,7 +76,11 @@
 <footer class="site-footer"><p>© 2025 B’s Beauty Blossom • All rights reserved</p></footer>
 
 <script src="script.js"></script>
+
 <script>
+// ========================================================================
+//                     CART + DISCOUNT SUPPORT ADDED
+// ========================================================================
 (function(){
   const list = document.getElementById('cart-items');
   const subtotalEl = document.getElementById('subtotal');
@@ -89,57 +93,102 @@
 
   let cart=[], baseSubtotal=0, shipping=0;
 
-  function money(n){ return 'Rs'+Number(n||0).toFixed(0); }
+  const money = (n) => 'Rs'+Number(n||0).toFixed(0);
+
+  // Detect discount-price in item
+  const getFinalUnitPrice = (item) => {
+    if (item.discountPrice && Number(item.discountPrice) > 0) {
+      return Number(item.discountPrice);
+    }
+    return Number(item.price || 0);
+  };
+
   function loadCart(){
     cart = JSON.parse(localStorage.getItem('cart')||'[]');
     list.innerHTML='';
     baseSubtotal = 0;
-    if (!cart.length){ list.innerHTML='<p class="muted">Your cart is empty.</p>'; }
+
+    if (!cart.length){
+      list.innerHTML='<p class="muted">Your cart is empty.</p>';
+    }
+
     cart.forEach((it,i)=>{
-      const line = Number(it.price||0)*Number(it.qty||it.quantity||1);
+      const unit = getFinalUnitPrice(it);
+      const qty = Number(it.qty || it.quantity || 1);
+      const line = unit * qty;
       baseSubtotal += line;
+
       const row = document.createElement('div');
       row.className='cart-row';
       row.innerHTML = `
         <img class="cart-thumb" src="${it.imageURL||'https://via.placeholder.com/60'}" alt="">
         <div>
           <div class="cart-title">${it.name||''}</div>
-          <div class="cart-meta">${money(it.price||0)} × ${Number(it.qty||it.quantity||1)}</div>
+          <div class="cart-meta">${money(unit)} × ${qty}</div>
         </div>
         <div class="cart-line">${money(line)}</div>
         <div class="cart-actions"><button class="btn danger" data-del="${i}">Remove</button></div>
       `;
       list.appendChild(row);
     });
+
     list.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click', ()=>{
-      const idx=Number(b.getAttribute('data-del')); cart.splice(idx,1);
-      localStorage.setItem('cart', JSON.stringify(cart)); loadCart(); window.updateCartCount?.();
+      const idx=Number(b.getAttribute('data-del')); 
+      cart.splice(idx,1);
+      localStorage.setItem('cart', JSON.stringify(cart));
+      loadCart(); 
+      window.updateCartCount?.();
     }));
+
     updateTotals();
   }
-  function updateTotals(){ subtotalEl.textContent=money(baseSubtotal); shippingEl.textContent=money(shipping); totalEl.textContent=money(baseSubtotal+shipping); }
-  loadCart(); window.updateCartCount?.();
 
-  // Delivery changes
+  function updateTotals(){
+    subtotalEl.textContent = money(baseSubtotal);
+    shippingEl.textContent = money(shipping);
+    totalEl.textContent = money(baseSubtotal+shipping);
+  }
+
+  loadCart(); 
+  window.updateCartCount?.();
+
+  // Delivery selection
   form.querySelectorAll('input[name="delivery"]').forEach(r=>r.addEventListener('change',()=>{
     customerInfo.style.display='block';
     if (r.value==='Delivery'){ shipping=150; addressWrap.style.display='block'; }
     else if (r.value==='Postage'){ shipping=125; addressWrap.style.display='block'; }
     else { shipping=0; addressWrap.style.display='none'; }
-    // force payment to Juice for shipping methods
-    if (r.value!=='Pick Up'){ form.querySelector('input[value="Juice"]').checked = true; juiceInfo.style.display='block'; }
-    else { juiceInfo.style.display = form.querySelector('input[name="payment"]:checked')?.value==='Juice'?'block':'none'; }
+
+    if (r.value!=='Pick Up'){ 
+      form.querySelector('input[value="Juice"]').checked = true; 
+      juiceInfo.style.display='block'; 
+    } else { 
+      juiceInfo.style.display = 
+        form.querySelector('input[name="payment"]:checked')?.value==='Juice'
+        ? 'block':'none'; 
+    }
+
     updateTotals();
   }));
-  form.querySelectorAll('input[name="payment"]').forEach(r=>r.addEventListener('change',()=>{ juiceInfo.style.display = r.value==='Juice'?'block':'none'; }));
+
+  form.querySelectorAll('input[name="payment"]').forEach(r=>
+    r.addEventListener('change',()=>{ 
+      juiceInfo.style.display = r.value==='Juice'?'block':'none'; 
+    })
+  );
 
   function validate(){
     const phone = document.getElementById('phone').value.trim();
     const email = document.getElementById('email').value.trim();
     const del = form.querySelector('input[name="delivery"]:checked').value;
+
     if (!/^5\d{7}$/.test(phone)){ alert('Phone must start with 5 and be 8 digits.'); return false; }
     if (!/@/.test(email)){ alert('Enter a valid email.'); return false; }
-    if ((del==='Delivery'||del==='Postage') && form.querySelector('input[name="payment"]:checked').value!=='Juice'){ alert('For Delivery/Postage, payment must be Juice.'); return false; }
+    if ((del==='Delivery'||del==='Postage') 
+        && form.querySelector('input[name="payment"]:checked').value!=='Juice'){ 
+      alert('For Delivery/Postage, payment must be Juice.'); 
+      return false; 
+    }
     return true;
   }
 
@@ -151,8 +200,14 @@
     const del = form.querySelector('input[name="delivery"]:checked').value;
     const pay = form.querySelector('input[name="payment"]:checked').value;
 
+    // final order (discount already applied)
     const order = {
-      items: cart.map(it=>({name: it.name, quantity: Number(it.qty||it.quantity||1), price: Number(it.price||0), imageURL: it.imageURL||''})),
+      items: cart.map(it=>({
+        name: it.name,
+        quantity: Number(it.qty||it.quantity||1),
+        price: getFinalUnitPrice(it),
+        imageURL: it.imageURL||''
+      })),
       delivery: del==='Delivery'?'Delivery':null,
       postage: del==='Postage'?'Postage':null,
       pickup: del==='Pick Up'?'Pick Up':null,
@@ -170,7 +225,8 @@
     try{
       await rtdb.ref('orders').push(order);
       alert('Order confirmed! Thank you.');
-      localStorage.removeItem('cart'); window.updateCartCount?.();
+      localStorage.removeItem('cart'); 
+      window.updateCartCount?.();
       window.location.href='index.html';
     }catch(err){
       alert('Error saving order: '+(err.message||err));
@@ -178,5 +234,6 @@
   });
 })();
 </script>
+
 </body>
 </html>
