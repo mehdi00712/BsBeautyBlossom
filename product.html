@@ -6,7 +6,6 @@
   <title>Product – B’s Beauty Blossom</title>
   <link rel="stylesheet" href="style.css"/>
   <style>
-    /* minimal helpers in case theme doesn't already include these */
     .out-of-stock .desc,
     .out-of-stock #product-image { opacity: .6; }
     .soldout-tag{
@@ -20,6 +19,7 @@
   </style>
 </head>
 <body>
+
 <header>
   <nav class="navbar">
     <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
@@ -45,7 +45,6 @@
     <div class="product-media">
       <div style="position:relative">
         <img id="product-image" src="https://via.placeholder.com/800x800?text=Product" alt="Product image">
-        <!-- out-of-stock badge will be injected here when needed -->
         <div id="oos-badge-slot"></div>
       </div>
       <div id="product-thumbs" class="thumbs"></div>
@@ -82,11 +81,13 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Load product from Firestore and render -->
+<!-- ============================================================
+     PRODUCT LOADER WITH FULL DISCOUNT SUPPORT
+=============================================================== -->
 <script>
 (function(){
   const $ = (id)=>document.getElementById(id);
-  const fmt = (n)=>"Rs" + (Number(n||0).toFixed(0));
+  const fmt = (n)=>"Rs" + Number(n||0).toFixed(0);
 
   function isOutOfStock(p){
     if (String(p.stockStatus||"").toLowerCase() === "out") return true;
@@ -94,156 +95,156 @@
     return false;
   }
 
-  function setPriceFromSelect(sel, priceEl){
-    const opt = sel.options[sel.selectedIndex];
-    const price = Number(opt?.dataset?.price || 0);
-    priceEl.textContent = fmt(price);
-  }
-
   function applyOOSUI(out){
-    const addBtn = $("add-to-cart");
-    const detail = $("product-detail");
-    const qtyInput = $("qty");
-    const minus = $("qty-minus");
-    const plus  = $("qty-plus");
+    const addBtn  = $("add-to-cart");
+    const detail  = $("product-detail");
+    const qty     = $("qty");
+    const minus   = $("qty-minus");
+    const plus    = $("qty-plus");
     const badgeSlot = $("oos-badge-slot");
 
     if (out){
       addBtn.textContent = "Out of Stock";
       addBtn.setAttribute("disabled","disabled");
-      addBtn.setAttribute("aria-disabled","true");
-      detail.classList.add("out-of-stock");
 
       minus.setAttribute("disabled","disabled");
       plus.setAttribute("disabled","disabled");
-      qtyInput.setAttribute("disabled","disabled");
+      qty.setAttribute("disabled","disabled");
 
+      detail.classList.add("out-of-stock");
       badgeSlot.innerHTML = `<span class="soldout-tag">Out of Stock</span>`;
-    }else{
+    } else {
       addBtn.textContent = "Add to Cart";
       addBtn.removeAttribute("disabled");
-      addBtn.removeAttribute("aria-disabled");
-      detail.classList.remove("out-of-stock");
 
       minus.removeAttribute("disabled");
       plus.removeAttribute("disabled");
-      qtyInput.removeAttribute("disabled");
+      qty.removeAttribute("disabled");
 
+      detail.classList.remove("out-of-stock");
       badgeSlot.innerHTML = "";
     }
   }
 
-  function wireThumbs(thumbsWrap, bigImg){
-    thumbsWrap.addEventListener("click",(e)=>{
-      const t = e.target.closest("img[data-src]");
-      if(!t) return;
-      const src = t.getAttribute("data-src");
-      bigImg.src = src;
-      thumbsWrap.querySelectorAll("img").forEach(img=>img.classList.remove("active"));
-      t.classList.add("active");
-    });
-  }
-
   function wireQty(){
-    const minus = $("qty-minus");
-    const plus  = $("qty-plus");
     const input = $("qty");
-    minus.addEventListener("click", ()=>{
-      const n = Math.max(1, Number(input.value||1)-1);
-      input.value = n;
+    $("qty-minus").addEventListener("click", ()=>{
+      input.value = Math.max(1, Number(input.value)-1);
     });
-    plus.addEventListener("click", ()=>{
-      const n = Math.max(1, Number(input.value||1)+1);
-      input.value = n;
-    });
-    input.addEventListener("input", ()=>{
-      const n = Math.max(1, Number(input.value||1));
-      input.value = n;
+    $("qty-plus").addEventListener("click", ()=>{
+      input.value = Math.max(1, Number(input.value)+1);
     });
   }
 
   async function load(){
-    if (!window.db) { console.error('Firestore not ready'); return; }
     const params = new URLSearchParams(location.search);
-    const id = params.get('id');
-    if (!id) { $("product-main").innerHTML = '<p>Product not found</p>'; return; }
+    const id = params.get("id");
+    if (!id) return;
 
-    try {
-      const doc = await db.collection('products').doc(id).get();
-      if (!doc.exists) { $("product-main").innerHTML = '<p>Product not found</p>'; return; }
-      const p = doc.data() || {};
+    const doc = await db.collection("products").doc(id).get();
+    if (!doc.exists) return;
 
-      // Fill UI
-      const big   = $("product-image");
-      const thumbs= $("product-thumbs");
-      const nameEl= $("product-name");
-      const brandEl=$("product-brand");
-      const descEl= $("product-desc");
-      const sizeSel=$("size");
-      const priceEl=$("price");
+    const p = doc.data();
 
-      document.title = (p.name ? p.name + " – " : "") + "B’s Beauty Blossom";
+    // BASIC INFO
+    $("product-name").textContent  = p.name || "";
+    $("product-brand").textContent = p.brand || "";
+    $("product-desc").textContent  = p.description || "";
 
-      nameEl.textContent = p.name || '';
-      brandEl.textContent= p.brand || '';
-      descEl.textContent = p.description || '';
+    // IMAGES
+    const allImages = Array.isArray(p.images) && p.images.length
+      ? p.images
+      : (p.imageURL ? [p.imageURL] : []);
 
-      const images = (Array.isArray(p.images) && p.images.length ? p.images : (p.imageURL?[p.imageURL]:[]));
-      if (images.length) {
-        big.src = images[0];
-        thumbs.innerHTML = images.map((src,i)=>`
-          <img class="${i===0?'active':''}" data-src="${src}" src="${src}" alt="thumb ${i+1}">
-        `).join('');
-        wireThumbs(thumbs, big);
-      } else {
-        thumbs.innerHTML = '';
-      }
+    const big = $("product-image");
+    const thumbs = $("product-thumbs");
 
-      // Sizes + initial price
-      const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-      if (sizes.length) {
-        sizeSel.innerHTML = sizes.map(s => {
-          const pr = Number(s?.price||0);
-          const lbl = String(s?.label||"");
-          return `<option data-price="${pr}" value="${lbl}">${lbl} - Rs${pr}</option>`;
-        }).join('');
-      } else {
-        const base = Number(p.basePrice || 0);
-        sizeSel.innerHTML = `<option data-price="${base}" value="">Rs${base}</option>`;
-      }
-      setPriceFromSelect(sizeSel, priceEl);
-      sizeSel.addEventListener("change", ()=>setPriceFromSelect(sizeSel, priceEl));
+    if (allImages.length){
+      big.src = allImages[0];
+      thumbs.innerHTML = allImages.map((src,i)=>`
+        <img data-src="${src}" src="${src}" class="${i===0?'active':''}">
+      `).join("");
 
-      // OOS handling
-      const out = isOutOfStock(p) || !p.active;
-      applyOOSUI(out);
-
-      // Qty controls
-      wireQty();
-
-      // If you handle add-to-cart here, keep a guard:
-      const addBtn = $("add-to-cart");
-      addBtn.addEventListener("click", (e)=>{
-        if (addBtn.hasAttribute("disabled")) {
-          e.preventDefault();
-          return;
-        }
-        // product-detail.js likely handles cart logic;
-        // this guard ensures no add happens when disabled.
+      thumbs.addEventListener("click",(e)=>{
+        const t = e.target.closest("img[data-src]");
+        if (!t) return;
+        big.src = t.dataset.src;
+        thumbs.querySelectorAll("img").forEach(img=>img.classList.remove("active"));
+        t.classList.add("active");
       });
-
-    } catch (e) {
-      console.error('Load product error:', e);
-      $("product-main").innerHTML = '<p>Error loading product.</p>';
     }
+
+    // DISCOUNT LOGIC
+    const hasDiscount = p.discountPrice && Number(p.discountPrice) > 0;
+    const discountVal = hasDiscount ? Number(p.discountPrice) : 0;
+
+    const sizes = Array.isArray(p.sizes) ? p.sizes : [];
+
+    const finalSizes = sizes.map(s => {
+      const base = Number(s.price || 0);
+      const final = hasDiscount ? Math.min(base, discountVal) : base;
+      return { label: s.label, basePrice: base, finalPrice: final };
+    });
+
+    let noSizeFinalPrice = null;
+    if (!sizes.length){
+      const base = Number(p.basePrice || 0);
+      noSizeFinalPrice = hasDiscount ? Math.min(base, discountVal) : base;
+    }
+
+    // SIZE DROPDOWN
+    const sizeSel = $("size");
+
+    if (finalSizes.length){
+      sizeSel.innerHTML = finalSizes.map(s=>`
+        <option data-price="${s.finalPrice}" data-base="${s.basePrice}" value="${s.label}">
+          ${s.label} - Rs${s.finalPrice}
+        </option>
+      `).join("");
+    } else {
+      sizeSel.innerHTML = `
+        <option data-price="${noSizeFinalPrice}" data-base="${p.basePrice}">
+          Rs${noSizeFinalPrice}
+        </option>
+      `;
+    }
+
+    // PRICE HANDLE
+    const priceEl = $("price");
+    function updatePrice(){
+      const opt = sizeSel.selectedOptions[0];
+      priceEl.textContent = fmt(opt.dataset.price);
+    }
+    sizeSel.addEventListener("change", updatePrice);
+    updatePrice();
+
+    // SEND DATA TO product-detail.js
+    window.__productData = {
+      id,
+      name: p.name,
+      brand: p.brand,
+      description: p.description,
+      discountPrice: hasDiscount ? discountVal : 0,
+      sizes: finalSizes.length ? finalSizes.map(s=>({
+        label: s.label,
+        price: s.finalPrice
+      })) : [],
+      basePrice: p.basePrice || 0
+    };
+
+    // OOS
+    applyOOSUI(isOutOfStock(p) || !p.active);
+
+    wireQty();
   }
 
   load();
 })();
 </script>
 
-<!-- Product interactions + navbar -->
+<!-- Extra scripts -->
 <script src="product-detail.js"></script>
 <script src="script.js"></script>
+
 </body>
 </html>
