@@ -1,8 +1,5 @@
 // products.js — Category page renderer (grouped by Brand when requested)
-// Requirements:
-// - firebase compat SDK + firebase-config.js already loaded (window.db available)
-// - Each category page sets: window.PRODUCT_CATEGORY = 'perfume' | 'body' | ...
-// - Page has: <div id="brand-container"></div> OR <div id="product-grid"></div>
+// Added: Black Friday discount support (discountPrice)
 
 (function () {
   console.log("✅ products.js loaded");
@@ -23,14 +20,21 @@
     return;
   }
 
-  const GROUP_BY_BRAND = !!window.GROUP_BY_BRAND; // if true => render sections per brand; else one flat grid
+  const GROUP_BY_BRAND = !!window.GROUP_BY_BRAND;
 
   // ---------- Helpers ----------
   const getFromPrice = (p) => {
     const base = Number(p.basePrice || 0) || 0;
     const sizes = Array.isArray(p.sizes) ? p.sizes : [];
     const prices = sizes.map(s => Number(s?.price || 0)).filter(n => n > 0);
-    return prices.length ? Math.min(...prices) : base;
+    const normalFrom = prices.length ? Math.min(...prices) : base;
+
+    // ⭐ DISCOUNT LOGIC
+    if (p.discountPrice && Number(p.discountPrice) > 0) {
+      return Math.min(Number(p.discountPrice), normalFrom);
+    }
+
+    return normalFrom;
   };
 
   const escapeHtml = (s = "") =>
@@ -39,22 +43,44 @@
     }[m]));
 
   const isOutOfStock = (p) => {
-    // honor both the boolean-ish numeric `stock` and the explicit `stockStatus`
     if (String(p.stockStatus || "").toLowerCase() === "out") return true;
     const n = Number(p.stock);
     if (!isNaN(n)) return n <= 0;
     return false;
   };
 
-  // ---------- Product Card ----------
+  // ---------- Product Card with DISCOUNT ----------
   const productCardHTML = (id, p) => {
-    const from = getFromPrice(p);
+    const baseFrom = getFromPrice(p);
+    const originalBase = (() => {
+      const base = Number(p.basePrice || 0);
+      const sizes = Array.isArray(p.sizes) ? p.sizes : [];
+      const prices = sizes.map(s => Number(s?.price || 0)).filter(n => n > 0);
+      return prices.length ? Math.min(...prices) : base;
+    })();
+
+    const hasDiscount = p.discountPrice && Number(p.discountPrice) > 0;
+    const discountPrice = hasDiscount ? Number(p.discountPrice) : null;
+
     const img =
       p.imageURL ||
       (Array.isArray(p.images) && p.images[0]) ||
       "https://via.placeholder.com/600x600?text=No+Image";
 
     const out = isOutOfStock(p);
+
+    // text price
+    let priceHTML = "";
+    if (hasDiscount) {
+      priceHTML = `
+        <p class="price">
+          <span class="disc-price">Rs${discountPrice}</span>
+          <span class="old-price" style="text-decoration:line-through; color:#999; margin-left:6px">Rs${originalBase}</span>
+        </p>
+      `;
+    } else {
+      priceHTML = `<p class="price">From Rs${baseFrom}</p>`;
+    }
 
     return `
       <div class="product ${out ? "out-of-stock" : ""}"
@@ -63,12 +89,15 @@
         <a href="product.html?id=${id}">
           <div class="img-wrap" style="position:relative">
             <img src="${img}" alt="${escapeHtml(p.name || "")}">
+            ${hasDiscount ? `<span class="sale-tag">Sale</span>` : ""}
             ${out ? `<span class="soldout-tag">Out of Stock</span>` : ""}
           </div>
         </a>
+
         <h3><a href="product.html?id=${id}">${escapeHtml(p.name || "")}</a></h3>
         ${p.brand ? `<div class="muted">${escapeHtml(p.brand)}</div>` : ""}
-        <p class="price">${from > 0 ? "From Rs" + from : ""}</p>
+
+        ${priceHTML}
       </div>
     `;
   };
@@ -103,7 +132,7 @@
     });
   };
 
-  // ---------- Flat grid Renderer (for pages that sort the .product-grid) ----------
+  // ---------- Flat grid Renderer ----------
   const renderFlatGrid = (items) => {
     wrap.innerHTML = `<div class="product-grid"></div>`;
     const grid = wrap.querySelector(".product-grid");
@@ -119,7 +148,6 @@
     try {
       wrap.innerHTML = `<div class="card"><p class="muted">Loading…</p></div>`;
 
-      // pull all active products; we'll filter category locally (case-insensitive)
       const snap = await db.collection("products")
         .where("active", "==", true)
         .get();
@@ -139,7 +167,6 @@
       }
 
       if (GROUP_BY_BRAND) {
-        // group by brand (fallback "Other")
         const groups = {};
         products.forEach(item => {
           const brand = (item.data.brand && String(item.data.brand).trim()) || "Other";
@@ -148,9 +175,9 @@
         });
         renderGroups(groups);
       } else {
-        // render as one flat grid so your page-level sorter can reorder .product cards
         renderFlatGrid(products);
       }
+
     } catch (e) {
       console.error("Category load error:", e);
       wrap.innerHTML = `<div class="card"><p class="muted">Error loading products. Please try again.</p></div>`;
