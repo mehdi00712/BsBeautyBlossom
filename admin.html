@@ -11,13 +11,12 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <!-- Your firebase-config.js must call: firebase.initializeApp({ ... }) -->
   <script src="firebase-config.js"></script>
 
   <!-- Cloudinary (optional uploads from admin) -->
   <script>
-    window.CLOUDINARY_CLOUD_NAME = window.CLOUDINARY_CLOUD_NAME || "dlwk13ady";
-    window.CLOUDINARY_UPLOAD_PRESET = window.CLOUDINARY_UPLOAD_PRESET || "unsigned_bbb";
+    window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
+    window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
   </script>
 
   <style>
@@ -46,6 +45,7 @@
   </style>
 </head>
 <body>
+
 <header>
   <nav class="navbar">
     <div class="logo">
@@ -62,56 +62,47 @@
       <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
       <li><a href="admin.html" class="active">Admin</a></li>
     </ul>
-    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
+    <div class="hamburger">&#9776;</div>
   </nav>
 </header>
 
 <main class="admin-wrap" style="padding:18px">
+
   <h1>Admin Dashboard</h1>
 
   <!-- Toolbar -->
   <div class="toolbar">
     <button id="btnSeeOrders" class="btn primary hide">📦 See Orders</button>
-    <button id="btnBack" class="btn hide">⬅ Back to Dashboard</button>
+    <button id="btnBack" class="btn hide">⬅ Back</button>
     <button id="loginBtn" class="btn">Log In</button>
     <button id="logoutBtn" class="btn hide">Log Out</button>
     <span id="auth-status" class="muted"></span>
   </div>
 
-  <!-- Login form -->
+  <!-- Login -->
   <section id="auth-section" class="card">
     <h2>Admin Login</h2>
     <div class="row row-2">
-      <div>
-        <label for="email">Admin email</label>
-        <input id="email" type="email" placeholder="Email">
-      </div>
-      <div>
-        <label for="password">Password</label>
-        <input id="password" type="password" placeholder="Password">
-      </div>
+      <div><label>Email</label><input id="email" type="email"></div>
+      <div><label>Password</label><input id="password" type="password"></div>
     </div>
-    <p class="muted" style="margin-top:8px">Tip: leave email/password empty to sign in with Google popup.</p>
+    <p class="muted">Leave empty to login with Google.</p>
   </section>
 
-  <!-- ADMIN SECTIONS (shown only for allow-listed admin) -->
   <div id="dashboard-sections" class="hide">
-    <!-- Site Settings -->
+
+    <!-- SITE SETTINGS -->
     <section id="site-section" class="card">
       <h2>Site Settings (Homepage)</h2>
+
       <div class="row row-2">
-        <div>
-          <label for="site-heroTitle">Hero Title</label>
-          <input id="site-heroTitle" type="text">
-        </div>
-        <div>
-          <label for="site-heroSubtitle">Hero Subtitle</label>
-          <input id="site-heroSubtitle" type="text">
-        </div>
+        <div><label>Hero Title</label><input id="site-heroTitle"></div>
+        <div><label>Hero Subtitle</label><input id="site-heroSubtitle"></div>
       </div>
+
       <div class="row row-2">
         <div>
-          <label for="site-featuredCategory">Featured Category</label>
+          <label>Featured Category</label>
           <select id="site-featuredCategory">
             <option value="perfume">Perfume</option>
             <option value="body">Body</option>
@@ -125,28 +116,31 @@
           <label><input id="site-showFeatured" type="checkbox"> Show Featured Products</label>
         </div>
       </div>
+
       <div class="row">
-        <label for="site-banner">Banner Image</label>
-        <input id="site-banner" type="file" accept="image/*">
+        <label>Banner Image</label>
+        <input id="site-banner" type="file">
         <div id="site-banner-preview" class="preview"></div>
       </div>
+
       <div class="row">
-        <label for="site-gallery">Gallery Images</label>
-        <input id="site-gallery" type="file" accept="image/*" multiple>
+        <label>Gallery Images</label>
+        <input id="site-gallery" type="file" multiple>
         <div id="site-gallery-preview" class="preview"></div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button id="site-save" class="btn">Save</button>
-        <button id="site-reload" class="btn">Reload</button>
-      </div>
+
+      <button id="site-save" class="btn">Save</button>
+      <button id="site-reload" class="btn">Reload</button>
+
       <p id="site-status" class="muted"></p>
     </section>
 
-    <!-- Product Form -->
+    <!-- PRODUCT FORM -->
     <section id="product-section" class="card">
       <h2>Add / Edit Product</h2>
+
       <div class="row">
-        <label for="category">Category</label>
+        <label>Category</label>
         <select id="category">
           <option value="perfume">Perfume</option>
           <option value="body">Body</option>
@@ -156,47 +150,41 @@
           <option value="gift">Gift</option>
         </select>
       </div>
+
       <div class="row row-2">
-        <div>
-          <label for="name">Product Name</label>
-          <input id="name">
-        </div>
-        <div>
-          <label for="price">Base Price (Rs)</label>
-          <input id="price" type="number">
-        </div>
+        <div><label>Product Name</label><input id="name"></div>
+        <div><label>Base Price (Rs)</label><input id="price" type="number"></div>
       </div>
+
+      <!-- ⭐ NEW DISCOUNT PRICE -->
+      <div class="row">
+        <label>Discount Price (Black Friday)</label>
+        <input id="discountPrice" type="number" placeholder="Optional">
+      </div>
+
       <div class="row row-2">
-        <div>
-          <label for="brand">Brand</label>
-          <input id="brand">
-        </div>
-        <div>
-          <label><input id="active" type="checkbox" checked> Active</label>
-        </div>
+        <div><label>Brand</label><input id="brand"></div>
+        <div style="margin-top:26px"><label><input id="active" type="checkbox" checked> Active</label></div>
       </div>
+
+      <div class="row"><label>Sizes</label><textarea id="sizes" rows="4"></textarea></div>
+      <div class="row"><label>Description</label><textarea id="description" rows="3"></textarea></div>
+
       <div class="row">
-        <label for="sizes">Sizes</label>
-        <textarea id="sizes" rows="4" placeholder="100ml | 2350"></textarea>
+        <label>Images</label>
+        <input id="images" type="file" multiple>
       </div>
-      <div class="row">
-        <label for="description">Description</label>
-        <textarea id="description" rows="3"></textarea>
-      </div>
-      <div class="row">
-        <label for="images">Images</label>
-        <input id="images" type="file" accept="image/*" multiple>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button id="saveBtn" class="btn">Save Product</button>
-        <button id="resetBtn" class="btn">Reset</button>
-      </div>
+
+      <button id="saveBtn" class="btn">Save Product</button>
+      <button id="resetBtn" class="btn">Reset</button>
+
       <input type="hidden" id="docId">
     </section>
 
-    <!-- Product List -->
+    <!-- PRODUCT LIST -->
     <section id="list-section" class="card">
       <h2>Products</h2>
+
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <select id="filterCategory">
           <option value="all">All</option>
@@ -209,21 +197,34 @@
         </select>
         <button id="refreshBtn" class="btn">Refresh</button>
       </div>
+
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Image</th><th>Name</th><th>Sizes</th><th>Base</th><th>Active</th><th>Actions</th></tr>
+            <tr>
+              <th>Image</th>
+              <th>Name</th>
+              <th>Sizes</th>
+              <th>Base</th>
+              <th>Discount</th>
+              <th>Active</th>
+              <th>Actions</th>
+            </tr>
           </thead>
-          <tbody id="tableBody"><tr><td colspan="6">Loading…</td></tr></tbody>
+          <tbody id="tableBody">
+            <tr><td colspan="7">Loading…</td></tr>
+          </tbody>
         </table>
       </div>
     </section>
-  </div><!-- /#dashboard-sections -->
 
-  <!-- ORDERS VIEW (with Phone column) -->
+  </div>
+
+  <!-- ORDERS -->
   <section id="orders-section" class="card hide">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
       <h2>Orders</h2>
+
       <div class="filters">
         <input id="orderSearch" type="search" placeholder="Search name/email/id…">
         <select id="orderStatusFilter">
@@ -235,7 +236,8 @@
         <button id="exportCsvBtn" class="btn sm">⬇ Export CSV</button>
       </div>
     </div>
-    <p><span id="orders-status">Connecting…</span></p>
+
+    <p id="orders-status">Connecting…</p>
 
     <div class="table-wrap">
       <table id="orders-table">
@@ -244,7 +246,7 @@
             <th>Order ID</th>
             <th>Customer</th>
             <th>Email</th>
-            <th>Phone</th><!-- NEW -->
+            <th>Phone</th>
             <th>Items</th>
             <th>Total</th>
             <th>Address</th>
@@ -257,6 +259,7 @@
       </table>
     </div>
   </section>
+
 </main>
 
 <footer class="site-footer">
@@ -267,51 +270,56 @@
 <script src="admin.js" defer></script>
 <script src="script.js" defer></script>
 
-<!-- Orders: filters + CSV -->
+<!-- Orders Filters + CSV Export -->
 <script>
   (function(){
-    const q = document.getElementById('orderSearch');
-    const f = document.getElementById('orderStatusFilter');
-    const body = document.getElementById('orders-body');
-    function match(row, txt, status){
-      const t = row.innerText.toLowerCase();
-      const okText = !txt || t.includes(txt);
-      const stCell = row.querySelector('[data-col="status"]');
-      const rowSt = (stCell?.dataset.status || "").toLowerCase();
-      const okStatus = !status || rowSt === status;
-      return okText && okStatus;
+    const q=document.getElementById('orderSearch');
+    const f=document.getElementById('orderStatusFilter');
+    const body=document.getElementById('orders-body');
+
+    function match(row,txt,status){
+      const t=row.innerText.toLowerCase();
+      const st=row.querySelector('[data-col="status"]')?.dataset.status?.toLowerCase() || "";
+      return (!txt||t.includes(txt)) && (!status||st===status);
     }
+
     function apply(){
-      const txt = (q?.value || "").toLowerCase().trim();
-      const status = (f?.value || "").toLowerCase().trim();
-      if (!body) return;
+      const txt=(q?.value||"").toLowerCase().trim();
+      const status=(f?.value||"").toLowerCase().trim();
       Array.from(body.querySelectorAll("tr")).forEach(tr=>{
-        tr.style.display = match(tr, txt, status) ? "" : "none";
+        tr.style.display=match(tr,txt,status)?"":"none";
       });
     }
-    q && q.addEventListener('input', apply);
-    f && f.addEventListener('change', apply);
-    window.__applyOrderFilters = apply;
+
+    q?.addEventListener('input',apply);
+    f?.addEventListener('change',apply);
+    window.__applyOrderFilters=apply;
   })();
 
   (function(){
-    const btn = document.getElementById('exportCsvBtn');
-    const body = document.getElementById('orders-body');
-    const head = document.querySelector('#orders-table thead');
+    const btn=document.getElementById('exportCsvBtn');
+    const body=document.getElementById('orders-body');
+    const head=document.querySelector('#orders-table thead');
+
     function toCSV(){
-      if (!body || !head) return;
-      const visibleRows = Array.from(body.querySelectorAll('tr')).filter(tr=>tr.style.display !== 'none');
-      const headers = Array.from(head.querySelectorAll('th')).map(th=>th.innerText.trim());
-      const rows = visibleRows.map(tr=>Array.from(tr.children).map(td=>('"'+(td.innerText||'').replaceAll('"','""')+'"')));
-      const csv = [headers.map(h=>('"'+h.replaceAll('"','""')+'"')).join(','), ...rows.map(r=>r.join(','))].join('\n');
-      const blob = new Blob([csv], {type:'text/csv'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'orders.csv'; a.click();
+      const visible=Array.from(body.querySelectorAll('tr')).filter(tr=>tr.style.display!=='none');
+      const headers=Array.from(head.querySelectorAll('th')).map(th=>th.innerText.trim());
+      const rows=visible.map(tr=>Array.from(tr.children)
+        .map(td=>('"'+(td.innerText||'').replaceAll('"','""')+'"'))
+      );
+      const csv=[headers.map(h=>('"'+h+'"')).join(','), ...rows.map(r=>r.join(','))].join('\n');
+
+      const blob=new Blob([csv],{type:'text/csv'});
+      const url=URL.createObjectURL(blob);
+
+      const a=document.createElement('a');
+      a.href=url; a.download='orders.csv'; a.click();
       URL.revokeObjectURL(url);
     }
-    btn && btn.addEventListener('click', toCSV);
+
+    btn?.addEventListener('click',toCSV);
   })();
 </script>
+
 </body>
 </html>
