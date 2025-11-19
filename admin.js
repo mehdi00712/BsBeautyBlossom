@@ -78,7 +78,7 @@ logoutBtn?.addEventListener("click", async () => {
 /* ---------- Orders view toggle (guarded) ---------- */
 btnSeeOrders?.addEventListener("click", () => {
   const u = auth.currentUser;
-  if (!canSeeAdmin(u)) return; // safety
+  if (!canSeeAdmin(u)) return;
   hide(dashboardWrap);
   show(ordersSection);
   show(btnBack);
@@ -97,14 +97,21 @@ btnBack?.addEventListener("click", () => {
 let ordersListenerAttached = false;
 function rowHTML(id, order){
   const itemsText = Array.isArray(order.items)
-    ? order.items.map(i=>`${i.name||i.title||'item'} x${i.qty||i.quantity||1}`).join(", ")
+    ? order.items.map(i=>`${i.name||i.title||"item"} x${i.qty||i.quantity||1}`).join(", ")
     : (order.items && typeof order.items==="object"
-        ? Object.values(order.items).map(i=>`${i.name||i.title||'item'} x${i.qty||i.quantity||1}`).join(", ")
+        ? Object.values(order.items).map(i=>`${i.name||i.title||"item"} x${i.qty||i.quantity||1}`).join(", ")
         : String(order.items||""));
+
   const status = (order.status || "pending").toLowerCase();
-  const cls = {pending:"status pending", shipped:"status shipped", completed:"status completed"}[status] || "status";
+  const cls = {
+    pending:"status pending",
+    shipped:"status shipped",
+    completed:"status completed"
+  }[status] || "status";
+
   const phone = (order.phone || "").trim();
-  const total = (order.total != null) ? order.total : order.totalAmount; // compatibility
+  const total = order.total ?? order.totalAmount;
+
   return `
     <td data-col="id">${id}</td>
     <td data-col="name">${esc(order.name)}</td>
@@ -114,304 +121,352 @@ function rowHTML(id, order){
     <td data-col="total">${fmtMoney(total)}</td>
     <td data-col="address">${esc(order.address)}</td>
     <td data-col="time">${fmtTime(order.timestamp)}</td>
-    <td data-col="status" data-status="${status}"><span class="${cls}">${status[0].toUpperCase()+status.slice(1)}</span></td>
+    <td data-col="status" data-status="${status}">
+      <span class="${cls}">${status[0].toUpperCase()+status.slice(1)}</span>
+    </td>
     <td data-col="action">
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn sm" data-set-status="pending"   data-id="${id}">Pending</button>
-        <button class="btn sm" data-set-status="shipped"   data-id="${id}">Shipped</button>
+        <button class="btn sm" data-set-status="pending" data-id="${id}">Pending</button>
+        <button class="btn sm" data-set-status="shipped" data-id="${id}">Shipped</button>
         <button class="btn sm" data-set-status="completed" data-id="${id}">Completed</button>
         <button class="btn sm danger" data-delete-id="${id}">Delete</button>
       </div>
     </td>`;
 }
+
 function attachOrdersListener(){
   if (ordersListenerAttached) return;
-  if (!firebase.database) { ordersStatus && (ordersStatus.textContent="Realtime Database not available."); return; }
   const rtdb = firebase.database();
   const ref = rtdb.ref("orders").limitToLast(500);
-  ref.on("value", (snap)=>{
-    if (!ordersBody) return;
+
+  ref.on("value", snap => {
     ordersBody.innerHTML = "";
-    const val = snap.val() || {};
+    const data = snap.val() || {};
     const rows = [];
-    Object.entries(val).forEach(([id, order])=> {
+
+    Object.entries(data).forEach(([id, order]) => {
       const tr = document.createElement("tr");
       tr.innerHTML = rowHTML(id, order || {});
-      rows.push([order.timestamp||0, tr]);
+      rows.push([order.timestamp || 0, tr]);
     });
-    rows.sort((a,b)=>(new Date(b[0]).getTime()||0)-(new Date(a[0]).getTime()||0));
-    rows.forEach(([,tr])=>ordersBody.appendChild(tr));
-    ordersStatus && (ordersStatus.textContent = rows.length ? `Loaded ${rows.length} order(s).` : "No orders yet.");
+
+    rows.sort((a,b)=>(new Date(b[0]).getTime())-(new Date(a[0]).getTime()));
+    rows.forEach(([,tr]) => ordersBody.appendChild(tr));
+
+    ordersStatus.textContent = rows.length ?
+      `Loaded ${rows.length} order(s).` : "No orders yet.";
+
     window.__applyOrderFilters?.();
-  }, (err)=>{
-    console.error(err);
-    ordersStatus && (ordersStatus.textContent = "Permission error or missing rules.");
   });
+
   ordersListenerAttached = true;
 }
 
-/* status + delete actions (delegated) */
+/* Delegated event for order status + delete */
 document.addEventListener("click", async (e)=>{
   const setBtn = e.target.closest("[data-set-status]");
   const delBtn = e.target.closest("[data-delete-id]");
+
   if (setBtn){
-    const id = setBtn.getAttribute("data-id");
-    const next = setBtn.getAttribute("data-set-status");
+    const id = setBtn.dataset.id;
+    const next = setBtn.dataset["setStatus"];
     try{
-      await firebase.database().ref(`orders/${id}`).update({ status: next, adminUpdatedAt: new Date().toISOString() });
+      await firebase.database().ref(`orders/${id}`).update({
+        status: next,
+        adminUpdatedAt: new Date().toISOString()
+      });
       const cell = setBtn.closest("tr")?.querySelector('[data-col="status"]');
-      if (cell) {
-        const cls = {pending:"status pending", shipped:"status shipped", completed:"status completed"}[next] || "status";
+      if (cell){
+        const cls = {pending:"status pending", shipped:"status shipped", completed:"status completed"}[next];
         cell.dataset.status = next;
         cell.innerHTML = `<span class="${cls}">${next[0].toUpperCase()+next.slice(1)}</span>`;
       }
-      window.__applyOrderFilters?.();
-    }catch(err){ console.error(err); alert("Failed to update status: " + (err?.message || err)); }
-    return;
+    }catch(err){
+      alert("Failed to update status: " + err.message);
+    }
   }
+
   if (delBtn){
-    const id = delBtn.getAttribute("data-delete-id");
-    if (!confirm("Delete this order? This cannot be undone.")) return;
+    const id = delBtn.dataset["deleteId"];
+    if (!confirm("Delete this order?")) return;
     try{
       await firebase.database().ref(`orders/${id}`).remove();
       delBtn.closest("tr")?.remove();
-    }catch(err){ console.error(err); alert("Failed to delete: " + (err?.message || err)); }
+    }catch(err){
+      alert("Failed to delete: " + err.message);
+    }
   }
 });
 
-/* ---------- Site Settings (Firestore) ---------- */
+/* ---------- Site Settings ---------- */
 const site = {
-  heroTitle: $("site-heroTitle"), heroSubtitle: $("site-heroSubtitle"),
-  featuredCategory: $("site-featuredCategory"), showFeatured: $("site-showFeatured"),
-  banner: $("site-banner"), bannerPreview: $("site-banner-preview"),
-  gallery: $("site-gallery"), galleryPreview: $("site-gallery-preview"),
-  saveBtn: $("site-save"), reloadBtn: $("site-reload"), status: $("site-status"),
+  heroTitle: $("site-heroTitle"),
+  heroSubtitle: $("site-heroSubtitle"),
+  featuredCategory: $("site-featuredCategory"),
+  showFeatured: $("site-showFeatured"),
+  banner: $("site-banner"),
+  bannerPreview: $("site-banner-preview"),
+  gallery: $("site-gallery"),
+  galleryPreview: $("site-gallery-preview"),
+  saveBtn: $("site-save"),
+  reloadBtn: $("site-reload"),
+  status: $("site-status")
 };
+
 const siteDocRef = db.collection("site").doc("home");
 
 async function loadSite(){
-  if(!site.heroTitle || !site.heroSubtitle || !site.featuredCategory || !site.showFeatured) return;
   try{
-    site.status && (site.status.textContent = "Loading…");
+    site.status.textContent = "Loading…";
     const snap = await siteDocRef.get();
-    const data = snap.exists ? snap.data() : {};
-    site.heroTitle.value        = data.heroTitle || "";
-    site.heroSubtitle.value     = data.heroSubtitle || "";
-    site.featuredCategory.value = (data.featuredCategory || "perfume").toLowerCase();
-    site.showFeatured.checked   = !!data.showFeatured;
-    site.bannerPreview && (site.bannerPreview.innerHTML = data.bannerImage ? `<img src="${data.bannerImage}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">` : "");
-    site.galleryPreview && (site.galleryPreview.innerHTML = Array.isArray(data.gallery) ? data.gallery.map(u=>`<img src="${u}" style="width:86px;height:86px;object-fit:cover;border-radius:8px;border:1px solid #e5e5e5">`).join("") : "");
-    site.status && (site.status.textContent = "Ready.");
-  }catch(e){ console.error(e); site.status && (site.status.textContent = "Error loading site settings."); }
+    const data = snap.data() || {};
+
+    site.heroTitle.value = data.heroTitle || "";
+    site.heroSubtitle.value = data.heroSubtitle || "";
+    site.featuredCategory.value = data.featuredCategory || "perfume";
+    site.showFeatured.checked = !!data.showFeatured;
+
+    site.bannerPreview.innerHTML = data.bannerImage ?
+      `<img src="${data.bannerImage}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #ccc">`
+      : "";
+
+    site.galleryPreview.innerHTML = Array.isArray(data.gallery)
+      ? data.gallery.map(u=>`<img src="${u}" style="width:86px;height:86px;border-radius:8px;border:1px solid #ccc">`).join("")
+      : "";
+
+    site.status.text
+Content = "Ready.";
+  }catch(e){
+    site.status.textContent = "Error loading site settings.";
+  }
 }
+
 site.reloadBtn?.addEventListener("click", loadSite);
 
-/* 🔹 Save Site Settings (added) */
 site.saveBtn?.addEventListener("click", async ()=>{
-  try {
+  try{
     site.status.textContent = "Saving…";
+
     let bannerUrl = "";
     let galleryUrls = [];
 
-    // Upload banner image
-    if (site.banner?.files?.length) {
+    if (site.banner.files.length){
       bannerUrl = await uploadToCloudinary(site.banner.files[0]);
     }
 
-    // Upload gallery images
-    if (site.gallery?.files?.length) {
-      const uploads = [];
-      for (const f of site.gallery.files) uploads.push(uploadToCloudinary(f));
+    if (site.gallery.files.length){
+      const uploads = [...site.gallery.files].map(f=>uploadToCloudinary(f));
       galleryUrls = await Promise.all(uploads);
     }
 
-    // Prepare and save data
     const data = {
-      heroTitle: site.heroTitle?.value.trim() || "",
-      heroSubtitle: site.heroSubtitle?.value.trim() || "",
-      featuredCategory: site.featuredCategory?.value.trim().toLowerCase() || "perfume",
-      showFeatured: !!site.showFeatured?.checked,
+      heroTitle: site.heroTitle.value.trim(),
+      heroSubtitle: site.heroSubtitle.value.trim(),
+      featuredCategory: site.featuredCategory.value.trim(),
+      showFeatured: site.showFeatured.checked
     };
 
     if (bannerUrl) data.bannerImage = bannerUrl;
-    if (galleryUrls.length > 0) data.gallery = galleryUrls;
+    if (galleryUrls.length) data.gallery = galleryUrls;
 
-    await siteDocRef.set(data, { merge: true });
-    site.status.textContent = "✅ Saved successfully!";
-    await loadSite();
-  } catch (e) {
-    console.error(e);
-    site.status.textContent = "❌ Save failed: " + e.message;
+    await siteDocRef.set(data,{merge:true});
+    site.status.textContent = "Saved ✓";
+    loadSite();
+  }catch(e){
+    site.status.textContent = "Save failed: " + e.message;
   }
 });
 
 /* ---------- Products (Firestore) ---------- */
-const nameEl=$("name"), priceEl=$("price"), brandEl=$("brand"), sizesEl=$("sizes"), descEl=$("description"),
-      categoryEl=$("category"), activeEl=$("active"), imagesEl=$("images");
-const tableBody=$("tableBody"), filterCategory=$("filterCategory"), refreshBtn=$("refreshBtn"),
-      resetBtn=$("resetBtn"), saveBtn=$("saveBtn"), docIdEl=$("docId");
+const nameEl        = $("name");
+const priceEl       = $("price");
+const discountPriceEl = $("discountPrice");  // ⭐ NEW
+const brandEl       = $("brand");
+const sizesEl       = $("sizes");
+const descEl        = $("description");
+const categoryEl    = $("category");
+const activeEl      = $("active");
+const imagesEl      = $("images");
 
-function resetForm(){ if(docIdEl)docIdEl.value=""; if(nameEl)nameEl.value=""; if(priceEl)priceEl.value=""; if(brandEl)brandEl.value=""; if(sizesEl)sizesEl.value=""; if(descEl)descEl.value=""; if(categoryEl)categoryEl.value="perfume"; if(activeEl)activeEl.checked=true; if(imagesEl)imagesEl.value=""; }
+const tableBody     = $("tableBody");
+const filterCategory= $("filterCategory");
+const refreshBtn    = $("refreshBtn");
+const resetBtn      = $("resetBtn");
+const saveBtn       = $("saveBtn");
+const docIdEl       = $("docId");
+
+function resetForm(){
+  docIdEl.value = "";
+  nameEl.value = "";
+  priceEl.value = "";
+  discountPriceEl.value = "";      // ⭐ NEW
+  brandEl.value = "";
+  sizesEl.value = "";
+  descEl.value = "";
+  categoryEl.value = "perfume";
+  activeEl.checked = true;
+  imagesEl.value = "";
+}
+
 resetBtn?.addEventListener("click", resetForm);
 
-function normalizeCategory(raw) {
-  const v = String(raw || "").trim().toLowerCase();
-  if (v === "jewelry") return "jewellery";
-  return v;
+function normalizeCategory(raw){
+  const v = (raw||"").toLowerCase().trim();
+  return v === "jewelry" ? "jewellery" : v;
 }
 
 async function loadProducts(){
-  if(!tableBody || !filterCategory){
-    console.warn("⚠ loadProducts: tableBody or filterCategory missing");
+  tableBody.innerHTML = `<tr><td colspan="7">Loading…</td></tr>`;
+
+  const cat = normalizeCategory(filterCategory.value);
+
+  let snap;
+  if (cat === "all") snap = await db.collection("products").get();
+  else snap = await db.collection("products").where("category","==",cat).get();
+
+  tableBody.innerHTML = "";
+
+  if (snap.empty){
+    tableBody.innerHTML = `<tr><td colspan="7">No products found</td></tr>`;
     return;
   }
-  const requested = normalizeCategory(filterCategory.value || "all");
-  tableBody.innerHTML = "<tr><td colspan='6'>Loading…</td></tr>";
 
-  try{
-    let snap;
-    if (requested === "all") {
-      snap = await db.collection("products").get();
-    } else {
-      snap = await db.collection("products").where("category","==",requested).get();
-      if (snap.empty) {
-        const all = await db.collection("products").get();
-        const docs = all.docs.filter(d => normalizeCategory(d.data().category) === requested);
-        snap = { empty: docs.length === 0, docs, forEach: (fn)=>docs.forEach(fn) };
-      }
-    }
+  snap.forEach(doc=>{
+    const p = doc.data();
+    const img = p.imageURL || (p.images?.[0] || "");
 
-    if (snap.empty){
-      tableBody.innerHTML = `<tr><td colspan="6">No products found.</td></tr>`;
-      return;
-    }
+    const isOut = (p.stockStatus || "").toLowerCase() === "out";
 
-    tableBody.innerHTML = "";
-    snap.forEach((doc)=>{
-      const p = doc.data() || {};
-      const img = p.imageURL || (Array.isArray(p.images) && p.images[0]) || "";
+    const tr = document.createElement("tr");
+    tr.style.opacity = isOut ? "0.5" : "1";
 
-      // 🔹 Out-of-stock UI (row hint)
-      const isOut = (p.stockStatus || "").toLowerCase() === "out";
+    tr.innerHTML = `
+      <td>${img?`<img src="${img}" width="60" height="60" style="object-fit:cover;border-radius:6px">`:""}</td>
+      <td>${esc(p.name)}<div class="muted">${esc(p.brand||"")}</div></td>
+      <td>${renderSizes(p.sizes)}</td>
+      <td>Rs${Number(p.basePrice||0).toFixed(2)}</td>
+      <td>${p.discountPrice ? `Rs${p.discountPrice}` : "-"}</td>   <!-- ⭐ NEW -->
+      <td>${p.active?"Yes":"No"}</td>
+      <td>
+        <button class="btn edit" data-id="${doc.id}">Edit</button>
+        <button class="btn danger delete" data-id="${doc.id}">Delete</button>
+        <button class="btn stock" data-id="${doc.id}" data-status="${isOut?"out":"in"}">
+          ${isOut?"Set In Stock":"Set Out of Stock"}
+        </button>
+      </td>
+    `;
 
-      const tr = document.createElement("tr");
-      tr.style.opacity = isOut ? "0.55" : "1";
-      tr.innerHTML = `
-        <td>${img?`<img src="${img}" width="60" height="60" style="object-fit:cover;border-radius:6px;border:1px solid #e5e5e5">`:""}</td>
-        <td>
-          ${esc(p.name||"")}
-          ${p.brand?`<div class="muted">${esc(p.brand)}</div>`:""}
-          ${isOut?`<div class="badge" style="background:#fee2e2;border-color:#fecaca;color:#991b1b;margin-top:4px">Out of Stock</div>`:""}
-        </td>
-        <td>${renderSizes(p.sizes)}</td>
-        <td>Rs${Number(p.basePrice||0).toFixed(2)}</td>
-        <td>${p.active?"Yes":"No"}</td>
-        <td>
-          <button class="btn edit" data-id="${doc.id}">Edit</button>
-          <button class="btn danger delete" data-id="${doc.id}">Delete</button>
-          <button class="btn stock" data-id="${doc.id}" data-status="${isOut?"out":"in"}">${isOut?"Set In Stock":"Set Out of Stock"}</button>
-        </td>`;
-      tableBody.appendChild(tr);
-    });
+    tableBody.appendChild(tr);
+  });
 
-    // existing edit/delete wiring
-    $$(".edit").forEach((b)=>b.addEventListener("click", async ()=>{
-      const d = await db.collection("products").doc(b.dataset.id).get();
-      if (!d.exists) return;
-      const p = d.data()||{};
-      if (docIdEl) docIdEl.value = d.id;
-      if (nameEl)  nameEl.value = p.name || "";
-      if (priceEl) priceEl.value = p.basePrice || 0;
-      if (brandEl) brandEl.value = p.brand || "";
-      if (sizesEl) sizesEl.value = (p.sizes||[]).map(s=>`${s.label} | ${s.price}`).join("\n");
-      if (descEl)  descEl.value = p.description || "";
-      if (categoryEl) categoryEl.value = normalizeCategory(p.category || "perfume");
-      if (activeEl) activeEl.checked = !!p.active;
-      window.scrollTo({top:0,behavior:"smooth"});
-    }));
-    $$(".delete").forEach((b)=>b.addEventListener("click", async ()=>{
-      if(!confirm("Delete this product?")) return;
-      await db.collection("products").doc(b.dataset.id).delete();
-      loadProducts();
-    }));
+  /* Edit */
+  $$(".edit").forEach(btn=>btn.addEventListener("click", async ()=>{
+    const snap = await db.collection("products").doc(btn.dataset.id).get();
+    if (!snap.exists) return;
+    const p = snap.data();
 
-    // 🔹 New: Stock toggle wiring
-    $$(".stock").forEach((btn)=>btn.addEventListener("click", async ()=>{
-      try{
-        const id = btn.dataset.id;
-        const current = btn.dataset.status; // "in" | "out"
-        const next = current === "out" ? "in" : "out";
-        await db.collection("products").doc(id).set({
-          stockStatus: next,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        }, { merge:true });
-        alert(`Product marked as ${next === "out" ? "OUT OF STOCK" : "IN STOCK"}.`);
-        await loadProducts();
-      }catch(err){
-        console.error(err);
-        alert("Failed to toggle stock: " + (err?.message || err));
-      }
-    }));
+    docIdEl.value = snap.id;
+    nameEl.value = p.name || "";
+    priceEl.value = p.basePrice || "";
+    discountPriceEl.value = p.discountPrice || "";   // ⭐ NEW
+    brandEl.value = p.brand || "";
+    descEl.value = p.description || "";
+    sizesEl.value = (p.sizes||[]).map(s=>`${s.label} | ${s.price}`).join("\n");
+    categoryEl.value = normalizeCategory(p.category);
+    activeEl.checked = !!p.active;
 
-  }catch(e){
-    console.error("❌ loadProducts error:", e);
-    tableBody.innerHTML = `<tr><td colspan="6">Error loading products: ${esc(e?.message || e)}</td></tr>`;
-  }
+    window.scrollTo({top:0,behavior:"smooth"});
+  }));
+
+  /* Delete */
+  $$(".delete").forEach(btn=>btn.addEventListener("click", async ()=>{
+    if (!confirm("Delete this product?")) return;
+    await db.collection("products").doc(btn.dataset.id).delete();
+    loadProducts();
+  }));
+
+  /* Stock toggle */
+  $$(".stock").forEach(btn=>btn.addEventListener("click", async ()=>{
+    const id = btn.dataset.id;
+    const next = btn.dataset.status === "out" ? "in" : "out";
+    await db.collection("products").doc(id).set({stockStatus:next},{merge:true});
+    alert("Updated.");
+    loadProducts();
+  }));
 }
+
 refreshBtn?.addEventListener("click", loadProducts);
 filterCategory?.addEventListener("change", loadProducts);
 
+/* SAVE PRODUCT */
 saveBtn?.addEventListener("click", async ()=>{
   try{
-    const id = (docIdEl && docIdEl.value) || db.collection("products").doc().id;
-    const sizes = parseSizes(sizesEl ? sizesEl.value : "");
+    const id = docIdEl.value || db.collection("products").doc().id;
+    const sizes = parseSizes(sizesEl.value);
+
     const data = {
-      name: (nameEl && nameEl.value.trim()) || "",
-      basePrice: toNumber(priceEl ? priceEl.value : 0),
-      brand: (brandEl && brandEl.value.trim()) || "",
+      name: nameEl.value.trim(),
+      basePrice: Number(priceEl.value),
+      discountPrice: discountPriceEl.value ? Number(discountPriceEl.value) : null,   // ⭐ NEW
+      brand: brandEl.value.trim(),
       sizes,
-      description: (descEl && descEl.value.trim()) || "",
-      category: normalizeCategory(categoryEl && categoryEl.value || "perfume"),
-      active: !!(activeEl && activeEl.checked),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      description: descEl.value.trim(),
+      category: normalizeCategory(categoryEl.value),
+      active: activeEl.checked,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-    if (!docIdEl || !docIdEl.value) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-    if (imagesEl?.files?.length){
-      const uploads = [];
-      for (const f of imagesEl.files) uploads.push(uploadToCloudinary(f));
+
+    if (!docIdEl.value){
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    }
+
+    if (imagesEl.files.length){
+      const uploads = [...imagesEl.files].map(f=>uploadToCloudinary(f));
       const urls = await Promise.all(uploads);
       data.images = urls;
-      if (!data.imageURL && urls[0]) data.imageURL = urls[0];
+      data.imageURL = urls[0];
     }
+
     await db.collection("products").doc(id).set(data,{merge:true});
-    alert("Saved ✓"); resetForm(); await loadProducts();
-  }catch(e){ console.error(e); alert("Save failed: " + (e?.message || e)); }
+    alert("Saved ✓");
+    resetForm();
+    loadProducts();
+  }catch(e){
+    alert("Save failed: " + e.message);
+  }
 });
 
 /* ---------- Auth state ---------- */
-auth.onAuthStateChanged((user)=>{
-  const loggedIn = !!user;
-  loggedIn ? hide(loginBtn) : show(loginBtn);
-  loggedIn ? show(logoutBtn) : hide(logoutBtn);
-  if (authStatus) {
-    if (!loggedIn) authStatus.textContent = "Please sign in.";
-    else if (canSeeAdmin(user)) authStatus.textContent = `Signed in as ${user.email || user.uid}`;
-    else authStatus.textContent = "Access denied for this account.";
+auth.onAuthStateChanged(user=>{
+  const logged = !!user;
+  logged ? hide(loginBtn) : show(loginBtn);
+  logged ? show(logoutBtn) : hide(logoutBtn);
+
+  if (!logged){
+    authStatus.textContent = "Please sign in.";
+  } else if (canSeeAdmin(user)){
+    authStatus.textContent = `Signed in as ${user.email}`;
+  } else {
+    authStatus.textContent = "Access denied.";
   }
-  const allowed = loggedIn && canSeeAdmin(user);
+
+  const allowed = logged && canSeeAdmin(user);
+
   allowed ? show(btnSeeOrders) : hide(btnSeeOrders);
-  if (allowed) {
-    if (dashboardWrap) dashboardWrap.style.display = "block";
-    if (siteSection) siteSection.style.display = "block";
-    if (productSection) productSection.style.display = "block";
-    if (listSection) listSection.style.display = "block";
+
+  if (allowed){
+    dashboardWrap.style.display = "block";
+    siteSection.style.display = "block";
+    productSection.style.display = "block";
+    listSection.style.display = "block";
+
     loadSite();
     loadProducts();
   } else {
-    if (dashboardWrap) dashboardWrap.style.display = "none";
-    if (siteSection) siteSection.style.display = "none";
-    if (productSection) productSection.style.display = "none";
-    if (listSection) listSection.style.display = "none";
+    dashboardWrap.style.display = "none";
+    siteSection.style.display = "none";
+    productSection.style.display = "none";
+    listSection.style.display = "none";
     hide(ordersSection);
     hide(btnBack);
   }
