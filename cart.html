@@ -4,10 +4,24 @@
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Checkout - B’s Beauty Blossom</title>
 <link rel="stylesheet" href="style.css">
+
 <!-- Firebase RTDB only -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
+
+<style>
+.old-price-cart {
+  text-decoration: line-through;
+  color: #777;
+  margin-right: 6px;
+}
+.new-price-cart {
+  color: #b30000;
+  font-weight: bold;
+}
+</style>
+
 </head>
 <body>
 <header>
@@ -33,6 +47,7 @@
   <h1>Checkout</h1>
 
   <div id="cart-items" class="cart-list"></div>
+
   <div class="totals">
     <div class="totals-row"><span>Subtotal</span><span id="subtotal">Rs0</span></div>
     <div class="totals-row"><span>Shipping</span><span id="shipping">Rs0</span></div>
@@ -40,6 +55,7 @@
   </div>
 
   <h2 style="margin-top:20px">Delivery Method</h2>
+
   <form id="checkout-form">
     <label><input type="radio" name="delivery" value="Pick Up" required> Pick Up (Free)</label><br>
     <label><input type="radio" name="delivery" value="Postage"> Postage (+Rs125)</label><br>
@@ -47,10 +63,12 @@
 
     <div id="customer-info" class="card" style="display:none;margin-top:10px">
       <h3 style="font-family:'Playfair Display',serif;margin-bottom:10px">Customer Details</h3>
+
       <div class="row row-2">
         <div><input type="text" id="name" placeholder="Full Name" required></div>
         <div><input type="email" id="email" placeholder="Email" required></div>
       </div>
+
       <div class="row row-2">
         <div><input type="tel" id="phone" placeholder="Phone (8 digits, starts with 5)" required></div>
         <div id="address-wrap" style="display:none"><input type="text" id="address" placeholder="Delivery Address"></div>
@@ -73,13 +91,15 @@
   </form>
 </section>
 
-<footer class="site-footer"><p>© 2025 B’s Beauty Blossom • All rights reserved</p></footer>
+<footer class="site-footer">
+  <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
+</footer>
 
 <script src="script.js"></script>
 
 <script>
 // ========================================================================
-//                     CART + DISCOUNT SUPPORT ADDED
+//                     CART + DISCOUNT SUPPORT (FULL)
 // ========================================================================
 (function(){
   const list = document.getElementById('cart-items');
@@ -93,52 +113,67 @@
 
   let cart=[], baseSubtotal=0, shipping=0;
 
-  const money = (n) => 'Rs'+Number(n||0).toFixed(0);
+  const money = n => "Rs" + Number(n||0).toFixed(0);
 
-  // Detect discount-price in item
-  const getFinalUnitPrice = (item) => {
-    if (item.discountPrice && Number(item.discountPrice) > 0) {
-      return Number(item.discountPrice);
-    }
+  const getPrice = item => {
+    if (item.discountPrice && Number(item.discountPrice) > 0) return Number(item.discountPrice);
     return Number(item.price || 0);
   };
 
   function loadCart(){
-    cart = JSON.parse(localStorage.getItem('cart')||'[]');
-    list.innerHTML='';
+    cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    list.innerHTML = "";
     baseSubtotal = 0;
 
     if (!cart.length){
-      list.innerHTML='<p class="muted">Your cart is empty.</p>';
+      list.innerHTML = '<p class="muted">Your cart is empty.</p>';
+      updateTotals();
+      return;
     }
 
     cart.forEach((it,i)=>{
-      const unit = getFinalUnitPrice(it);
       const qty = Number(it.qty || it.quantity || 1);
-      const line = unit * qty;
+
+      const newPrice = getPrice(it);
+      const oldPrice = it.oldPrice ? Number(it.oldPrice) : null;
+
+      const line = newPrice * qty;
       baseSubtotal += line;
 
-      const row = document.createElement('div');
-      row.className='cart-row';
+      const row = document.createElement("div");
+      row.className = "cart-row";
       row.innerHTML = `
-        <img class="cart-thumb" src="${it.imageURL||'https://via.placeholder.com/60'}" alt="">
+        <img class="cart-thumb" src="${it.imageURL || 'https://via.placeholder.com/60'}">
+          
         <div>
-          <div class="cart-title">${it.name||''}</div>
-          <div class="cart-meta">${money(unit)} × ${qty}</div>
+          <div class="cart-title">${it.name}</div>
+
+          <div class="cart-meta">
+            ${oldPrice ? `<span class="old-price-cart">Rs${oldPrice}</span>` : ""}
+            <span class="new-price-cart">Rs${newPrice}</span>
+             × ${qty}
+          </div>
         </div>
+
         <div class="cart-line">${money(line)}</div>
-        <div class="cart-actions"><button class="btn danger" data-del="${i}">Remove</button></div>
+
+        <div class="cart-actions">
+          <button class="btn danger" data-del="${i}">Remove</button>
+        </div>
       `;
+
       list.appendChild(row);
     });
 
-    list.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click', ()=>{
-      const idx=Number(b.getAttribute('data-del')); 
-      cart.splice(idx,1);
-      localStorage.setItem('cart', JSON.stringify(cart));
-      loadCart(); 
-      window.updateCartCount?.();
-    }));
+    list.querySelectorAll("[data-del]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const idx = Number(btn.getAttribute("data-del"));
+        cart.splice(idx,1);
+        localStorage.setItem("cart", JSON.stringify(cart));
+        loadCart();
+        window.updateCartCount?.();
+      });
+    });
 
     updateTotals();
   }
@@ -146,92 +181,104 @@
   function updateTotals(){
     subtotalEl.textContent = money(baseSubtotal);
     shippingEl.textContent = money(shipping);
-    totalEl.textContent = money(baseSubtotal+shipping);
+    totalEl.textContent = money(baseSubtotal + shipping);
   }
 
-  loadCart(); 
+  loadCart();
   window.updateCartCount?.();
 
-  // Delivery selection
-  form.querySelectorAll('input[name="delivery"]').forEach(r=>r.addEventListener('change',()=>{
-    customerInfo.style.display='block';
-    if (r.value==='Delivery'){ shipping=150; addressWrap.style.display='block'; }
-    else if (r.value==='Postage'){ shipping=125; addressWrap.style.display='block'; }
-    else { shipping=0; addressWrap.style.display='none'; }
+  // DELIVERY
+  form.querySelectorAll('input[name="delivery"]').forEach(r => 
+    r.addEventListener("change",()=>{
+      customerInfo.style.display = "block";
 
-    if (r.value!=='Pick Up'){ 
-      form.querySelector('input[value="Juice"]').checked = true; 
-      juiceInfo.style.display='block'; 
-    } else { 
-      juiceInfo.style.display = 
-        form.querySelector('input[name="payment"]:checked')?.value==='Juice'
-        ? 'block':'none'; 
-    }
+      if (r.value === "Delivery"){ shipping = 150; addressWrap.style.display='block'; }
+      else if (r.value === "Postage"){ shipping = 125; addressWrap.style.display='block'; }
+      else { shipping = 0; addressWrap.style.display='none'; }
 
-    updateTotals();
-  }));
+      if (r.value !== "Pick Up"){
+        form.querySelector('input[value="Juice"]').checked = true;
+        juiceInfo.style.display = "block";
+      } else {
+        juiceInfo.style.display = 
+          form.querySelector('input[name="payment"]:checked')?.value === "Juice" 
+          ? "block" : "none";
+      }
 
-  form.querySelectorAll('input[name="payment"]').forEach(r=>
-    r.addEventListener('change',()=>{ 
-      juiceInfo.style.display = r.value==='Juice'?'block':'none'; 
+      updateTotals();
     })
   );
 
-  function validate(){
-    const phone = document.getElementById('phone').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const del = form.querySelector('input[name="delivery"]:checked').value;
+  // PAYMENT
+  form.querySelectorAll('input[name="payment"]').forEach(r =>
+    r.addEventListener("change",()=>{
+      juiceInfo.style.display = r.value === "Juice" ? "block" : "none";
+    })
+  );
 
-    if (!/^5\d{7}$/.test(phone)){ alert('Phone must start with 5 and be 8 digits.'); return false; }
-    if (!/@/.test(email)){ alert('Enter a valid email.'); return false; }
-    if ((del==='Delivery'||del==='Postage') 
-        && form.querySelector('input[name="payment"]:checked').value!=='Juice'){ 
-      alert('For Delivery/Postage, payment must be Juice.'); 
-      return false; 
+  // VALIDATION
+  function validate(){
+    const phone = document.getElementById("phone").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const del = form.querySelector('input[name="delivery"]:checked')?.value;
+
+    if (!/^5\d{7}$/.test(phone)){ alert("Phone must start with 5 and be 8 digits."); return false; }
+    if (!/@/.test(email)){ alert("Enter a valid email."); return false; }
+    if ((del==="Delivery" || del==="Postage") &&
+        form.querySelector('input[name="payment"]:checked').value !== "Juice"){
+      alert("For Delivery/Postage, payment must be Juice.");
+      return false;
     }
     return true;
   }
 
-  form.addEventListener('submit', async (e)=>{
+  // SUBMIT ORDER
+  form.addEventListener("submit", async (e)=>{
     e.preventDefault();
-    if (!cart.length) return alert('Cart is empty.');
+    if (!cart.length) return alert("Cart is empty.");
     if (!validate()) return;
+
+    const rtdb = firebase.database();
 
     const del = form.querySelector('input[name="delivery"]:checked').value;
     const pay = form.querySelector('input[name="payment"]:checked').value;
 
-    // final order (discount already applied)
     const order = {
-      items: cart.map(it=>({
+      items: cart.map(it => ({
         name: it.name,
-        quantity: Number(it.qty||it.quantity||1),
-        price: getFinalUnitPrice(it),
-        imageURL: it.imageURL||''
+        quantity: Number(it.qty || it.quantity || 1),
+        price: getPrice(it),
+        oldPrice: it.oldPrice || null,
+        imageURL: it.imageURL || ""
       })),
-      delivery: del==='Delivery'?'Delivery':null,
-      postage: del==='Postage'?'Postage':null,
-      pickup: del==='Pick Up'?'Pick Up':null,
+      delivery: del === "Delivery" ? "Delivery" : null,
+      postage: del === "Postage" ? "Postage" : null,
+      pickup: del === "Pick Up" ? "Pick Up" : null,
       payment: pay,
-      name: document.getElementById('name').value.trim(),
-      email: document.getElementById('email').value.trim(),
-      phone: document.getElementById('phone').value.trim(),
-      address: document.getElementById('address').value.trim() || 'N/A',
+
+      name: document.getElementById("name").value.trim(),
+      email: document.getElementById("email").value.trim(),
+      phone: document.getElementById("phone").value.trim(),
+      address: document.getElementById("address").value.trim() || "N/A",
+
       subtotal: baseSubtotal,
       shipping: shipping,
-      total: baseSubtotal+shipping,
+      total: baseSubtotal + shipping,
+
       timestamp: new Date().toISOString()
     };
 
-    try{
-      await rtdb.ref('orders').push(order);
-      alert('Order confirmed! Thank you.');
-      localStorage.removeItem('cart'); 
+    try {
+      await rtdb.ref("orders").push(order);
+      alert("Order confirmed! Thank you.");
+      localStorage.removeItem("cart");
       window.updateCartCount?.();
-      window.location.href='index.html';
-    }catch(err){
-      alert('Error saving order: '+(err.message||err));
+      window.location.href="index.html";
+    } catch (err){
+      alert("Error saving order: " + err.message);
     }
   });
+
 })();
 </script>
 
