@@ -35,13 +35,14 @@
       <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
       <li><a href="admin.html">Admin</a></li>
     </ul>
-    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
+    <div class="hamburger">&#9776;</div>
   </nav>
   <div id="nav-overlay"></div>
 </header>
 
 <main class="section" id="product-main">
   <div class="product-detail" id="product-detail">
+
     <div class="product-media">
       <div style="position:relative">
         <img id="product-image" src="https://via.placeholder.com/800x800?text=Product" alt="Product image">
@@ -58,17 +59,23 @@
       <label for="size">Choose size</label>
       <select id="size"></select>
 
+      <!-- ⭐ FINAL PRICE UI WITH DISCOUNT SUPPORT -->
       <div class="price-qty">
-        <div class="price" id="price">Rs0</div>
+        <div class="price">
+          <span id="price" style="font-size:1.4rem;font-weight:700;color:#d10000;">Rs0</span>
+          <span id="old-price" style="margin-left:8px;text-decoration:line-through;color:#777;display:none;">Rs0</span>
+        </div>
+
         <div class="qty">
-          <button id="qty-minus" type="button" aria-label="decrease quantity">–</button>
+          <button id="qty-minus" type="button">–</button>
           <input id="qty" type="number" value="1" min="1">
-          <button id="qty-plus" type="button" aria-label="increase quantity">+</button>
+          <button id="qty-plus" type="button">+</button>
         </div>
       </div>
 
       <button id="add-to-cart" class="btn">Add to Cart</button>
     </div>
+
   </div>
 </main>
 
@@ -81,168 +88,10 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- ============================================================
-     PRODUCT LOADER WITH FULL DISCOUNT SUPPORT
-=============================================================== -->
-<script>
-(function(){
-  const $ = (id)=>document.getElementById(id);
-  const fmt = (n)=>"Rs" + Number(n||0).toFixed(0);
+<!-- Product Loader -->
+<script src="product.js"></script>
 
-  function isOutOfStock(p){
-    if (String(p.stockStatus||"").toLowerCase() === "out") return true;
-    if (!isNaN(Number(p.stock))) return Number(p.stock) <= 0;
-    return false;
-  }
-
-  function applyOOSUI(out){
-    const addBtn  = $("add-to-cart");
-    const detail  = $("product-detail");
-    const qty     = $("qty");
-    const minus   = $("qty-minus");
-    const plus    = $("qty-plus");
-    const badgeSlot = $("oos-badge-slot");
-
-    if (out){
-      addBtn.textContent = "Out of Stock";
-      addBtn.setAttribute("disabled","disabled");
-
-      minus.setAttribute("disabled","disabled");
-      plus.setAttribute("disabled","disabled");
-      qty.setAttribute("disabled","disabled");
-
-      detail.classList.add("out-of-stock");
-      badgeSlot.innerHTML = `<span class="soldout-tag">Out of Stock</span>`;
-    } else {
-      addBtn.textContent = "Add to Cart";
-      addBtn.removeAttribute("disabled");
-
-      minus.removeAttribute("disabled");
-      plus.removeAttribute("disabled");
-      qty.removeAttribute("disabled");
-
-      detail.classList.remove("out-of-stock");
-      badgeSlot.innerHTML = "";
-    }
-  }
-
-  function wireQty(){
-    const input = $("qty");
-    $("qty-minus").addEventListener("click", ()=>{
-      input.value = Math.max(1, Number(input.value)-1);
-    });
-    $("qty-plus").addEventListener("click", ()=>{
-      input.value = Math.max(1, Number(input.value)+1);
-    });
-  }
-
-  async function load(){
-    const params = new URLSearchParams(location.search);
-    const id = params.get("id");
-    if (!id) return;
-
-    const doc = await db.collection("products").doc(id).get();
-    if (!doc.exists) return;
-
-    const p = doc.data();
-
-    // BASIC INFO
-    $("product-name").textContent  = p.name || "";
-    $("product-brand").textContent = p.brand || "";
-    $("product-desc").textContent  = p.description || "";
-
-    // IMAGES
-    const allImages = Array.isArray(p.images) && p.images.length
-      ? p.images
-      : (p.imageURL ? [p.imageURL] : []);
-
-    const big = $("product-image");
-    const thumbs = $("product-thumbs");
-
-    if (allImages.length){
-      big.src = allImages[0];
-      thumbs.innerHTML = allImages.map((src,i)=>`
-        <img data-src="${src}" src="${src}" class="${i===0?'active':''}">
-      `).join("");
-
-      thumbs.addEventListener("click",(e)=>{
-        const t = e.target.closest("img[data-src]");
-        if (!t) return;
-        big.src = t.dataset.src;
-        thumbs.querySelectorAll("img").forEach(img=>img.classList.remove("active"));
-        t.classList.add("active");
-      });
-    }
-
-    // DISCOUNT LOGIC
-    const hasDiscount = p.discountPrice && Number(p.discountPrice) > 0;
-    const discountVal = hasDiscount ? Number(p.discountPrice) : 0;
-
-    const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-
-    const finalSizes = sizes.map(s => {
-      const base = Number(s.price || 0);
-      const final = hasDiscount ? Math.min(base, discountVal) : base;
-      return { label: s.label, basePrice: base, finalPrice: final };
-    });
-
-    let noSizeFinalPrice = null;
-    if (!sizes.length){
-      const base = Number(p.basePrice || 0);
-      noSizeFinalPrice = hasDiscount ? Math.min(base, discountVal) : base;
-    }
-
-    // SIZE DROPDOWN
-    const sizeSel = $("size");
-
-    if (finalSizes.length){
-      sizeSel.innerHTML = finalSizes.map(s=>`
-        <option data-price="${s.finalPrice}" data-base="${s.basePrice}" value="${s.label}">
-          ${s.label} - Rs${s.finalPrice}
-        </option>
-      `).join("");
-    } else {
-      sizeSel.innerHTML = `
-        <option data-price="${noSizeFinalPrice}" data-base="${p.basePrice}">
-          Rs${noSizeFinalPrice}
-        </option>
-      `;
-    }
-
-    // PRICE HANDLE
-    const priceEl = $("price");
-    function updatePrice(){
-      const opt = sizeSel.selectedOptions[0];
-      priceEl.textContent = fmt(opt.dataset.price);
-    }
-    sizeSel.addEventListener("change", updatePrice);
-    updatePrice();
-
-    // SEND DATA TO product-detail.js
-    window.__productData = {
-      id,
-      name: p.name,
-      brand: p.brand,
-      description: p.description,
-      discountPrice: hasDiscount ? discountVal : 0,
-      sizes: finalSizes.length ? finalSizes.map(s=>({
-        label: s.label,
-        price: s.finalPrice
-      })) : [],
-      basePrice: p.basePrice || 0
-    };
-
-    // OOS
-    applyOOSUI(isOutOfStock(p) || !p.active);
-
-    wireQty();
-  }
-
-  load();
-})();
-</script>
-
-<!-- Extra scripts -->
+<!-- Product interactions -->
 <script src="product-detail.js"></script>
 <script src="script.js"></script>
 
