@@ -11,13 +11,13 @@
   const qtyInput   = document.getElementById('qty');
   const sizeSelect = document.getElementById('size');
   const priceLabel = document.getElementById('price');
-  const oldPriceEl = document.getElementById('old-price');   // ⭐ Add this in product.html
+  const oldPriceEl = document.getElementById('old-price');   // ⭐ Add in product.html
   const addBtn     = document.getElementById('add-to-cart');
   const nameEl     = document.getElementById('product-name');
   const brandEl    = document.getElementById('product-brand');
   const descEl     = document.getElementById('product-desc');
 
-  // 🔥 Product data injected from Firestore by product.js
+  // 🔥 Product data injected from Firestore in product.js
   const data = window.__productData || {};
 
   /** Compute price with discount logic */
@@ -32,9 +32,10 @@
     let finalPrice = base;
 
     if (hasDiscount) {
-      // Apply discount ONLY if discountPrice < base
-      finalPrice = Number(data.discountPrice) < base ? Number(data.discountPrice) : base;
+      const discount = Number(data.discountPrice);
+      finalPrice = discount < base ? discount : base;
 
+      // Show old price
       if (oldPriceEl) {
         oldPriceEl.style.display = "inline-block";
         oldPriceEl.textContent = "Rs" + base;
@@ -64,6 +65,7 @@
     const v = Number(qtyInput?.value || 1);
     if (qtyInput) qtyInput.value = Math.max(1, v-1);
   });
+
   if (qtyPlus) qtyPlus.addEventListener('click', ()=>{
     const v = Number(qtyInput?.value || 1);
     if (qtyInput) qtyInput.value = v+1;
@@ -73,6 +75,7 @@
   if (sizeSelect) {
     sizeSelect.addEventListener('change', computePrice);
   }
+
   computePrice();
 
   // Add to cart
@@ -87,24 +90,27 @@
 
       const basePrice = Number(opt?.dataset?.price || 0);
 
-      // ⭐ Apply discount logic
+      // ⭐ Apply discount
       const finalPrice = (data.discountPrice && Number(data.discountPrice) > 0)
         ? Math.min(Number(data.discountPrice), basePrice)
         : basePrice;
 
       const itemName = size ? `${name} (${size})` : name;
+
       const cartItem = { 
         name: itemName,
-        brand, 
+        brand,
         price: finalPrice,
         quantity: qty,
-        imageURL: img 
+        imageURL: img
       };
 
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
       const idx = cart.findIndex(i => i.name === cartItem.name && i.price === cartItem.price);
+
       if (idx >= 0) cart[idx].quantity += qty;
       else cart.push(cartItem);
+
       localStorage.setItem('cart', JSON.stringify(cart));
 
       // update cart badge
