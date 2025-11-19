@@ -53,6 +53,47 @@ button{cursor:pointer}
 .pad{padding:8px 6px 2px}
 
 /* =========================================================
+   DISCOUNT STYLING (NEW)
+========================================================= */
+
+/* For old price on product.html */
+#old-price{
+  font-size:1.05rem;
+  margin-left:8px;
+  color:#999;
+  text-decoration:line-through;
+  display:none;
+}
+
+/* For category cards */
+.disc-price{
+  color:var(--brand);
+  font-weight:700;
+  text-shadow:0 0 6px rgba(255,0,80,.45);
+}
+.old-price{
+  text-decoration:line-through;
+  color:#888;
+  margin-left:6px;
+  font-size:0.9rem;
+}
+
+/* Sale tag */
+.sale-tag{
+  position:absolute;
+  top:10px;
+  right:10px;
+  background:var(--brand);
+  color:#fff;
+  padding:4px 8px;
+  font-weight:700;
+  border-radius:8px;
+  font-size:.8rem;
+  box-shadow:0 0 10px rgba(255,0,80,.6);
+  z-index:10;
+}
+
+/* =========================================================
    NAVBAR
 ========================================================= */
 header{
@@ -330,7 +371,9 @@ input:focus,select:focus,textarea:focus{
   text-shadow:0 0 6px rgba(255,0,80,.5);
 }
 
-/* Brand groups */
+/* =========================================================
+   BRAND GROUPS
+========================================================= */
 .brand-section{margin:28px 0}
 .brand-title{
   font-family:'Playfair Display',serif;
