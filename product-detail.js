@@ -11,17 +11,40 @@
   const qtyInput   = document.getElementById('qty');
   const sizeSelect = document.getElementById('size');
   const priceLabel = document.getElementById('price');
+  const oldPriceEl = document.getElementById('old-price');   // ⭐ Add this in product.html
   const addBtn     = document.getElementById('add-to-cart');
   const nameEl     = document.getElementById('product-name');
   const brandEl    = document.getElementById('product-brand');
   const descEl     = document.getElementById('product-desc');
 
+  // 🔥 Product data injected from Firestore by product.js
+  const data = window.__productData || {};
+
+  /** Compute price with discount logic */
   function computePrice(){
     if (!sizeSelect) return 0;
+
     const opt = sizeSelect.selectedOptions[0];
-    const p = Number(opt?.dataset?.price || 0);
-    if (priceLabel) priceLabel.textContent = p > 0 ? `Rs${p}` : 'Rs0';
-    return p;
+    const base = Number(opt?.dataset?.price || 0);
+
+    const hasDiscount = data.discountPrice && Number(data.discountPrice) > 0;
+
+    let finalPrice = base;
+
+    if (hasDiscount) {
+      // Apply discount ONLY if discountPrice < base
+      finalPrice = Number(data.discountPrice) < base ? Number(data.discountPrice) : base;
+
+      if (oldPriceEl) {
+        oldPriceEl.style.display = "inline-block";
+        oldPriceEl.textContent = "Rs" + base;
+      }
+    } else {
+      if (oldPriceEl) oldPriceEl.style.display = "none";
+    }
+
+    if (priceLabel) priceLabel.textContent = `Rs${finalPrice}`;
+    return finalPrice;
   }
 
   // Thumbnails → swap big image
@@ -60,11 +83,23 @@
       const qty  = Number(qtyInput?.value || 1);
       const opt  = sizeSelect?.selectedOptions?.[0];
       const size = opt ? opt.value : '';
-      const unit = Number(opt?.dataset?.price || 0);
       const img  = bigImg?.src || '';
 
+      const basePrice = Number(opt?.dataset?.price || 0);
+
+      // ⭐ Apply discount logic
+      const finalPrice = (data.discountPrice && Number(data.discountPrice) > 0)
+        ? Math.min(Number(data.discountPrice), basePrice)
+        : basePrice;
+
       const itemName = size ? `${name} (${size})` : name;
-      const cartItem = { name: itemName, brand, price: unit, quantity: qty, imageURL: img };
+      const cartItem = { 
+        name: itemName,
+        brand, 
+        price: finalPrice,
+        quantity: qty,
+        imageURL: img 
+      };
 
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
       const idx = cart.findIndex(i => i.name === cartItem.name && i.price === cartItem.price);
