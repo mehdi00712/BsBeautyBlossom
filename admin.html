@@ -6,42 +6,118 @@
   <title>Admin – B’s Beauty Blossom</title>
   <link rel="stylesheet" href="style.css"/>
 
-  <!-- Firebase (ORDER MATTERS) -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="firebase-config.js"></script>
 
-  <!-- Cloudinary (optional uploads from admin) -->
+  <!-- Cloudinary -->
   <script>
     window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
     window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
   </script>
 
+  <!-- BUTTON THEME UPDATE -->
   <style>
     .hide{display:none!important}
-    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
-    .btn{padding:.6rem .9rem;border:1px solid #ccc;border-radius:10px;cursor:pointer;background:#fff}
-    .btn.primary{border-color:#111}
-    .btn.danger{border-color:#cc0000}
-    .btn.sm{padding:.35rem .6rem;border-radius:8px}
+
+    /* -------- BUTTONS -------- */
+    .btn {
+      padding:.6rem .9rem;
+      font-weight:600;
+      border-radius:10px;
+      cursor:pointer;
+      background:#111;
+      color:#fff;
+      border:1px solid #2a2a2a;
+      transition:0.25s ease;
+    }
+    .btn:hover {
+      box-shadow:0 0 10px rgba(255,0,80,.4);
+    }
+
+    /* Primary Pink Buttons (Save, Save Product) */
+    .btn.primary,
+    #saveBtn,
+    #site-save {
+      background:#ff004c !important;
+      border-color:#ff004c !important;
+      color:#fff !important;
+    }
+    .btn.primary:hover,
+    #saveBtn:hover,
+    #site-save:hover {
+      background:#d6003f !important;
+      box-shadow:0 0 12px rgba(255,0,80,.6);
+    }
+
+    /* Delete button */
+    .btn.danger {
+      background:#ff1744 !important;
+      border-color:#ff1744 !important;
+      color:white !important;
+    }
+    .btn.danger:hover {
+      background:#d31234 !important;
+    }
+
+    /* Export CSV - pink outline */
+    #exportCsvBtn {
+      background:transparent !important;
+      border:1px solid #ff004c !important;
+      color:#ff004c !important;
+    }
+    #exportCsvBtn:hover {
+      background:#ff004c !important;
+      color:white !important;
+    }
+
+    /* small btn */
+    .btn.sm { padding:.35rem .6rem; border-radius:8px }
+
+    /* -------- ADMIN CARDS -------- */
+    .card {
+      padding:16px;
+      border-radius:12px;
+      background:#111;
+      color:#fff;
+      border:1px solid #2a2a2a;
+      box-shadow:0 0 10px rgba(255,0,80,.08);
+      margin-bottom:16px;
+    }
+
+    /* -------- TABLE -------- */
+    table{width:100%;border-collapse:collapse;color:#fff}
+    th,td{border:1px solid #2a2a2a;padding:8px}
+    th{background:#0f0f0f}
+
+    /* -------- INPUTS -------- */
+    input,textarea,select{
+      width:100%;padding:.6rem;border-radius:10px;
+      background:#0f0f0f;border:1px solid #333;color:#eee;
+    }
+    input:focus,textarea:focus,select:focus{
+      border-color:#ff004c;
+      box-shadow:0 0 10px rgba(255,0,80,.4);
+    }
+
     .muted{opacity:.7}
-    .card{padding:16px;border:1px solid #eee;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.04);margin-bottom:16px}
-    .table-wrap{overflow:auto}
-    table{width:100%;border-collapse:collapse}
-    th,td{border:1px solid #eee;padding:8px;text-align:left;vertical-align:top}
-    th{background:#fafafa}
-    .status{display:inline-block;padding:.25rem .5rem;border-radius:999px;border:1px solid #ddd;font-size:.85rem}
-    .status.pending{background:#fff7e6;border-color:#f0c36d}
-    .status.shipped{background:#e6f7ff;border-color:#82c4f8}
-    .status.completed{background:#eaffea;border-color:#7bc47f}
-    .filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
-    .filters input, .filters select{padding:.45rem .6rem;border:1px solid #ddd;border-radius:8px}
     .row{margin-bottom:10px}
     .row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    input,textarea,select{width:100%;padding:.6rem;border:1px solid #ddd;border-radius:10px}
-    .logo .logo-mark{font-weight:700}
+
+    .preview img{
+      width:86px;height:86px;
+      object-fit:cover;
+      border:1px solid #2a2a2a;
+      border-radius:8px;
+    }
+
+    .filters input,.filters select{
+      background:#0f0f0f;border:1px solid #333;color:#fff;
+      padding:.45rem .6rem;border-radius:8px;
+    }
   </style>
 </head>
 <body>
@@ -51,6 +127,7 @@
     <div class="logo">
       <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
     </div>
+
     <ul class="nav-links">
       <li><a href="index.html">Home</a></li>
       <li><a href="perfume.html">Perfume</a></li>
@@ -62,6 +139,7 @@
       <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
       <li><a href="admin.html" class="active">Admin</a></li>
     </ul>
+
     <div class="hamburger">&#9776;</div>
   </nav>
 </header>
@@ -79,13 +157,15 @@
     <span id="auth-status" class="muted"></span>
   </div>
 
-  <!-- Login -->
+  <!-- Login Section -->
   <section id="auth-section" class="card">
     <h2>Admin Login</h2>
+
     <div class="row row-2">
       <div><label>Email</label><input id="email" type="email"></div>
       <div><label>Password</label><input id="password" type="password"></div>
     </div>
+
     <p class="muted">Leave empty to login with Google.</p>
   </section>
 
@@ -112,6 +192,7 @@
             <option value="gift">Gift</option>
           </select>
         </div>
+
         <div style="margin-top:26px">
           <label><input id="site-showFeatured" type="checkbox"> Show Featured Products</label>
         </div>
@@ -129,7 +210,7 @@
         <div id="site-gallery-preview" class="preview"></div>
       </div>
 
-      <button id="site-save" class="btn">Save</button>
+      <button id="site-save" class="btn primary">Save</button>
       <button id="site-reload" class="btn">Reload</button>
 
       <p id="site-status" class="muted"></p>
@@ -156,7 +237,6 @@
         <div><label>Base Price (Rs)</label><input id="price" type="number"></div>
       </div>
 
-      <!-- ⭐ NEW DISCOUNT PRICE -->
       <div class="row">
         <label>Discount Price (Black Friday)</label>
         <input id="discountPrice" type="number" placeholder="Optional">
@@ -175,7 +255,7 @@
         <input id="images" type="file" multiple>
       </div>
 
-      <button id="saveBtn" class="btn">Save Product</button>
+      <button id="saveBtn" class="btn primary">Save Product</button>
       <button id="resetBtn" class="btn">Reset</button>
 
       <input type="hidden" id="docId">
@@ -195,6 +275,7 @@
           <option value="jewellery">Jewellery</option>
           <option value="gift">Gift</option>
         </select>
+
         <button id="refreshBtn" class="btn">Refresh</button>
       </div>
 
@@ -220,8 +301,9 @@
 
   </div>
 
-  <!-- ORDERS -->
+  <!-- ORDERS SECTION -->
   <section id="orders-section" class="card hide">
+
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <h2>Orders</h2>
 
@@ -258,6 +340,7 @@
         <tbody id="orders-body"></tbody>
       </table>
     </div>
+
   </section>
 
 </main>
@@ -266,33 +349,32 @@
   <p>© 2025 B’s Beauty Blossom • Admin</p>
 </footer>
 
-<!-- App scripts -->
 <script src="admin.js" defer></script>
 <script src="script.js" defer></script>
 
-<!-- Orders Filters + CSV Export -->
+<!-- Order Filters + CSV Export -->
 <script>
   (function(){
     const q=document.getElementById('orderSearch');
     const f=document.getElementById('orderStatusFilter');
     const body=document.getElementById('orders-body');
 
-    function match(row,txt,status){
-      const t=row.innerText.toLowerCase();
-      const st=row.querySelector('[data-col="status"]')?.dataset.status?.toLowerCase() || "";
+    function match(r,txt,status){
+      const t=r.innerText.toLowerCase();
+      const st=r.querySelector('[data-col="status"]')?.dataset.status?.toLowerCase() || "";
       return (!txt||t.includes(txt)) && (!status||st===status);
     }
 
     function apply(){
-      const txt=(q?.value||"").toLowerCase().trim();
-      const status=(f?.value||"").toLowerCase().trim();
+      const txt=(q.value||"").toLowerCase().trim();
+      const st=(f.value||"").toLowerCase().trim();
       Array.from(body.querySelectorAll("tr")).forEach(tr=>{
-        tr.style.display=match(tr,txt,status)?"":"none";
+        tr.style.display=match(tr,txt,st)?"":"none";
       });
     }
 
-    q?.addEventListener('input',apply);
-    f?.addEventListener('change',apply);
+    q.addEventListener('input',apply);
+    f.addEventListener('change',apply);
     window.__applyOrderFilters=apply;
   })();
 
@@ -302,22 +384,25 @@
     const head=document.querySelector('#orders-table thead');
 
     function toCSV(){
-      const visible=Array.from(body.querySelectorAll('tr')).filter(tr=>tr.style.display!=='none');
-      const headers=Array.from(head.querySelectorAll('th')).map(th=>th.innerText.trim());
-      const rows=visible.map(tr=>Array.from(tr.children)
-        .map(td=>('"'+(td.innerText||'').replaceAll('"','""')+'"'))
-      );
-      const csv=[headers.map(h=>('"'+h+'"')).join(','), ...rows.map(r=>r.join(','))].join('\n');
+      const visible=[...body.querySelectorAll('tr')].filter(tr=>tr.style.display!=='none');
+      const headCols=[...head.querySelectorAll('th')].map(th=>('"'+th.innerText+'"'));
+      const rows=visible.map(tr=>{
+        return [...tr.children].map(td=>('"'+(td.innerText||'')+'"'));
+      });
+
+      const csv=[headCols.join(','), ...rows.map(r=>r.join(','))].join('\n');
 
       const blob=new Blob([csv],{type:'text/csv'});
       const url=URL.createObjectURL(blob);
 
       const a=document.createElement('a');
-      a.href=url; a.download='orders.csv'; a.click();
+      a.href=url;
+      a.download='orders.csv';
+      a.click();
       URL.revokeObjectURL(url);
     }
 
-    btn?.addEventListener('click',toCSV);
+    btn.addEventListener('click',toCSV);
   })();
 </script>
 
