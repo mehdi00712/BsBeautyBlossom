@@ -3,6 +3,7 @@
 if (!window.firebase) throw new Error("❌ Firebase SDK missing");
 const auth = firebase.auth();
 const db   = firebase.firestore();
+const storage = firebase.storage(); // ✅ ADDED (Firebase Storage)
 
 /* ===== ONLY THESE UIDs GET ADMIN FEATURES ===== */
 const ALLOWED_UIDS = [
@@ -35,6 +36,15 @@ async function uploadToCloudinary(file){
   const fd = new FormData(); fd.append("file", file); fd.append("upload_preset", UPLOAD_PRESET);
   const r = await fetch(url,{method:"POST",body:fd}); if(!r.ok) throw new Error("Cloudinary upload failed");
   return (await r.json()).secure_url;
+}
+
+/* ---------- Firebase Storage (NEW) ---------- */
+async function uploadToFirebase(file, folder){
+  const uid = auth.currentUser?.uid || "anon";
+  const path = `${folder}/${uid}/${Date.now()}_${file.name}`;
+  const ref = storage.ref(path);
+  await ref.put(file);
+  return await ref.getDownloadURL();
 }
 
 /* ---------- UI refs ---------- */
@@ -234,8 +244,7 @@ async function loadSite(){
       ? data.gallery.map(u=>`<img src="${u}" style="width:86px;height:86px;border-radius:8px;border:1px solid #ccc">`).join("")
       : "";
 
-    site.status.text
-Content = "Ready.";
+    site.status.textContent = "Ready.";
   }catch(e){
     site.status.textContent = "Error loading site settings.";
   }
@@ -251,11 +260,13 @@ site.saveBtn?.addEventListener("click", async ()=>{
     let galleryUrls = [];
 
     if (site.banner.files.length){
-      bannerUrl = await uploadToCloudinary(site.banner.files[0]);
+      // ✅ CHANGED: Cloudinary -> Firebase Storage
+      bannerUrl = await uploadToFirebase(site.banner.files[0], "site/banner");
     }
 
     if (site.gallery.files.length){
-      const uploads = [...site.gallery.files].map(f=>uploadToCloudinary(f));
+      // ✅ CHANGED: Cloudinary -> Firebase Storage
+      const uploads = [...site.gallery.files].map(f=>uploadToFirebase(f, "site/gallery"));
       galleryUrls = await Promise.all(uploads);
     }
 
@@ -421,7 +432,8 @@ saveBtn?.addEventListener("click", async ()=>{
     }
 
     if (imagesEl.files.length){
-      const uploads = [...imagesEl.files].map(f=>uploadToCloudinary(f));
+      // ✅ CHANGED: Cloudinary -> Firebase Storage
+      const uploads = [...imagesEl.files].map(f=>uploadToFirebase(f, "products"));
       const urls = await Promise.all(uploads);
       data.images = urls;
       data.imageURL = urls[0];
