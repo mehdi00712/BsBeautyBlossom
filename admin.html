@@ -20,54 +20,104 @@
     window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
   </script>
 
-  <!-- BUTTON THEME UPDATE -->
+  <!-- ADMIN UI UPGRADE (keeps ALL your elements, just improves styling + navbar UX) -->
   <style>
     .hide{display:none!important}
 
+    /* Smooth base for admin page (does not affect other pages) */
+    body{
+      background: radial-gradient(1200px 600px at 20% 0%, rgba(255,0,76,.10), transparent 60%),
+                  radial-gradient(900px 500px at 90% 10%, rgba(255,255,255,.06), transparent 55%),
+                  #070709;
+      color:#fff;
+    }
+
+    /* Keep your header but make it glassy + app-like */
+    header{
+      background:rgba(10,10,12,.78) !important;
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid rgba(255,255,255,.08) !important;
+    }
+
+    /* Make the sticky nav behave nicely with the slide-in menu */
+    .navbar{
+      gap:12px;
+    }
+
+    /* Add an overlay when mobile nav opens */
+    .nav-overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.55);
+      backdrop-filter: blur(2px);
+      z-index:9998;
+      opacity:0;
+      pointer-events:none;
+      transition: .2s ease;
+    }
+    .nav-overlay.show{
+      opacity:1;
+      pointer-events:auto;
+    }
+
+    /* Improve nav links look for admin context (no element removed) */
+    .nav-links a{
+      color:#e8e8ea !important;
+    }
+    .nav-links a:hover,
+    .nav-links a.active{
+      background:#ff004c !important;
+      color:#fff !important;
+      box-shadow:0 0 16px rgba(255,0,80,.45) !important;
+    }
+
     /* -------- BUTTONS -------- */
     .btn {
-      padding:.6rem .9rem;
-      font-weight:600;
-      border-radius:10px;
+      padding:.62rem .95rem;
+      font-weight:700;
+      border-radius:12px;
       cursor:pointer;
-      background:#111;
+      background:rgba(255,255,255,.04);
       color:#fff;
-      border:1px solid #2a2a2a;
-      transition:0.25s ease;
+      border:1px solid rgba(255,255,255,.10);
+      transition:0.22s ease;
     }
     .btn:hover {
-      box-shadow:0 0 10px rgba(255,0,80,.4);
+      transform: translateY(-1px);
+      box-shadow:0 10px 22px rgba(0,0,0,.35), 0 0 12px rgba(255,0,80,.25);
+      border-color: rgba(255,0,80,.35);
     }
 
     /* Primary Pink Buttons (Save, Save Product) */
     .btn.primary,
     #saveBtn,
     #site-save {
-      background:#ff004c !important;
-      border-color:#ff004c !important;
+      background:linear-gradient(180deg,#ff004c,#d6003f) !important;
+      border-color:transparent !important;
       color:#fff !important;
+      box-shadow:0 10px 26px rgba(255,0,80,.22);
     }
     .btn.primary:hover,
     #saveBtn:hover,
     #site-save:hover {
-      background:#d6003f !important;
-      box-shadow:0 0 12px rgba(255,0,80,.6);
+      filter: brightness(1.02);
+      box-shadow:0 14px 30px rgba(255,0,80,.30), 0 0 16px rgba(255,0,80,.22);
     }
 
     /* Delete button */
     .btn.danger {
-      background:#ff1744 !important;
-      border-color:#ff1744 !important;
+      background:linear-gradient(180deg,#ff2a55,#c91434) !important;
+      border-color:transparent !important;
       color:white !important;
     }
     .btn.danger:hover {
-      background:#d31234 !important;
+      box-shadow:0 12px 26px rgba(255,42,85,.24);
     }
 
     /* Export CSV - pink outline */
     #exportCsvBtn {
       background:transparent !important;
-      border:1px solid #ff004c !important;
+      border:1px solid rgba(255,0,80,.85) !important;
       color:#ff004c !important;
     }
     #exportCsvBtn:hover {
@@ -76,52 +126,140 @@
     }
 
     /* small btn */
-    .btn.sm { padding:.35rem .6rem; border-radius:8px }
+    .btn.sm { padding:.42rem .7rem; border-radius:10px }
+
+    /* -------- ADMIN WRAP -------- */
+    .admin-wrap{
+      max-width:1100px;
+      margin:0 auto;
+      padding:22px 18px !important; /* you already had inline padding:18px */
+    }
+    .admin-wrap h1{
+      letter-spacing:.2px;
+      margin-bottom:12px;
+    }
+
+    /* Toolbar: make it look like a control bar */
+    .toolbar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      padding:12px;
+      border-radius:14px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow: 0 18px 40px rgba(0,0,0,.28);
+      margin-bottom:14px;
+    }
+    #auth-status{
+      margin-left:auto;
+      opacity:.75;
+      font-size:.95rem;
+    }
+    @media (max-width:640px){
+      #auth-status{margin-left:0;width:100%}
+    }
 
     /* -------- ADMIN CARDS -------- */
     .card {
-      padding:16px;
-      border-radius:12px;
-      background:#111;
+      padding:18px;
+      border-radius:16px;
+      background:rgba(255,255,255,.03);
       color:#fff;
-      border:1px solid #2a2a2a;
-      box-shadow:0 0 10px rgba(255,0,80,.08);
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow: 0 18px 40px rgba(0,0,0,.28);
       margin-bottom:16px;
+    }
+    .card h2{
+      font-size:1.22rem;
+      margin-bottom:12px;
     }
 
     /* -------- TABLE -------- */
+    .table-wrap{overflow:auto}
     table{width:100%;border-collapse:collapse;color:#fff}
-    th,td{border:1px solid #2a2a2a;padding:8px}
-    th{background:#0f0f0f}
+    th,td{border-bottom:1px solid rgba(255,255,255,.08);padding:10px}
+    th{
+      background:rgba(255,255,255,.03);
+      border-bottom:1px solid rgba(255,255,255,.10);
+      font-weight:700;
+    }
+    tbody tr:hover{
+      background:rgba(255,0,80,.07);
+    }
 
     /* -------- INPUTS -------- */
     input,textarea,select{
-      width:100%;padding:.6rem;border-radius:10px;
-      background:#0f0f0f;border:1px solid #333;color:#eee;
+      width:100%;
+      padding:.62rem .75rem;
+      border-radius:12px;
+      background:rgba(0,0,0,.28);
+      border:1px solid rgba(255,255,255,.12);
+      color:#eee;
+      outline:none;
+      transition:.15s ease;
     }
+    input::placeholder, textarea::placeholder{color:rgba(255,255,255,.55)}
     input:focus,textarea:focus,select:focus{
       border-color:#ff004c;
-      box-shadow:0 0 10px rgba(255,0,80,.4);
+      box-shadow:0 0 0 4px rgba(255,0,80,.18);
     }
 
-    .muted{opacity:.7}
-    .row{margin-bottom:10px}
+    .muted{opacity:.75}
+    label{display:block;margin-bottom:6px;font-weight:600;opacity:.92}
+    .row{margin-bottom:12px}
     .row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:720px){
+      .row-2{grid-template-columns:1fr}
+    }
 
+    .preview{
+      margin-top:10px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
     .preview img{
       width:86px;height:86px;
       object-fit:cover;
-      border:1px solid #2a2a2a;
-      border-radius:8px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:12px;
+      background:rgba(0,0,0,.25);
     }
 
+    /* Filters row in Orders */
+    .filters{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
     .filters input,.filters select{
-      background:#0f0f0f;border:1px solid #333;color:#fff;
-      padding:.45rem .6rem;border-radius:8px;
+      width:auto;
+      min-width:200px;
+      padding:.5rem .65rem;
+      border-radius:10px;
+    }
+    @media (max-width:720px){
+      .filters input,.filters select{
+        width:100%;
+        min-width:0;
+      }
+    }
+
+    /* Footer */
+    .site-footer{
+      background:transparent !important;
+      border-top:1px solid rgba(255,255,255,.08) !important;
+      color:rgba(255,255,255,.70) !important;
     }
   </style>
 </head>
 <body>
+
+<!-- Mobile nav overlay (added, does not remove anything) -->
+<div class="nav-overlay hide" id="navOverlay"></div>
 
 <header>
   <nav class="navbar">
@@ -130,6 +268,9 @@
     </div>
 
     <ul class="nav-links">
+      <!-- close button (keeps your CSS compatible if you already have nav-close styles in style.css) -->
+      <span class="nav-close" id="navCloseBtn">&times;</span>
+
       <li><a href="index.html">Home</a></li>
       <li><a href="perfume.html">Perfume</a></li>
       <li><a href="body.html">Body</a></li>
@@ -141,7 +282,7 @@
       <li><a href="admin.html" class="active">Admin</a></li>
     </ul>
 
-    <div class="hamburger">&#9776;</div>
+    <div class="hamburger" id="hamburgerBtn">&#9776;</div>
   </nav>
 </header>
 
@@ -266,7 +407,7 @@
     <section id="list-section" class="card">
       <h2>Products</h2>
 
-      <div style="display:flex;gap:8px;margin-bottom:8px">
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
         <select id="filterCategory">
           <option value="all">All</option>
           <option value="perfume">Perfume</option>
@@ -305,7 +446,7 @@
   <!-- ORDERS SECTION -->
   <section id="orders-section" class="card hide">
 
-    <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
       <h2>Orders</h2>
 
       <div class="filters">
@@ -353,6 +494,45 @@
 <script src="admin.js" defer></script>
 <script src="script.js" defer></script>
 
+<!-- Mobile Nav Toggle (added; does NOT remove anything) -->
+<script>
+  (function(){
+    const hamburger = document.getElementById('hamburgerBtn');
+    const navLinks  = document.querySelector('.nav-links');
+    const closeBtn  = document.getElementById('navCloseBtn');
+    const overlay   = document.getElementById('navOverlay');
+    const links     = navLinks ? navLinks.querySelectorAll('a') : [];
+
+    if(!hamburger || !navLinks || !overlay) return;
+
+    // Ensure overlay is not permanently hidden
+    overlay.classList.remove('hide');
+
+    function openNav(){
+      navLinks.classList.add('show');
+      overlay.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeNav(){
+      navLinks.classList.remove('show');
+      overlay.classList.remove('show');
+      document.body.style.overflow = '';
+    }
+
+    hamburger.addEventListener('click', openNav);
+    overlay.addEventListener('click', closeNav);
+    if(closeBtn) closeBtn.addEventListener('click', closeNav);
+
+    // Close on link click (mobile UX)
+    links.forEach(a => a.addEventListener('click', closeNav));
+
+    // Close on ESC
+    window.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape') closeNav();
+    });
+  })();
+</script>
+
 <!-- Order Filters + CSV Export -->
 <script>
   (function(){
@@ -374,8 +554,8 @@
       });
     }
 
-    q.addEventListener('input',apply);
-    f.addEventListener('change',apply);
+    q && q.addEventListener('input',apply);
+    f && f.addEventListener('change',apply);
     window.__applyOrderFilters=apply;
   })();
 
@@ -386,14 +566,14 @@
 
     function toCSV(){
       const visible=[...body.querySelectorAll('tr')].filter(tr=>tr.style.display!=='none');
-      const headCols=[...head.querySelectorAll('th')].map(th=>('"'+th.innerText+'"'));
+      const headCols=[...head.querySelectorAll('th')].map(th=>('"'+th.innerText.replace(/"/g,'""')+'"'));
       const rows=visible.map(tr=>{
-        return [...tr.children].map(td=>('"'+(td.innerText||'')+'"'));
+        return [...tr.children].map(td=>('"'+(td.innerText||'').replace(/"/g,'""')+'"'));
       });
 
       const csv=[headCols.join(','), ...rows.map(r=>r.join(','))].join('\n');
 
-      const blob=new Blob([csv],{type:'text/csv'});
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
       const url=URL.createObjectURL(blob);
 
       const a=document.createElement('a');
@@ -403,7 +583,7 @@
       URL.revokeObjectURL(url);
     }
 
-    btn.addEventListener('click',toCSV);
+    btn && btn.addEventListener('click',toCSV);
   })();
 </script>
 
