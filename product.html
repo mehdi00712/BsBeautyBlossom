@@ -28,38 +28,53 @@
       .product-detail{ grid-template-columns: 1fr; }
     }
 
-    .product-media img#product-image{
-      width:100%;
+    /* ✅ FIX: stable image frame so you DON'T get huge empty white box */
+    .media-frame{
+      position:relative;
       background:#fff;
       border:1px solid var(--line);
       border-radius:14px;
       padding:10px;
-      max-height:520px;        /* ✅ stops huge portrait images */
-      object-fit:contain;
-    }
-    @media (max-width:600px){
-      .product-media img#product-image{ max-height:360px; }
-    }
+      box-shadow:var(--shadow);
+      overflow:hidden;
 
-    /* ✅ thumbs slider with arrows */
-    .thumbs-wrap{
+      height:360px;                 /* stable height */
       display:flex;
       align-items:center;
-      gap:10px;
+      justify-content:center;
+    }
+    @media (max-width:600px){
+      .media-frame{ height:300px; }
+    }
+
+    /* Image fills frame */
+    .product-media img#product-image{
+      width:100% !important;
+      height:100% !important;
+      object-fit:contain !important;
+      background:transparent !important;
+      border:none !important;
+      border-radius:12px;
+      padding:0 !important;
+      max-height:none !important;
+    }
+
+    /* ✅ thumbs slider with arrows (overlay) */
+    .thumbs-wrap{
+      position:relative;
       margin-top:10px;
     }
 
     .thumbs{
       display:flex;
+      flex-wrap:nowrap;              /* IMPORTANT: allow horizontal scroll */
       gap:10px;
       overflow:auto;
       scroll-behavior:smooth;
       -webkit-overflow-scrolling:touch;
-      padding:6px 2px 8px;
-      flex:1;
+
+      padding:8px 46px;              /* space for overlay arrows */
       scrollbar-width:none;
-      margin-top:0;          /* override old margin */
-      padding-bottom:0;      /* override old padding */
     }
     .thumbs::-webkit-scrollbar{display:none}
 
@@ -79,6 +94,9 @@
     }
 
     .thumb-nav{
+      position:absolute;
+      top:50%;
+      transform:translateY(-50%);
       width:38px;
       height:38px;
       border-radius:12px;
@@ -91,8 +109,12 @@
       align-items:center;
       justify-content:center;
       box-shadow:var(--shadow);
-      flex:0 0 auto;
+      z-index:50;                    /* clickable above thumbs */
+      pointer-events:auto;
     }
+    .thumb-nav.prev{ left:6px; }
+    .thumb-nav.next{ right:6px; }
+
     .thumb-nav:hover{
       box-shadow:0 0 12px rgba(199,162,106,.35);
     }
@@ -187,12 +209,14 @@
 <main class="section" id="product-main">
   <div class="product-detail" id="product-detail">
     <div class="product-media">
-      <div style="position:relative">
+
+      <!-- ✅ FIX: use a real frame -->
+      <div class="media-frame" style="position:relative">
         <img id="product-image" src="https://via.placeholder.com/800x800?text=Product" alt="Product image">
         <div id="oos-badge-slot"></div>
       </div>
 
-      <!-- ✅ thumbs with arrows -->
+      <!-- ✅ thumbs with arrows (buttons are overlay + clickable) -->
       <div class="thumbs-wrap">
         <button type="button" class="thumb-nav prev" id="thumbPrev" aria-label="Scroll thumbnails left">‹</button>
         <div id="product-thumbs" class="thumbs"></div>
@@ -301,31 +325,6 @@
     }
   }
 
-  function bindThumbArrows(){
-    const thumbs = $("product-thumbs");
-    const prev = $("thumbPrev");
-    const next = $("thumbNext");
-    if (!thumbs || !prev || !next) return;
-
-    if (thumbs.dataset.arrowBound === "1") return;
-    thumbs.dataset.arrowBound = "1";
-
-    const step = () => Math.max(200, Math.floor(thumbs.clientWidth * 0.7));
-
-    function update(){
-      const max = thumbs.scrollWidth - thumbs.clientWidth - 2;
-      prev.disabled = thumbs.scrollLeft <= 2;
-      next.disabled = thumbs.scrollLeft >= max;
-    }
-
-    prev.addEventListener("click", ()=> thumbs.scrollBy({ left: -step(), behavior: "smooth" }));
-    next.addEventListener("click", ()=> thumbs.scrollBy({ left:  step(), behavior: "smooth" }));
-    thumbs.addEventListener("scroll", update);
-
-    setTimeout(update, 150);
-    window.addEventListener("resize", update);
-  }
-
   async function load(){
     const params = new URLSearchParams(location.search);
     const id = params.get("id");
@@ -366,9 +365,6 @@
           t.classList.add("active");
         });
       }
-
-      // ✅ arrows (after thumbs exist)
-      bindThumbArrows();
     }
 
     // DISCOUNT LOGIC
