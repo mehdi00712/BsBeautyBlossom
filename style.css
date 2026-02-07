@@ -626,3 +626,24 @@ button.stock-toggle:hover{
   border-top:1px solid var(--admin-line);
   color:var(--admin-muted);
 }
+
+/* (your existing CSS ends here) */
+.admin-theme .site-footer{
+  background:transparent;
+  border-top:1px solid var(--admin-line);
+  color:var(--admin-muted);
+}
+
+/* ✅ PASTE BELOW THIS LINE */
+#product-main #product-image{
+  width:100%;
+  max-height:520px;
+  object-fit:contain;
+  background:#fff;
+}
+@media (max-width: 600px){
+  #product-main #product-image{
+    max-height:360px;
+  }
+}
+
