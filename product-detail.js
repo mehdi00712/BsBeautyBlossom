@@ -49,7 +49,8 @@
   }
 
   // Thumbnails → swap big image
-  if (thumbWrap) {
+  if (thumbWrap && !thumbWrap.dataset.bound) {
+    thumbWrap.dataset.bound = "1";
     thumbWrap.addEventListener('click', (e)=>{
       const t = e.target.closest('[data-src]');
       if (!t) return;
@@ -60,26 +61,34 @@
     });
   }
 
-  // Qty controls
-  if (qtyMinus) qtyMinus.addEventListener('click', ()=>{
-    const v = Number(qtyInput?.value || 1);
-    if (qtyInput) qtyInput.value = Math.max(1, v-1);
-  });
+  // ✅ Qty controls (bind ONLY ONCE even if script loads multiple times)
+  if (qtyMinus && qtyInput && !qtyMinus.dataset.bound) {
+    qtyMinus.dataset.bound = "1";
+    qtyMinus.addEventListener('click', ()=>{
+      const v = Number(qtyInput?.value || 1);
+      qtyInput.value = Math.max(1, v - 1);
+    });
+  }
 
-  if (qtyPlus) qtyPlus.addEventListener('click', ()=>{
-    const v = Number(qtyInput?.value || 1);
-    if (qtyInput) qtyInput.value = v+1;
-  });
+  if (qtyPlus && qtyInput && !qtyPlus.dataset.bound) {
+    qtyPlus.dataset.bound = "1";
+    qtyPlus.addEventListener('click', ()=>{
+      const v = Number(qtyInput?.value || 1);
+      qtyInput.value = v + 1; // ✅ ALWAYS +1 (no more +7)
+    });
+  }
 
   // Size change
-  if (sizeSelect) {
+  if (sizeSelect && !sizeSelect.dataset.bound) {
+    sizeSelect.dataset.bound = "1";
     sizeSelect.addEventListener('change', computePrice);
   }
 
   computePrice();
 
-  // Add to cart
-  if (addBtn) {
+  // Add to cart (bind ONLY ONCE)
+  if (addBtn && !addBtn.dataset.bound) {
+    addBtn.dataset.bound = "1";
     addBtn.addEventListener('click', ()=>{
       const name = nameEl?.textContent?.trim() || 'Product';
       const brand= brandEl?.textContent?.trim() || '';
@@ -97,7 +106,7 @@
 
       const itemName = size ? `${name} (${size})` : name;
 
-      const cartItem = { 
+      const cartItem = {
         name: itemName,
         brand,
         price: finalPrice,
