@@ -102,6 +102,22 @@ header{
   background:#f0ece7;
   border-bottom:1px solid var(--line);
 }
+
+.nav-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  z-index:9998;
+  opacity:0;
+  pointer-events:none;
+  transition:.2s ease;
+}
+.nav-overlay.show{
+  opacity:1;
+  pointer-events:auto;
+}
+
+
 .navbar{
   max-width:var(--maxw);
   margin:0 auto;
