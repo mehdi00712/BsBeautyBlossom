@@ -103,20 +103,20 @@ header{
   border-bottom:1px solid var(--line);
 }
 
+/* ✅ Overlay behind menu panel (fixes "film over menu") */
 .nav-overlay{
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,.55);
-  z-index:9998;
+  background:rgba(0,0,0,.35);
+  z-index:9998;            /* below .nav-links */
   opacity:0;
   pointer-events:none;
-  transition:.2s ease;
+  transition:opacity .2s ease;
 }
 .nav-overlay.show{
   opacity:1;
   pointer-events:auto;
 }
-
 
 .navbar{
   max-width:var(--maxw);
@@ -166,6 +166,7 @@ header{
   margin-bottom:20px;
   padding:6px 8px;
   border-radius:8px;
+  line-height:1;
 }
 .nav-close:hover{background:#e6dfd8}
 
@@ -177,7 +178,7 @@ header{
     top:0;right:0;
     height:100vh;
     width:min(84vw,320px);
-    background:#f0ece7;
+    background:#f0ece7;          /* solid panel */
     border-left:1px solid var(--line);
     box-shadow:var(--shadow);
     flex-direction:column;
@@ -186,7 +187,8 @@ header{
     transform:translateX(100%);
     transition:transform .28s ease;
     overflow:auto;
-    z-index:9999;
+    z-index:9999;                /* above overlay */
+    opacity:1;                   /* ensure NOT transparent */
   }
   .nav-links.show{transform:translateX(0)}
   .nav-links li{width:100%}
