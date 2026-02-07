@@ -64,9 +64,14 @@
     });
   }
 
-  // ✅ Thumbs arrows: bind after thumbs exist + keep updated
+  // ✅ Arrow controls for thumbnail scroller (bind once)
   function bindThumbArrows(){
     if (!thumbWrap || !thumbPrev || !thumbNext) return;
+
+    // must be scrollable for arrows to do anything
+    thumbWrap.style.overflowX = thumbWrap.style.overflowX || "auto";
+    thumbWrap.style.scrollBehavior = thumbWrap.style.scrollBehavior || "smooth";
+
     if (thumbWrap.dataset.arrowBound === "1") return;
     thumbWrap.dataset.arrowBound = "1";
 
@@ -76,27 +81,38 @@
       const max = Math.max(0, thumbWrap.scrollWidth - thumbWrap.clientWidth - 2);
       thumbPrev.disabled = thumbWrap.scrollLeft <= 2;
       thumbNext.disabled = thumbWrap.scrollLeft >= max;
+
+      // Hide arrows if no scrolling needed
+      const needsScroll = thumbWrap.scrollWidth > thumbWrap.clientWidth + 2;
+      thumbPrev.style.display = needsScroll ? "" : "none";
+      thumbNext.style.display = needsScroll ? "" : "none";
     }
 
-    thumbPrev.addEventListener("click", ()=> {
+    thumbPrev.addEventListener("click", (e)=> {
+      e.preventDefault();
+      e.stopPropagation();
       thumbWrap.scrollBy({ left: -step(), behavior: "smooth" });
       setTimeout(update, 180);
     });
 
-    thumbNext.addEventListener("click", ()=> {
+    thumbNext.addEventListener("click", (e)=> {
+      e.preventDefault();
+      e.stopPropagation();
       thumbWrap.scrollBy({ left: step(), behavior: "smooth" });
       setTimeout(update, 180);
     });
 
-    thumbWrap.addEventListener("scroll", update);
+    thumbWrap.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
 
-    setTimeout(update, 200);
+    // initial state (after images load)
+    setTimeout(update, 250);
+    setTimeout(update, 800);
   }
 
-  // Call it now, and again after a short delay (covers late-loaded thumbs)
+  // Try bind now + again shortly (covers late rendered thumbs)
   bindThumbArrows();
-  setTimeout(bindThumbArrows, 350);
+  setTimeout(bindThumbArrows, 400);
 
   // Qty controls (bind once)
   if (qtyMinus && qtyInput && !qtyMinus.dataset.bound) {
