@@ -17,6 +17,10 @@
   const brandEl    = document.getElementById('product-brand');
   const descEl     = document.getElementById('product-desc');
 
+  // ✅ thumbs arrows (optional on pages that include them)
+  const thumbPrev  = document.getElementById('thumbPrev');
+  const thumbNext  = document.getElementById('thumbNext');
+
   // 🔥 Product data injected from Firestore in product.js
   const data = window.__productData || {};
 
@@ -61,6 +65,35 @@
     });
   }
 
+  // ✅ Thumbs arrows (scroll left/right) — binds ONLY ONCE
+  (function bindThumbArrows(){
+    if (!thumbWrap || !thumbPrev || !thumbNext) return;
+    if (thumbWrap.dataset.arrowBound === "1") return;
+    thumbWrap.dataset.arrowBound = "1";
+
+    const step = () => Math.max(200, Math.floor(thumbWrap.clientWidth * 0.7));
+
+    function update(){
+      const max = thumbWrap.scrollWidth - thumbWrap.clientWidth - 2;
+      thumbPrev.disabled = thumbWrap.scrollLeft <= 2;
+      thumbNext.disabled = thumbWrap.scrollLeft >= max;
+    }
+
+    if (!thumbPrev.dataset.bound){
+      thumbPrev.dataset.bound = "1";
+      thumbPrev.addEventListener("click", ()=> thumbWrap.scrollBy({ left: -step(), behavior: "smooth" }));
+    }
+    if (!thumbNext.dataset.bound){
+      thumbNext.dataset.bound = "1";
+      thumbNext.addEventListener("click", ()=> thumbWrap.scrollBy({ left:  step(), behavior: "smooth" }));
+    }
+
+    thumbWrap.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+
+    setTimeout(update, 150);
+  })();
+
   // ✅ Qty controls (bind ONLY ONCE even if script loads multiple times)
   if (qtyMinus && qtyInput && !qtyMinus.dataset.bound) {
     qtyMinus.dataset.bound = "1";
@@ -74,7 +107,20 @@
     qtyPlus.dataset.bound = "1";
     qtyPlus.addEventListener('click', ()=>{
       const v = Number(qtyInput?.value || 1);
-      qtyInput.value = v + 1; // ✅ ALWAYS +1 (no more +7)
+      qtyInput.value = v + 1; // ✅ ALWAYS +1
+    });
+  }
+
+  // ✅ If user types manually (or mobile stepper), sanitize to >= 1
+  if (qtyInput && !qtyInput.dataset.bound) {
+    qtyInput.dataset.bound = "1";
+    qtyInput.addEventListener("input", ()=>{
+      const n = Number(qtyInput.value);
+      if (!Number.isFinite(n) || n < 1) qtyInput.value = 1;
+    });
+    qtyInput.addEventListener("blur", ()=>{
+      const n = Number(qtyInput.value);
+      if (!Number.isFinite(n) || n < 1) qtyInput.value = 1;
     });
   }
 
