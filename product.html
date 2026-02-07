@@ -325,6 +325,43 @@
     }
   }
 
+  /* ✅ arrows for thumbnail scroller */
+  function bindThumbArrows(){
+    const thumbs = $("product-thumbs");
+    const prev = $("thumbPrev");
+    const next = $("thumbNext");
+    if (!thumbs || !prev || !next) return;
+
+    if (thumbs.dataset.arrowBound === "1") return;
+    thumbs.dataset.arrowBound = "1";
+
+    const step = () => Math.max(220, Math.floor(thumbs.clientWidth * 0.7));
+
+    function update(){
+      const max = thumbs.scrollWidth - thumbs.clientWidth - 2;
+      prev.disabled = thumbs.scrollLeft <= 2;
+      next.disabled = thumbs.scrollLeft >= max;
+    }
+
+    prev.addEventListener("click", (e)=>{
+      e.preventDefault();
+      thumbs.scrollBy({ left: -step(), behavior: "smooth" });
+      setTimeout(update, 250);
+    });
+
+    next.addEventListener("click", (e)=>{
+      e.preventDefault();
+      thumbs.scrollBy({ left: step(), behavior: "smooth" });
+      setTimeout(update, 250);
+    });
+
+    thumbs.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+
+    // initial state
+    setTimeout(update, 200);
+  }
+
   async function load(){
     const params = new URLSearchParams(location.search);
     const id = params.get("id");
@@ -365,6 +402,9 @@
           t.classList.add("active");
         });
       }
+
+      // ✅ bind arrow buttons AFTER thumbs exist
+      bindThumbArrows();
     }
 
     // DISCOUNT LOGIC
