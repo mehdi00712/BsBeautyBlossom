@@ -697,4 +697,100 @@ button.stock-toggle:hover{
   .thumb-nav{ width:34px; height:34px; border-radius:10px; }
 }
 
+/* ===== Product image: create a proper frame so it never becomes a huge blank box ===== */
+.product-media > div[style*="position:relative"]{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:10px;
+  box-shadow:var(--shadow);
+
+  /* make a consistent frame */
+  aspect-ratio: 1 / 1;        /* square frame */
+  max-height: 420px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+
+@media (max-width:600px){
+  .product-media > div[style*="position:relative"]{
+    aspect-ratio: 4 / 5;      /* nicer for portrait on phone */
+    max-height: 360px;
+  }
+}
+
+/* Make the image actually fill the frame */
+#product-image{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  border-radius:12px;
+  padding:0 !important;       /* prevents image padding causing huge white area */
+  border:none !important;     /* border is now on the frame */
+  background:transparent !important;
+}
+
+
+/* ===== Thumbnails slider: arrows overlay left/right, thumbs scroll smoothly ===== */
+.thumbs-wrap{
+  position:relative;
+  margin-top:10px;
+}
+
+/* important so flex/overflow behaves */
+#product-thumbs{
+  display:flex;
+  gap:10px;
+  overflow:auto;
+  scroll-behavior:smooth;
+  -webkit-overflow-scrolling:touch;
+  padding:8px 42px;           /* space for arrows */
+  scrollbar-width:none;
+}
+#product-thumbs::-webkit-scrollbar{display:none}
+
+#product-thumbs img{
+  width:68px;
+  height:68px;
+  object-fit:cover;
+  border-radius:12px;
+  border:2px solid transparent;
+  background:#fff;
+  flex:0 0 auto;
+}
+#product-thumbs img.active{
+  border-color:var(--brand);
+  box-shadow:0 0 0 3px rgba(199,162,106,.18);
+}
+
+/* arrows sit ON TOP, not pushing layout */
+.thumb-nav{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:#fff;
+  color:#573d21;
+  font-size:22px;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:var(--shadow);
+  z-index:2;
+}
+.thumb-nav.prev{ left:6px; }
+.thumb-nav.next{ right:6px; }
+
+.thumb-nav:disabled{
+  opacity:.35;
+  cursor:not-allowed;
+  box-shadow:none;
+}
+
 
