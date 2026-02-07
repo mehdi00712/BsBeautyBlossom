@@ -1,4 +1,4 @@
-// script.js — slide-in mobile nav (with ✖ close) + cart badge
+// script.js — slide-in mobile nav (with ✖ close) + overlay + cart badge
 (function () {
   const hamburger = document.querySelector(".hamburger");
   const navLinks  = document.querySelector(".nav-links");
@@ -13,24 +13,40 @@
     document.body.appendChild(overlay);
   }
 
+  function lockBody(lock) {
+    document.body.style.overflow = lock ? "hidden" : "";
+  }
+
   function openMenu() {
-    navLinks?.classList.add("show");
-    overlay?.classList.add("show");
+    if (!navLinks) return;
+
+    navLinks.classList.add("show");
     hamburger?.setAttribute("aria-expanded", "true");
-    document.body.style.overflow = "hidden";
+
+    // ✅ show overlay only on mobile
+    if (window.innerWidth <= 1023) overlay.classList.add("show");
+    lockBody(true);
   }
 
   function closeMenu() {
-    navLinks?.classList.remove("show");
-    overlay?.classList.remove("show");
+    if (!navLinks) return;
+
+    navLinks.classList.remove("show");
     hamburger?.setAttribute("aria-expanded", "false");
-    document.body.style.overflow = "";
+
+    // ✅ always remove overlay
+    overlay.classList.remove("show");
+    lockBody(false);
   }
 
   function toggleMenu() {
     if (!navLinks) return;
     navLinks.classList.contains("show") ? closeMenu() : openMenu();
   }
+
+  // ✅ HARD RESET ON LOAD (prevents the “film” staying stuck)
+  overlay.classList.remove("show");
+  if (!navLinks?.classList.contains("show")) lockBody(false);
 
   // ✅ Avoid double-binding (prevents weird multi toggle bugs)
   if (hamburger && hamburger.dataset.navBound !== "1") {
@@ -50,20 +66,31 @@
   }
 
   // Close when tapping any link inside the panel
-  if (navLinks && navLinks.dataset.navBound !== "1") {
-    navLinks.dataset.navBound = "1";
+  if (navLinks && navLinks.dataset.navLinksBound !== "1") {
+    navLinks.dataset.navLinksBound = "1";
     navLinks.addEventListener("click", (e) => {
       if (e.target.closest("a")) closeMenu();
     });
   }
 
   // Close if resized back to desktop
-  let lastW = window.innerWidth;
   if (window.datasetNavResizeBound !== "1") {
     window.datasetNavResizeBound = "1";
+    let lastW = window.innerWidth;
+
     window.addEventListener("resize", () => {
       const w = window.innerWidth;
-      if (lastW <= 1023 && w > 1023) closeMenu();
+
+      // going to desktop: force close + remove overlay
+      if (w > 1023) {
+        closeMenu();
+        overlay.classList.remove("show");
+        lockBody(false);
+      } else {
+        // still mobile: if menu is open, ensure overlay is shown
+        if (navLinks?.classList.contains("show")) overlay.classList.add("show");
+      }
+
       lastW = w;
     });
   }
