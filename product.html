@@ -16,6 +16,102 @@
     .btn[disabled], .btn[aria-disabled="true"]{
       opacity:.6; cursor:not-allowed; pointer-events:none;
     }
+
+    /* ✅ Better Product Page Layout (mobile friendly, premium look) */
+    .product-detail{
+      display:grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap:22px;
+      align-items:start;
+    }
+    @media (max-width: 900px){
+      .product-detail{ grid-template-columns: 1fr; }
+    }
+
+    .product-media img#product-image{
+      width:100%;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px;
+    }
+
+    /* thumbs */
+    .thumbs{
+      display:flex;
+      gap:10px;
+      margin-top:10px;
+      overflow:auto;
+      padding-bottom:6px;
+    }
+    .thumbs img{
+      width:74px;
+      height:74px;
+      object-fit:cover;
+      border-radius:12px;
+      border:2px solid transparent;
+      background:#fff;
+      cursor:pointer;
+      flex:0 0 auto;
+    }
+    .thumbs img.active{
+      border-color:var(--brand);
+      box-shadow:0 0 0 3px rgba(199,162,106,.18);
+    }
+
+    /* info */
+    .product-info{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:16px;
+      box-shadow:var(--shadow);
+    }
+    .product-info h1{ margin-bottom:6px; }
+    .desc{ margin:12px 0 14px; }
+
+    /* price + qty row */
+    .price-qty{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      margin:14px 0;
+      flex-wrap:wrap;
+    }
+    .price{
+      font-size:1.35rem;
+      font-weight:800;
+      color:var(--brand);
+    }
+
+    /* qty controls */
+    .qty{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .qty button{
+      width:42px;
+      height:42px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:#fff;
+      font-size:20px;
+      line-height:1;
+    }
+    .qty input{
+      width:78px;
+      text-align:center;
+      font-weight:800;
+      border-radius:12px;
+    }
+
+    /* add button full width */
+    #add-to-cart{
+      width:100%;
+      margin-top:8px;
+    }
   </style>
 </head>
 <body>
@@ -37,7 +133,9 @@
     </ul>
     <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
   </nav>
-  <div id="nav-overlay"></div>
+
+  <!-- ✅ Keep element, but make id match script.js (navOverlay) -->
+  <div id="navOverlay" class="nav-overlay"></div>
 </header>
 
 <main class="section" id="product-main">
@@ -128,12 +226,27 @@
 
   function wireQty(){
     const input = $("qty");
-    $("qty-minus").addEventListener("click", ()=>{
-      input.value = Math.max(1, Number(input.value)-1);
-    });
-    $("qty-plus").addEventListener("click", ()=>{
-      input.value = Math.max(1, Number(input.value)+1);
-    });
+    const minus = $("qty-minus");
+    const plus  = $("qty-plus");
+
+    if (!input || !minus || !plus) return;
+
+    // ✅ prevent double-binding (product-detail.js also binds)
+    if (minus.dataset.bound === "1" || plus.dataset.bound === "1") return;
+
+    if (!minus.dataset.bound) {
+      minus.dataset.bound = "1";
+      minus.addEventListener("click", ()=>{
+        input.value = Math.max(1, Number(input.value || 1) - 1);
+      });
+    }
+
+    if (!plus.dataset.bound) {
+      plus.dataset.bound = "1";
+      plus.addEventListener("click", ()=>{
+        input.value = Math.max(1, Number(input.value || 1) + 1);
+      });
+    }
   }
 
   async function load(){
@@ -165,13 +278,17 @@
         <img data-src="${src}" src="${src}" class="${i===0?'active':''}">
       `).join("");
 
-      thumbs.addEventListener("click",(e)=>{
-        const t = e.target.closest("img[data-src]");
-        if (!t) return;
-        big.src = t.dataset.src;
-        thumbs.querySelectorAll("img").forEach(img=>img.classList.remove("active"));
-        t.classList.add("active");
-      });
+      // ✅ prevent double-binding if load() runs again
+      if (!thumbs.dataset.bound){
+        thumbs.dataset.bound = "1";
+        thumbs.addEventListener("click",(e)=>{
+          const t = e.target.closest("img[data-src]");
+          if (!t) return;
+          big.src = t.dataset.src;
+          thumbs.querySelectorAll("img").forEach(img=>img.classList.remove("active"));
+          t.classList.add("active");
+        });
+      }
     }
 
     // DISCOUNT LOGIC
@@ -215,7 +332,10 @@
       const opt = sizeSel.selectedOptions[0];
       priceEl.textContent = fmt(opt.dataset.price);
     }
-    sizeSel.addEventListener("change", updatePrice);
+    if (!sizeSel.dataset.bound){
+      sizeSel.dataset.bound = "1";
+      sizeSel.addEventListener("change", updatePrice);
+    }
     updatePrice();
 
     // SEND DATA TO product-detail.js
@@ -235,6 +355,7 @@
     // OOS
     applyOOSUI(isOutOfStock(p) || !p.active);
 
+    // ✅ only binds if product-detail.js didn't already
     wireQty();
   }
 
