@@ -68,46 +68,73 @@
   function bindThumbArrows(){
     if (!thumbWrap || !thumbPrev || !thumbNext) return;
 
-    // must be scrollable for arrows to do anything
-    thumbWrap.style.overflowX = thumbWrap.style.overflowX || "auto";
-    thumbWrap.style.scrollBehavior = thumbWrap.style.scrollBehavior || "smooth";
+    // Ensure the thumbs container is scrollable (some CSS might override)
+    if (!thumbWrap.style.overflowX) thumbWrap.style.overflowX = "auto";
+    if (!thumbWrap.style.overflowY) thumbWrap.style.overflowY = "hidden";
+    if (!thumbWrap.style.scrollBehavior) thumbWrap.style.scrollBehavior = "smooth";
 
     if (thumbWrap.dataset.arrowBound === "1") return;
     thumbWrap.dataset.arrowBound = "1";
 
-    const step = () => Math.max(220, Math.floor(thumbWrap.clientWidth * 0.75));
+    const step = () => Math.max(240, Math.floor(thumbWrap.clientWidth * 0.8));
 
     function update(){
       const max = Math.max(0, thumbWrap.scrollWidth - thumbWrap.clientWidth - 2);
-      thumbPrev.disabled = thumbWrap.scrollLeft <= 2;
-      thumbNext.disabled = thumbWrap.scrollLeft >= max;
 
-      // Hide arrows if no scrolling needed
       const needsScroll = thumbWrap.scrollWidth > thumbWrap.clientWidth + 2;
-      thumbPrev.style.display = needsScroll ? "" : "none";
-      thumbNext.style.display = needsScroll ? "" : "none";
+
+      // IMPORTANT: don't hide arrows (you said you want them)
+      thumbPrev.style.display = "";
+      thumbNext.style.display = "";
+
+      // Disable if not needed / at edge
+      thumbPrev.disabled = !needsScroll || thumbWrap.scrollLeft <= 2;
+      thumbNext.disabled = !needsScroll || thumbWrap.scrollLeft >= max;
     }
 
-    thumbPrev.addEventListener("click", (e)=> {
-      e.preventDefault();
-      e.stopPropagation();
-      thumbWrap.scrollBy({ left: -step(), behavior: "smooth" });
-      setTimeout(update, 180);
-    });
+    function safeScrollBy(dx){
+      try{
+        thumbWrap.scrollBy({ left: dx, behavior: "smooth" });
+      }catch{
+        // fallback for older browsers
+        thumbWrap.scrollLeft += dx;
+      }
+      setTimeout(update, 220);
+    }
 
-    thumbNext.addEventListener("click", (e)=> {
-      e.preventDefault();
-      e.stopPropagation();
-      thumbWrap.scrollBy({ left: step(), behavior: "smooth" });
-      setTimeout(update, 180);
-    });
+    // Bind clicks
+    if (!thumbPrev.dataset.bound) {
+      thumbPrev.dataset.bound = "1";
+      thumbPrev.addEventListener("click", (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        safeScrollBy(-step());
+      });
+    }
 
+    if (!thumbNext.dataset.bound) {
+      thumbNext.dataset.bound = "1";
+      thumbNext.addEventListener("click", (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        safeScrollBy(step());
+      });
+    }
+
+    // Keep state updated
     thumbWrap.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
 
-    // initial state (after images load)
+    // initial state (after thumbs/images render)
+    requestAnimationFrame(update);
     setTimeout(update, 250);
-    setTimeout(update, 800);
+    setTimeout(update, 900);
+
+    // When images load late, width changes → re-check
+    thumbWrap.querySelectorAll("img").forEach(img=>{
+      img.addEventListener("load", update, { once: true });
+      img.addEventListener("error", update, { once: true });
+    });
   }
 
   // Try bind now + again shortly (covers late rendered thumbs)
