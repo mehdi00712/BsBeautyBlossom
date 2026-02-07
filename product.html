@@ -6,13 +6,18 @@
   <title>Product – B’s Beauty Blossom</title>
   <link rel="stylesheet" href="style.css"/>
   <style>
+    /* ✅ hard stop for horizontal overflow */
+    html,body{overflow-x:hidden}
+
     .out-of-stock .desc,
     .out-of-stock #product-image { opacity: .6; }
+
     .soldout-tag{
       position:absolute;left:10px;top:10px;
       background:#ef4444;color:#fff;font-weight:700;
       padding:6px 10px;border-radius:999px;font-size:.9rem
     }
+
     .btn[disabled], .btn[aria-disabled="true"]{
       opacity:.6; cursor:not-allowed; pointer-events:none;
     }
@@ -23,14 +28,27 @@
       grid-template-columns: 1.05fr .95fr;
       gap:22px;
       align-items:start;
+
+      /* ✅ stops any accidental overflow */
+      max-width:100%;
+      overflow-x:hidden;
     }
     @media (max-width: 900px){
       .product-detail{ grid-template-columns: 1fr; }
     }
 
-    /* ✅ FIX: stable image frame so you DON'T get huge empty white box */
+    /* ✅ media wrapper should never overflow */
+    .product-media{
+      max-width:100%;
+      overflow:hidden;
+    }
+
+    /* ✅ FIX: centered stable image frame (no huge empty box, no spill) */
     .media-frame{
       position:relative;
+      width:100%;
+      max-width:520px;       /* ✅ keeps it nicely centered */
+      margin:0 auto;         /* ✅ centers */
       background:#fff;
       border:1px solid var(--line);
       border-radius:14px;
@@ -38,13 +56,13 @@
       box-shadow:var(--shadow);
       overflow:hidden;
 
-      height:360px;                 /* stable height */
+      height:360px;
       display:flex;
       align-items:center;
       justify-content:center;
     }
     @media (max-width:600px){
-      .media-frame{ height:300px; }
+      .media-frame{ height:320px; max-width:100%; }
     }
 
     /* Image fills frame */
@@ -57,23 +75,29 @@
       border-radius:12px;
       padding:0 !important;
       max-height:none !important;
+      display:block;
+      margin:0 auto;
     }
 
-    /* ✅ thumbs slider with arrows (overlay) */
+    /* ✅ thumbs centered under image + arrows ALWAYS visible */
     .thumbs-wrap{
       position:relative;
-      margin-top:10px;
+      width:100%;
+      max-width:520px;      /* match image frame */
+      margin:12px auto 0;   /* center */
+      overflow:hidden;      /* nothing goes outside */
     }
 
     .thumbs{
       display:flex;
-      flex-wrap:nowrap;              /* IMPORTANT: allow horizontal scroll */
+      flex-wrap:nowrap;
       gap:10px;
-      overflow:auto;
+      overflow-x:auto;
+      overflow-y:hidden;
       scroll-behavior:smooth;
       -webkit-overflow-scrolling:touch;
 
-      padding:8px 46px;              /* space for overlay arrows */
+      padding:8px 52px;     /* space for arrows */
       scrollbar-width:none;
     }
     .thumbs::-webkit-scrollbar{display:none}
@@ -105,24 +129,19 @@
       color:#573d21;
       font-size:22px;
       line-height:1;
-      display:flex;
+      display:flex;          /* ✅ always show */
       align-items:center;
       justify-content:center;
       box-shadow:var(--shadow);
-      z-index:50;                    /* clickable above thumbs */
+      z-index:80;            /* ✅ above thumbs, clickable */
       pointer-events:auto;
     }
-    .thumb-nav.prev{ left:6px; }
-    .thumb-nav.next{ right:6px; }
+    .thumb-nav.prev{ left:8px; }
+    .thumb-nav.next{ right:8px; }
 
-    .thumb-nav:hover{
-      box-shadow:0 0 12px rgba(199,162,106,.35);
-    }
-    .thumb-nav:disabled{
-      opacity:.4;
-      cursor:not-allowed;
-      box-shadow:none;
-    }
+    .thumb-nav:hover{ box-shadow:0 0 12px rgba(199,162,106,.35); }
+    .thumb-nav:disabled{ opacity:.35; cursor:not-allowed; box-shadow:none; }
+
     @media (max-width:600px){
       .thumb-nav{ width:34px; height:34px; border-radius:10px; }
     }
@@ -134,6 +153,8 @@
       border-radius:14px;
       padding:16px;
       box-shadow:var(--shadow);
+      max-width:100%;
+      overflow:hidden;
     }
     .product-info h1{ margin-bottom:6px; }
     .desc{ margin:12px 0 14px; }
@@ -210,13 +231,11 @@
   <div class="product-detail" id="product-detail">
     <div class="product-media">
 
-      <!-- ✅ FIX: use a real frame -->
       <div class="media-frame" style="position:relative">
         <img id="product-image" src="https://via.placeholder.com/800x800?text=Product" alt="Product image">
         <div id="oos-badge-slot"></div>
       </div>
 
-      <!-- ✅ thumbs with arrows (buttons are overlay + clickable) -->
       <div class="thumbs-wrap">
         <button type="button" class="thumb-nav prev" id="thumbPrev" aria-label="Scroll thumbnails left">‹</button>
         <div id="product-thumbs" class="thumbs"></div>
@@ -338,7 +357,7 @@
     const step = () => Math.max(220, Math.floor(thumbs.clientWidth * 0.7));
 
     function update(){
-      const max = thumbs.scrollWidth - thumbs.clientWidth - 2;
+      const max = Math.max(0, thumbs.scrollWidth - thumbs.clientWidth - 2);
       prev.disabled = thumbs.scrollLeft <= 2;
       next.disabled = thumbs.scrollLeft >= max;
     }
@@ -346,13 +365,13 @@
     prev.addEventListener("click", (e)=>{
       e.preventDefault();
       thumbs.scrollBy({ left: -step(), behavior: "smooth" });
-      setTimeout(update, 250);
+      setTimeout(update, 220);
     });
 
     next.addEventListener("click", (e)=>{
       e.preventDefault();
       thumbs.scrollBy({ left: step(), behavior: "smooth" });
-      setTimeout(update, 250);
+      setTimeout(update, 220);
     });
 
     thumbs.addEventListener("scroll", update);
