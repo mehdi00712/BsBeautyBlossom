@@ -25,235 +25,290 @@
     .hide{display:none!important}
 
     /* Smooth base for admin page (does not affect other pages) */
-    body{
-      background: radial-gradient(1200px 600px at 20% 0%, rgba(255,0,76,.10), transparent 60%),
-                  radial-gradient(900px 500px at 90% 10%, rgba(255,255,255,.06), transparent 55%),
-                  #070709;
-      color:#fff;
-    }
+    /* ===============================
+   🌙 RAMADAN ADMIN THEME
+================================ */
 
-    /* Keep your header but make it glassy + app-like */
-    header{
-      background:rgba(10,10,12,.78) !important;
-      backdrop-filter: blur(10px);
-      border-bottom:1px solid rgba(255,255,255,.08) !important;
-    }
+body{
+  background:
+    radial-gradient(1200px 600px at 20% 0%, rgba(212,175,55,.12), transparent 60%),
+    radial-gradient(900px 500px at 90% 10%, rgba(255,255,255,.05), transparent 55%),
+    #0b0f1a;
+  color:#f8f8f8;
+  position:relative;
+  overflow-x:hidden;
+}
 
-    /* Make the sticky nav behave nicely with the slide-in menu */
-    .navbar{
-      gap:12px;
-    }
+/* ✨ Islamic geometric background overlay */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  opacity:.04;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(212,175,55,.5) 0px, rgba(212,175,55,.5) 1px, transparent 1px, transparent 40px),
+    repeating-linear-gradient(-45deg, rgba(212,175,55,.5) 0px, rgba(212,175,55,.5) 1px, transparent 1px, transparent 40px);
+  z-index:0;
+}
 
-    /* Add an overlay when mobile nav opens */
-    .nav-overlay{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.55);
-      backdrop-filter: blur(2px);
-      z-index:9998;
-      opacity:0;
-      pointer-events:none;
-      transition: .2s ease;
-    }
-    .nav-overlay.show{
-      opacity:1;
-      pointer-events:auto;
-    }
+/* 🕯 Lantern glow behind header */
+header{
+  background:rgba(15,23,42,.85) !important;
+  backdrop-filter: blur(12px);
+  border-bottom:1px solid rgba(212,175,55,.25) !important;
+  position:relative;
+}
 
-    /* Improve nav links look for admin context (no element removed) */
-    .nav-links a{
-      color:#e8e8ea !important;
-    }
-    .nav-links a:hover,
-    .nav-links a.active{
-      background:#ff004c !important;
-      color:#fff !important;
-      box-shadow:0 0 16px rgba(255,0,80,.45) !important;
-    }
+header::after{
+  content:"";
+  position:absolute;
+  top:0;
+  left:50%;
+  transform:translateX(-50%);
+  width:420px;
+  height:200px;
+  background:radial-gradient(circle, rgba(212,175,55,.28) 0%, rgba(212,175,55,.12) 40%, transparent 70%);
+  filter:blur(40px);
+  pointer-events:none;
+  z-index:-1;
+}
 
-    /* -------- BUTTONS -------- */
-    .btn {
-      padding:.62rem .95rem;
-      font-weight:700;
-      border-radius:12px;
-      cursor:pointer;
-      background:rgba(255,255,255,.04);
-      color:#fff;
-      border:1px solid rgba(255,255,255,.10);
-      transition:0.22s ease;
-    }
-    .btn:hover {
-      transform: translateY(-1px);
-      box-shadow:0 10px 22px rgba(0,0,0,.35), 0 0 12px rgba(255,0,80,.25);
-      border-color: rgba(255,0,80,.35);
-    }
+/* Navbar spacing */
+.navbar{
+  gap:12px;
+}
 
-    /* Primary Pink Buttons (Save, Save Product) */
-    .btn.primary,
-    #saveBtn,
-    #site-save {
-      background:linear-gradient(180deg,#ff004c,#d6003f) !important;
-      border-color:transparent !important;
-      color:#fff !important;
-      box-shadow:0 10px 26px rgba(255,0,80,.22);
-    }
-    .btn.primary:hover,
-    #saveBtn:hover,
-    #site-save:hover {
-      filter: brightness(1.02);
-      box-shadow:0 14px 30px rgba(255,0,80,.30), 0 0 16px rgba(255,0,80,.22);
-    }
+/* Overlay for mobile nav */
+.nav-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.65);
+  backdrop-filter: blur(3px);
+  z-index:9998;
+  opacity:0;
+  pointer-events:none;
+  transition:.2s ease;
+}
+.nav-overlay.show{
+  opacity:1;
+  pointer-events:auto;
+}
 
-    /* Delete button */
-    .btn.danger {
-      background:linear-gradient(180deg,#ff2a55,#c91434) !important;
-      border-color:transparent !important;
-      color:white !important;
-    }
-    .btn.danger:hover {
-      box-shadow:0 12px 26px rgba(255,42,85,.24);
-    }
+/* Nav links */
+.nav-links a{
+  color:#f1f1f1 !important;
+}
+.nav-links a:hover,
+.nav-links a.active{
+  background:#d4af37 !important;
+  color:#0b0f1a !important;
+  box-shadow:0 0 18px rgba(212,175,55,.45) !important;
+}
 
-    /* Export CSV - pink outline */
-    #exportCsvBtn {
-      background:transparent !important;
-      border:1px solid rgba(255,0,80,.85) !important;
-      color:#ff004c !important;
-    }
-    #exportCsvBtn:hover {
-      background:#ff004c !important;
-      color:white !important;
-    }
+/* ===== GOLD GLOW ANIMATION ===== */
+@keyframes ramadanGlow{
+  0%{ box-shadow:0 0 0 rgba(212,175,55,.15); }
+  50%{ box-shadow:0 0 30px rgba(212,175,55,.35); }
+  100%{ box-shadow:0 0 0 rgba(212,175,55,.15); }
+}
 
-    /* small btn */
-    .btn.sm { padding:.42rem .7rem; border-radius:10px }
+/* -------- BUTTONS -------- */
+.btn{
+  padding:.62rem .95rem;
+  font-weight:700;
+  border-radius:12px;
+  cursor:pointer;
+  background:rgba(255,255,255,.04);
+  color:#fff;
+  border:1px solid rgba(212,175,55,.25);
+  transition:.22s ease;
+}
+.btn:hover{
+  transform:translateY(-1px);
+  box-shadow:0 10px 22px rgba(0,0,0,.35), 0 0 12px rgba(212,175,55,.35);
+  border-color:#d4af37;
+}
 
-    /* -------- ADMIN WRAP -------- */
-    .admin-wrap{
-      max-width:1100px;
-      margin:0 auto;
-      padding:22px 18px !important; /* you already had inline padding:18px */
-    }
-    .admin-wrap h1{
-      letter-spacing:.2px;
-      margin-bottom:12px;
-    }
+/* 🌙 Gold Primary Buttons */
+.btn.primary,
+#saveBtn,
+#site-save{
+  background:linear-gradient(180deg,#d4af37,#b8962e) !important;
+  border-color:transparent !important;
+  color:#0b0f1a !important;
+  box-shadow:0 10px 26px rgba(212,175,55,.25);
+}
+.btn.primary:hover,
+#saveBtn:hover,
+#site-save:hover{
+  filter:brightness(1.05);
+  box-shadow:0 14px 30px rgba(212,175,55,.40);
+}
 
-    /* Toolbar: make it look like a control bar */
-    .toolbar{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-      padding:12px;
-      border-radius:14px;
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.08);
-      box-shadow: 0 18px 40px rgba(0,0,0,.28);
-      margin-bottom:14px;
-    }
-    #auth-status{
-      margin-left:auto;
-      opacity:.75;
-      font-size:.95rem;
-    }
-    @media (max-width:640px){
-      #auth-status{margin-left:0;width:100%}
-    }
+/* Delete button */
+.btn.danger{
+  background:linear-gradient(180deg,#ff3b5c,#c91434) !important;
+  border-color:transparent !important;
+  color:#fff !important;
+}
+.btn.danger:hover{
+  box-shadow:0 12px 26px rgba(255,59,92,.30);
+}
 
-    /* -------- ADMIN CARDS -------- */
-    .card {
-      padding:18px;
-      border-radius:16px;
-      background:rgba(255,255,255,.03);
-      color:#fff;
-      border:1px solid rgba(255,255,255,.08);
-      box-shadow: 0 18px 40px rgba(0,0,0,.28);
-      margin-bottom:16px;
-    }
-    .card h2{
-      font-size:1.22rem;
-      margin-bottom:12px;
-    }
+/* Export CSV - gold outline */
+#exportCsvBtn{
+  background:transparent !important;
+  border:1px solid #d4af37 !important;
+  color:#d4af37 !important;
+}
+#exportCsvBtn:hover{
+  background:#d4af37 !important;
+  color:#0b0f1a !important;
+}
 
-    /* -------- TABLE -------- */
-    .table-wrap{overflow:auto}
-    table{width:100%;border-collapse:collapse;color:#fff}
-    th,td{border-bottom:1px solid rgba(255,255,255,.08);padding:10px}
-    th{
-      background:rgba(255,255,255,.03);
-      border-bottom:1px solid rgba(255,255,255,.10);
-      font-weight:700;
-    }
-    tbody tr:hover{
-      background:rgba(255,0,80,.07);
-    }
+/* small btn */
+.btn.sm{ padding:.42rem .7rem; border-radius:10px }
 
-    /* -------- INPUTS -------- */
-    input,textarea,select{
-      width:100%;
-      padding:.62rem .75rem;
-      border-radius:12px;
-      background:rgba(0,0,0,.28);
-      border:1px solid rgba(255,255,255,.12);
-      color:#eee;
-      outline:none;
-      transition:.15s ease;
-    }
-    input::placeholder, textarea::placeholder{color:rgba(255,255,255,.55)}
-    input:focus,textarea:focus,select:focus{
-      border-color:#ff004c;
-      box-shadow:0 0 0 4px rgba(255,0,80,.18);
-    }
+/* -------- ADMIN WRAP -------- */
+.admin-wrap{
+  max-width:1100px;
+  margin:0 auto;
+  padding:22px 18px !important;
+  position:relative;
+  z-index:1;
+}
+.admin-wrap h1{
+  letter-spacing:.3px;
+  margin-bottom:12px;
+}
 
-    .muted{opacity:.75}
-    label{display:block;margin-bottom:6px;font-weight:600;opacity:.92}
-    .row{margin-bottom:12px}
-    .row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:720px){
-      .row-2{grid-template-columns:1fr}
-    }
+/* Toolbar */
+.toolbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  padding:12px;
+  border-radius:14px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(212,175,55,.25);
+  box-shadow:0 18px 40px rgba(0,0,0,.28);
+  margin-bottom:14px;
+}
+#auth-status{
+  margin-left:auto;
+  opacity:.75;
+  font-size:.95rem;
+}
+@media (max-width:640px){
+  #auth-status{margin-left:0;width:100%}
+}
 
-    .preview{
-      margin-top:10px;
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    .preview img{
-      width:86px;height:86px;
-      object-fit:cover;
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:12px;
-      background:rgba(0,0,0,.25);
-    }
+/* -------- CARDS -------- */
+.card{
+  padding:18px;
+  border-radius:16px;
+  background:rgba(255,255,255,.04);
+  color:#fff;
+  border:1px solid rgba(212,175,55,.25);
+  box-shadow:0 18px 40px rgba(0,0,0,.28);
+  margin-bottom:16px;
+  animation:ramadanGlow 8s ease-in-out infinite;
+}
+.card h2{
+  font-size:1.22rem;
+  margin-bottom:12px;
+}
 
-    /* Filters row in Orders */
-    .filters{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-    .filters input,.filters select{
-      width:auto;
-      min-width:200px;
-      padding:.5rem .65rem;
-      border-radius:10px;
-    }
-    @media (max-width:720px){
-      .filters input,.filters select{
-        width:100%;
-        min-width:0;
-      }
-    }
+/* -------- TABLE -------- */
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;color:#fff}
+th,td{
+  border-bottom:1px solid rgba(212,175,55,.20);
+  padding:10px
+}
+th{
+  background:rgba(212,175,55,.10);
+  font-weight:700;
+}
+tbody tr:hover{
+  background:rgba(212,175,55,.08);
+}
 
-    /* Footer */
-    .site-footer{
-      background:transparent !important;
-      border-top:1px solid rgba(255,255,255,.08) !important;
-      color:rgba(255,255,255,.70) !important;
-    }
+/* -------- INPUTS -------- */
+input,textarea,select{
+  width:100%;
+  padding:.62rem .75rem;
+  border-radius:12px;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(212,175,55,.25);
+  color:#eee;
+  outline:none;
+  transition:.15s ease;
+}
+input::placeholder, textarea::placeholder{
+  color:rgba(255,255,255,.55)
+}
+input:focus,textarea:focus,select:focus{
+  border-color:#d4af37;
+  box-shadow:0 0 0 4px rgba(212,175,55,.18);
+}
+
+.muted{opacity:.75}
+label{display:block;margin-bottom:6px;font-weight:600;opacity:.92}
+.row{margin-bottom:12px}
+.row-2{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px
+}
+@media (max-width:720px){
+  .row-2{grid-template-columns:1fr}
+}
+
+.preview{
+  margin-top:10px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.preview img{
+  width:86px;
+  height:86px;
+  object-fit:cover;
+  border:1px solid rgba(212,175,55,.30);
+  border-radius:12px;
+  background:rgba(0,0,0,.25);
+}
+
+/* Filters row */
+.filters{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.filters input,.filters select{
+  width:auto;
+  min-width:200px;
+  padding:.5rem .65rem;
+  border-radius:10px;
+}
+@media (max-width:720px){
+  .filters input,.filters select{
+    width:100%;
+    min-width:0;
+  }
+}
+
+/* Footer */
+.site-footer{
+  background:transparent !important;
+  border-top:1px solid rgba(212,175,55,.25) !important;
+  color:rgba(255,255,255,.70) !important;
+}
+
   </style>
 </head>
 <body>
