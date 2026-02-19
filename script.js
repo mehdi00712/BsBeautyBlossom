@@ -1,5 +1,8 @@
 // script.js — slide-in mobile nav (with ✖ close) + overlay + cart badge
-(function () {
+// ✅ FIXED to work on ALL pages including admin
+
+document.addEventListener("DOMContentLoaded", function () {
+
   const hamburger = document.querySelector(".hamburger");
   const navLinks  = document.querySelector(".nav-links");
   const navClose  = document.querySelector(".nav-close");
@@ -23,7 +26,7 @@
     navLinks.classList.add("show");
     hamburger?.setAttribute("aria-expanded", "true");
 
-    // ✅ show overlay only on mobile
+    // show overlay only on mobile
     if (window.innerWidth <= 1023) overlay.classList.add("show");
     lockBody(true);
   }
@@ -34,7 +37,6 @@
     navLinks.classList.remove("show");
     hamburger?.setAttribute("aria-expanded", "false");
 
-    // ✅ always remove overlay
     overlay.classList.remove("show");
     lockBody(false);
   }
@@ -44,11 +46,11 @@
     navLinks.classList.contains("show") ? closeMenu() : openMenu();
   }
 
-  // ✅ HARD RESET ON LOAD (prevents the “film” staying stuck)
+  // ✅ HARD RESET ON LOAD
   overlay.classList.remove("show");
   if (!navLinks?.classList.contains("show")) lockBody(false);
 
-  // ✅ Avoid double-binding (prevents weird multi toggle bugs)
+  // ✅ Avoid double-binding
   if (hamburger && hamburger.dataset.navBound !== "1") {
     hamburger.dataset.navBound = "1";
     hamburger.addEventListener("click", toggleMenu);
@@ -59,13 +61,12 @@
     navClose.addEventListener("click", closeMenu);
   }
 
-  // ✅ Close when tapping overlay (outside)
   if (overlay && overlay.dataset.navBound !== "1") {
     overlay.dataset.navBound = "1";
     overlay.addEventListener("click", closeMenu);
   }
 
-  // Close when tapping any link inside the panel
+  // Close when clicking link inside panel
   if (navLinks && navLinks.dataset.navLinksBound !== "1") {
     navLinks.dataset.navLinksBound = "1";
     navLinks.addEventListener("click", (e) => {
@@ -73,25 +74,20 @@
     });
   }
 
-  // Close if resized back to desktop
-  if (window.datasetNavResizeBound !== "1") {
+  // Close if resized to desktop
+  if (!window.datasetNavResizeBound) {
     window.datasetNavResizeBound = "1";
-    let lastW = window.innerWidth;
 
     window.addEventListener("resize", () => {
       const w = window.innerWidth;
 
-      // going to desktop: force close + remove overlay
       if (w > 1023) {
         closeMenu();
         overlay.classList.remove("show");
         lockBody(false);
       } else {
-        // still mobile: if menu is open, ensure overlay is shown
         if (navLinks?.classList.contains("show")) overlay.classList.add("show");
       }
-
-      lastW = w;
     });
   }
 
@@ -103,14 +99,21 @@
     });
   }
 
-  // Cart badge
+  // ===============================
+  // 🛒 Cart badge
+  // ===============================
+
   const cartCountEl = document.getElementById("cart-count");
   if (cartCountEl) {
     try {
       const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      cartCountEl.textContent = cart.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+      cartCountEl.textContent = cart.reduce(
+        (sum, i) => sum + Number(i.quantity || 0),
+        0
+      );
     } catch {
       cartCountEl.textContent = 0;
     }
   }
-})();
+
+});
