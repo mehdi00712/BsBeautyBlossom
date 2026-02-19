@@ -510,44 +510,6 @@ input:focus,textarea:focus,select:focus{
 <script src="script.js" defer></script>
 <script src="admin.js" defer></script>
 
-<!-- Mobile Nav Toggle (added; does NOT remove anything) -->
-<script>
-  (function(){
-    const hamburger = document.getElementById('hamburgerBtn');
-    const navLinks  = document.querySelector('.nav-links');
-    const closeBtn  = document.getElementById('navCloseBtn');
-    const overlay   = document.getElementById('navOverlay');
-    const links     = navLinks ? navLinks.querySelectorAll('a') : [];
-
-    if(!hamburger || !navLinks || !overlay) return;
-
-    // Ensure overlay is not permanently hidden
-    overlay.classList.remove('hide');
-
-    function openNav(){
-      navLinks.classList.add('show');
-      overlay.classList.add('show');
-      document.body.style.overflow = 'hidden';
-    }
-    function closeNav(){
-      navLinks.classList.remove('show');
-      overlay.classList.remove('show');
-      document.body.style.overflow = '';
-    }
-
-    hamburger.addEventListener('click', openNav);
-    overlay.addEventListener('click', closeNav);
-    if(closeBtn) closeBtn.addEventListener('click', closeNav);
-
-    // Close on link click (mobile UX)
-    links.forEach(a => a.addEventListener('click', closeNav));
-
-    // Close on ESC
-    window.addEventListener('keydown', (e)=>{
-      if(e.key === 'Escape') closeNav();
-    });
-  })();
-</script>
 
 <!-- Order Filters + CSV Export -->
 <script>
