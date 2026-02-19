@@ -38,7 +38,7 @@ body{
   overflow-x:hidden;
 }
 
-/* ✨ Islamic geometric background overlay */
+/* ✨ Islamic geometric overlay */
 body::before{
   content:"";
   position:fixed;
@@ -51,13 +51,13 @@ body::before{
   z-index:0;
 }
 
-/* 🕯 Lantern glow behind header */
+/* 🕯 Header lantern glow */
 header{
-  background:rgba(15,23,42,.85) !important;
+  background:rgba(15,23,42,.88) !important;
   backdrop-filter: blur(12px);
   border-bottom:1px solid rgba(212,175,55,.25) !important;
   position:relative;
-  z-index:10;
+  z-index:10000;
 }
 
 header::after{
@@ -74,43 +74,55 @@ header::after{
   z-index:-1;
 }
 
-/* Navbar spacing */
-.navbar{
-  gap:12px;
-}
-
 /* ===============================
-   🔥 MOBILE NAV FIX (IMPORTANT)
+   🔥 NAVBAR + HAMBURGER FIX
 ================================ */
 
-/* Ensure mobile menu works */
+.navbar{
+  gap:12px;
+  position:relative;
+  z-index:10001;
+}
+
+.hamburger{
+  display:block !important;
+  cursor:pointer;
+  font-size:24px;
+  z-index:10002;
+}
+
+/* Mobile Slide Panel */
 .nav-links{
-  position:fixed;
-  top:0;
-  right:-280px;
-  width:260px;
-  height:100vh;
-  background:#0b0f1a;
-  flex-direction:column;
-  padding-top:80px;
-  transition:right .3s ease;
-  z-index:9999;
+  position:fixed !important;
+  top:0 !important;
+  right:-300px !important;
+  width:280px !important;
+  height:100vh !important;
+  background:#0b0f1a !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-start !important;
+  padding:90px 20px !important;
+  gap:18px !important;
+  transition:right .35s ease !important;
+  z-index:10001 !important;
 }
 
+/* When open */
 .nav-links.show{
-  right:0;
+  right:0 !important;
 }
 
-/* Overlay for mobile nav */
+/* Overlay */
 .nav-overlay{
   position:fixed;
   inset:0;
   background:rgba(0,0,0,.65);
   backdrop-filter: blur(3px);
-  z-index:9998;
+  z-index:10000;
   opacity:0;
   pointer-events:none;
-  transition:.2s ease;
+  transition:.25s ease;
 }
 .nav-overlay.show{
   opacity:1;
@@ -128,14 +140,20 @@ header::after{
   box-shadow:0 0 18px rgba(212,175,55,.45) !important;
 }
 
-/* ===== GOLD GLOW ANIMATION ===== */
+/* ===============================
+   ✨ GOLD GLOW ANIMATION
+================================ */
+
 @keyframes ramadanGlow{
   0%{ box-shadow:0 0 0 rgba(212,175,55,.15); }
   50%{ box-shadow:0 0 30px rgba(212,175,55,.35); }
   100%{ box-shadow:0 0 0 rgba(212,175,55,.15); }
 }
 
-/* -------- BUTTONS -------- */
+/* ===============================
+   🔘 BUTTONS
+================================ */
+
 .btn{
   padding:.62rem .95rem;
   font-weight:700;
@@ -152,7 +170,7 @@ header::after{
   border-color:#d4af37;
 }
 
-/* 🌙 Gold Primary Buttons */
+/* Gold primary */
 .btn.primary,
 #saveBtn,
 #site-save{
@@ -168,17 +186,14 @@ header::after{
   box-shadow:0 14px 30px rgba(212,175,55,.40);
 }
 
-/* Delete button */
+/* Danger */
 .btn.danger{
   background:linear-gradient(180deg,#ff3b5c,#c91434) !important;
   border-color:transparent !important;
   color:#fff !important;
 }
-.btn.danger:hover{
-  box-shadow:0 12px 26px rgba(255,59,92,.30);
-}
 
-/* Export CSV - gold outline */
+/* Export */
 #exportCsvBtn{
   background:transparent !important;
   border:1px solid #d4af37 !important;
@@ -189,7 +204,10 @@ header::after{
   color:#0b0f1a !important;
 }
 
-/* -------- CARDS -------- */
+/* ===============================
+   📦 CARDS
+================================ */
+
 .card{
   padding:18px;
   border-radius:16px;
@@ -201,41 +219,57 @@ header::after{
   animation:ramadanGlow 8s ease-in-out infinite;
 }
 
-/* Footer */
+/* ===============================
+   📝 TABLE
+================================ */
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  color:#fff;
+}
+th,td{
+  border-bottom:1px solid rgba(212,175,55,.20);
+  padding:10px;
+}
+th{
+  background:rgba(212,175,55,.10);
+  font-weight:700;
+}
+tbody tr:hover{
+  background:rgba(212,175,55,.08);
+}
+
+/* ===============================
+   🧾 INPUTS
+================================ */
+
+input,textarea,select{
+  width:100%;
+  padding:.62rem .75rem;
+  border-radius:12px;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(212,175,55,.25);
+  color:#eee;
+  outline:none;
+}
+input:focus,textarea:focus,select:focus{
+  border-color:#d4af37;
+  box-shadow:0 0 0 4px rgba(212,175,55,.18);
+}
+
+/* ===============================
+   🧱 FOOTER
+================================ */
+
 .site-footer{
   background:transparent !important;
   border-top:1px solid rgba(212,175,55,.25) !important;
   color:rgba(255,255,255,.70) !important;
 }
 
-/* ===============================
-   🔥 FORCE MOBILE NAV FIX
-================================ */
-
-@media (max-width: 1024px){
-
-  .nav-links{
-    position:fixed !important;
-    top:0 !important;
-    right:-280px !important;
-    width:260px !important;
-    height:100vh !important;
-    background:#0b0f1a !important;
-    display:flex !important;
-    flex-direction:column !important;
-    padding-top:80px !important;
-    transition:right .3s ease !important;
-    z-index:9999 !important;
-  }
-
-  .nav-links.show{
-    right:0 !important;
-  }
-
-}
-
-  
 </style>
+
 
 </head>
 <body>
