@@ -21,11 +21,10 @@
   </script>
 
   <!-- ADMIN UI UPGRADE (keeps ALL your elements, just improves styling + navbar UX) -->
-  <style>
-    .hide{display:none!important}
+<style>
+.hide{display:none!important}
 
-    /* Smooth base for admin page (does not affect other pages) */
-    /* ===============================
+/* ===============================
    🌙 RAMADAN ADMIN THEME
 ================================ */
 
@@ -58,6 +57,7 @@ header{
   backdrop-filter: blur(12px);
   border-bottom:1px solid rgba(212,175,55,.25) !important;
   position:relative;
+  z-index:10;
 }
 
 header::after{
@@ -79,6 +79,28 @@ header::after{
   gap:12px;
 }
 
+/* ===============================
+   🔥 MOBILE NAV FIX (IMPORTANT)
+================================ */
+
+/* Ensure mobile menu works */
+.nav-links{
+  position:fixed;
+  top:0;
+  right:-280px;
+  width:260px;
+  height:100vh;
+  background:#0b0f1a;
+  flex-direction:column;
+  padding-top:80px;
+  transition:right .3s ease;
+  z-index:9999;
+}
+
+.nav-links.show{
+  right:0;
+}
+
 /* Overlay for mobile nav */
 .nav-overlay{
   position:fixed;
@@ -95,7 +117,7 @@ header::after{
   pointer-events:auto;
 }
 
-/* Nav links */
+/* Nav links styling */
 .nav-links a{
   color:#f1f1f1 !important;
 }
@@ -167,44 +189,6 @@ header::after{
   color:#0b0f1a !important;
 }
 
-/* small btn */
-.btn.sm{ padding:.42rem .7rem; border-radius:10px }
-
-/* -------- ADMIN WRAP -------- */
-.admin-wrap{
-  max-width:1100px;
-  margin:0 auto;
-  padding:22px 18px !important;
-  position:relative;
-  z-index:1;
-}
-.admin-wrap h1{
-  letter-spacing:.3px;
-  margin-bottom:12px;
-}
-
-/* Toolbar */
-.toolbar{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
-  padding:12px;
-  border-radius:14px;
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(212,175,55,.25);
-  box-shadow:0 18px 40px rgba(0,0,0,.28);
-  margin-bottom:14px;
-}
-#auth-status{
-  margin-left:auto;
-  opacity:.75;
-  font-size:.95rem;
-}
-@media (max-width:640px){
-  #auth-status{margin-left:0;width:100%}
-}
-
 /* -------- CARDS -------- */
 .card{
   padding:18px;
@@ -216,91 +200,6 @@ header::after{
   margin-bottom:16px;
   animation:ramadanGlow 8s ease-in-out infinite;
 }
-.card h2{
-  font-size:1.22rem;
-  margin-bottom:12px;
-}
-
-/* -------- TABLE -------- */
-.table-wrap{overflow:auto}
-table{width:100%;border-collapse:collapse;color:#fff}
-th,td{
-  border-bottom:1px solid rgba(212,175,55,.20);
-  padding:10px
-}
-th{
-  background:rgba(212,175,55,.10);
-  font-weight:700;
-}
-tbody tr:hover{
-  background:rgba(212,175,55,.08);
-}
-
-/* -------- INPUTS -------- */
-input,textarea,select{
-  width:100%;
-  padding:.62rem .75rem;
-  border-radius:12px;
-  background:rgba(0,0,0,.35);
-  border:1px solid rgba(212,175,55,.25);
-  color:#eee;
-  outline:none;
-  transition:.15s ease;
-}
-input::placeholder, textarea::placeholder{
-  color:rgba(255,255,255,.55)
-}
-input:focus,textarea:focus,select:focus{
-  border-color:#d4af37;
-  box-shadow:0 0 0 4px rgba(212,175,55,.18);
-}
-
-.muted{opacity:.75}
-label{display:block;margin-bottom:6px;font-weight:600;opacity:.92}
-.row{margin-bottom:12px}
-.row-2{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px
-}
-@media (max-width:720px){
-  .row-2{grid-template-columns:1fr}
-}
-
-.preview{
-  margin-top:10px;
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-.preview img{
-  width:86px;
-  height:86px;
-  object-fit:cover;
-  border:1px solid rgba(212,175,55,.30);
-  border-radius:12px;
-  background:rgba(0,0,0,.25);
-}
-
-/* Filters row */
-.filters{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  flex-wrap:wrap;
-}
-.filters input,.filters select{
-  width:auto;
-  min-width:200px;
-  padding:.5rem .65rem;
-  border-radius:10px;
-}
-@media (max-width:720px){
-  .filters input,.filters select{
-    width:100%;
-    min-width:0;
-  }
-}
 
 /* Footer */
 .site-footer{
@@ -308,8 +207,8 @@ label{display:block;margin-bottom:6px;font-weight:600;opacity:.92}
   border-top:1px solid rgba(212,175,55,.25) !important;
   color:rgba(255,255,255,.70) !important;
 }
+</style>
 
-  </style>
 </head>
 <body>
 
