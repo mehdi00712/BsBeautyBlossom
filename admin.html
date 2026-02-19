@@ -207,6 +207,34 @@ header::after{
   border-top:1px solid rgba(212,175,55,.25) !important;
   color:rgba(255,255,255,.70) !important;
 }
+
+/* ===============================
+   🔥 FORCE MOBILE NAV FIX
+================================ */
+
+@media (max-width: 1024px){
+
+  .nav-links{
+    position:fixed !important;
+    top:0 !important;
+    right:-280px !important;
+    width:260px !important;
+    height:100vh !important;
+    background:#0b0f1a !important;
+    display:flex !important;
+    flex-direction:column !important;
+    padding-top:80px !important;
+    transition:right .3s ease !important;
+    z-index:9999 !important;
+  }
+
+  .nav-links.show{
+    right:0 !important;
+  }
+
+}
+
+  
 </style>
 
 </head>
@@ -445,8 +473,8 @@ header::after{
   <p>© 2025 B’s Beauty Blossom • Admin</p>
 </footer>
 
-<script src="admin.js" defer></script>
 <script src="script.js" defer></script>
+<script src="admin.js" defer></script>
 
 <!-- Mobile Nav Toggle (added; does NOT remove anything) -->
 <script>
