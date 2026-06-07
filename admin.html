@@ -6,7 +6,6 @@
   <title>Admin – B’s Beauty Blossom</title>
   <link rel="stylesheet" href="style.css"/>
 
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -14,299 +13,136 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
   <script src="firebase-config.js"></script>
 
-  <!-- Cloudinary -->
-  <script>
-    window.CLOUDINARY_CLOUD_NAME = "dlwk13ady";
-    window.CLOUDINARY_UPLOAD_PRESET = "unsigned_bbb";
-  </script>
-
-  <!-- ADMIN UI UPGRADE (keeps ALL your elements, just improves styling + navbar UX) -->
-<style>
-.hide{display:none!important}
-
-/* ===============================
-   🌙 RAMADAN ADMIN THEME
-================================ */
-
-body{
-  background:
-    radial-gradient(1200px 600px at 20% 0%, rgba(212,175,55,.12), transparent 60%),
-    radial-gradient(900px 500px at 90% 10%, rgba(255,255,255,.05), transparent 55%),
-    #0b0f1a;
-  color:#f8f8f8;
-  position:relative;
-  overflow-x:hidden;
-  min-height:100vh;
-}
-
-/* ✨ Islamic geometric overlay */
-body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  opacity:.04;
-  background-image:
-    repeating-linear-gradient(45deg, rgba(212,175,55,.5) 0px, rgba(212,175,55,.5) 1px, transparent 1px, transparent 40px),
-    repeating-linear-gradient(-45deg, rgba(212,175,55,.5) 0px, rgba(212,175,55,.5) 1px, transparent 1px, transparent 40px);
-  z-index:0;
-}
-
-/* ===============================
-   🕯 HEADER
-================================ */
-
-header{
-  background:rgba(15,23,42,.88) !important;
-  backdrop-filter: blur(12px);
-  border-bottom:1px solid rgba(212,175,55,.25) !important;
-  position:relative;
-  z-index:10000;
-}
-
-header::after{
-  content:"";
-  position:absolute;
-  top:0;
-  left:50%;
-  transform:translateX(-50%);
-  width:420px;
-  height:200px;
-  background:radial-gradient(circle, rgba(212,175,55,.28) 0%, rgba(212,175,55,.12) 40%, transparent 70%);
-  filter:blur(40px);
-  pointer-events:none;
-  z-index:-1;
-}
-
-.navbar{
-  gap:12px;
-  position:relative;
-  z-index:10001;
-}
-
-/* ===============================
-   🔥 MOBILE NAV — PERFECT FIX
-================================ */
-
-/* Only activate mobile panel on small screens */
-@media (max-width:1023px){
-
-  .nav-links{
-    position:fixed !important;
-    top:0 !important;
-    right:-100% !important;
-    width:280px !important;
-    height:100vh !important;
-    background:#0b0f1a !important;
-
-    display:flex !important;
-    flex-direction:column !important;
-    align-items:flex-start !important;
-
-    padding:90px 25px 30px !important;
-    gap:18px !important;
-
-    transition:right .35s ease !important;
-    z-index:10001 !important;
-
-    overflow-y:auto;
-  }
-
-  .nav-links.show{
-    right:0 !important;
-  }
-
-  .hamburger{
-    display:block !important;
-    cursor:pointer;
-    font-size:24px;
-    z-index:10002;
-  }
-
-}
-
-/* Desktop — restore normal nav */
-@media (min-width:1024px){
-  .nav-links{
-    position:static !important;
-    height:auto !important;
-    width:auto !important;
-    background:transparent !important;
-    flex-direction:row !important;
-    padding:0 !important;
-    gap:20px !important;
-  }
-}
-
-/* Overlay */
-.nav-overlay{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.65);
-  backdrop-filter: blur(3px);
-  z-index:10000;
-  opacity:0;
-  pointer-events:none;
-  transition:.25s ease;
-}
-
-.nav-overlay.show{
-  opacity:1;
-  pointer-events:auto;
-}
-
-/* Nav link styling */
-.nav-links a{
-  color:#f1f1f1 !important;
-}
-
-.nav-links a:hover,
-.nav-links a.active{
-  background:#d4af37 !important;
-  color:#0b0f1a !important;
-  box-shadow:0 0 18px rgba(212,175,55,.45) !important;
-}
-
-/* ===============================
-   ✨ GOLD GLOW
-================================ */
-
-@keyframes ramadanGlow{
-  0%{ box-shadow:0 0 0 rgba(212,175,55,.15); }
-  50%{ box-shadow:0 0 30px rgba(212,175,55,.35); }
-  100%{ box-shadow:0 0 0 rgba(212,175,55,.15); }
-}
-
-/* ===============================
-   🔘 BUTTONS
-================================ */
-
-.btn{
-  padding:.62rem .95rem;
-  font-weight:700;
-  border-radius:12px;
-  cursor:pointer;
-  background:rgba(255,255,255,.04);
-  color:#fff;
-  border:1px solid rgba(212,175,55,.25);
-  transition:.22s ease;
-}
-
-.btn:hover{
-  transform:translateY(-1px);
-  box-shadow:0 10px 22px rgba(0,0,0,.35), 0 0 12px rgba(212,175,55,.35);
-  border-color:#d4af37;
-}
-
-.btn.primary,
-#saveBtn,
-#site-save{
-  background:linear-gradient(180deg,#d4af37,#b8962e) !important;
-  border-color:transparent !important;
-  color:#0b0f1a !important;
-  box-shadow:0 10px 26px rgba(212,175,55,.25);
-}
-
-.btn.primary:hover,
-#saveBtn:hover,
-#site-save:hover{
-  filter:brightness(1.05);
-  box-shadow:0 14px 30px rgba(212,175,55,.40);
-}
-
-.btn.danger{
-  background:linear-gradient(180deg,#ff3b5c,#c91434) !important;
-  border-color:transparent !important;
-  color:#fff !important;
-}
-
-#exportCsvBtn{
-  background:transparent !important;
-  border:1px solid #d4af37 !important;
-  color:#d4af37 !important;
-}
-
-#exportCsvBtn:hover{
-  background:#d4af37 !important;
-  color:#0b0f1a !important;
-}
-
-/* ===============================
-   📦 CARDS
-================================ */
-
-.card{
-  padding:18px;
-  border-radius:16px;
-  background:rgba(255,255,255,.04);
-  color:#fff;
-  border:1px solid rgba(212,175,55,.25);
-  box-shadow:0 18px 40px rgba(0,0,0,.28);
-  margin-bottom:16px;
-  animation:ramadanGlow 8s ease-in-out infinite;
-}
-
-/* ===============================
-   📝 TABLE
-================================ */
-
-table{
-  width:100%;
-  border-collapse:collapse;
-  color:#fff;
-}
-
-th,td{
-  border-bottom:1px solid rgba(212,175,55,.20);
-  padding:10px;
-}
-
-th{
-  background:rgba(212,175,55,.10);
-  font-weight:700;
-}
-
-tbody tr:hover{
-  background:rgba(212,175,55,.08);
-}
-
-/* ===============================
-   🧾 INPUTS
-================================ */
-
-input,textarea,select{
-  width:100%;
-  padding:.62rem .75rem;
-  border-radius:12px;
-  background:rgba(0,0,0,.35);
-  border:1px solid rgba(212,175,55,.25);
-  color:#eee;
-}
-
-input:focus,
-textarea:focus,
-select:focus{
-  border-color:#d4af37;
-  box-shadow:0 0 0 4px rgba(212,175,55,.18);
-}
-
-/* ===============================
-   🧱 FOOTER
-================================ */
-
-.site-footer{
-  background:transparent !important;
-  border-top:1px solid rgba(212,175,55,.25) !important;
-  color:rgba(255,255,255,.70) !important;
-}
-
-</style>
-
-
+  <style>
+    .hide{display:none!important}
+    body{
+      background:
+        radial-gradient(1200px 600px at 20% 0%, rgba(212,175,55,.12), transparent 60%),
+        radial-gradient(900px 500px at 90% 10%, rgba(255,255,255,.05), transparent 55%),
+        #0b0f1a;
+      color:#f8f8f8;
+      overflow-x:hidden;
+      min-height:100vh;
+    }
+    header{
+      background:rgba(15,23,42,.88)!important;
+      backdrop-filter:blur(12px);
+      border-bottom:1px solid rgba(212,175,55,.25)!important;
+      z-index:10000;
+    }
+    .navbar{gap:12px;position:relative;z-index:10001}
+    .nav-links a{color:#f1f1f1!important}
+    .nav-links a:hover,.nav-links a.active{
+      background:#d4af37!important;
+      color:#0b0f1a!important;
+    }
+    .nav-overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.65);
+      z-index:10000;
+      opacity:0;
+      pointer-events:none;
+      transition:.25s ease;
+    }
+    .nav-overlay.show{opacity:1;pointer-events:auto}
+    @media(max-width:1023px){
+      .nav-links{
+        position:fixed!important;
+        top:0!important;
+        right:-100%!important;
+        width:280px!important;
+        height:100vh!important;
+        background:#0b0f1a!important;
+        display:flex!important;
+        flex-direction:column!important;
+        align-items:flex-start!important;
+        padding:90px 25px 30px!important;
+        gap:18px!important;
+        transition:right .35s ease!important;
+        z-index:10001!important;
+        overflow-y:auto;
+      }
+      .nav-links.show{right:0!important}
+      .hamburger{
+        display:block!important;
+        cursor:pointer;
+        font-size:24px;
+        z-index:10002;
+      }
+    }
+    @media(min-width:1024px){
+      .nav-links{
+        position:static!important;
+        height:auto!important;
+        width:auto!important;
+        background:transparent!important;
+        flex-direction:row!important;
+        padding:0!important;
+        gap:20px!important;
+      }
+    }
+    .btn{
+      padding:.62rem .95rem;
+      font-weight:700;
+      border-radius:12px;
+      cursor:pointer;
+      background:rgba(255,255,255,.04);
+      color:#fff;
+      border:1px solid rgba(212,175,55,.25);
+      transition:.22s ease;
+    }
+    .btn:hover{
+      transform:translateY(-1px);
+      box-shadow:0 10px 22px rgba(0,0,0,.35),0 0 12px rgba(212,175,55,.35);
+      border-color:#d4af37;
+    }
+    .btn.primary,#saveBtn,#site-save{
+      background:linear-gradient(180deg,#d4af37,#b8962e)!important;
+      border-color:transparent!important;
+      color:#0b0f1a!important;
+      box-shadow:0 10px 26px rgba(212,175,55,.25);
+    }
+    .btn.danger{
+      background:linear-gradient(180deg,#ff3b5c,#c91434)!important;
+      border-color:transparent!important;
+      color:#fff!important;
+    }
+    .card{
+      padding:18px;
+      border-radius:16px;
+      background:rgba(255,255,255,.04);
+      color:#fff;
+      border:1px solid rgba(212,175,55,.25);
+      box-shadow:0 18px 40px rgba(0,0,0,.28);
+      margin-bottom:16px;
+    }
+    table{width:100%;border-collapse:collapse;color:#fff}
+    th,td{border-bottom:1px solid rgba(212,175,55,.20);padding:10px}
+    th{background:rgba(212,175,55,.10);font-weight:700}
+    tbody tr:hover{background:rgba(212,175,55,.08)}
+    input,textarea,select{
+      width:100%;
+      padding:.62rem .75rem;
+      border-radius:12px;
+      background:rgba(0,0,0,.35);
+      border:1px solid rgba(212,175,55,.25);
+      color:#eee;
+    }
+    input:focus,textarea:focus,select:focus{
+      border-color:#d4af37;
+      box-shadow:0 0 0 4px rgba(212,175,55,.18);
+      outline:none;
+    }
+    .site-footer{
+      background:transparent!important;
+      border-top:1px solid rgba(212,175,55,.25)!important;
+      color:rgba(255,255,255,.70)!important;
+    }
+  </style>
 </head>
-<body>
 
-<!-- Mobile nav overlay (added, does not remove anything) -->
+<body>
 <div class="nav-overlay hide" id="navOverlay"></div>
 
 <header>
@@ -316,16 +152,14 @@ select:focus{
     </div>
 
     <ul class="nav-links">
-      <!-- close button (keeps your CSS compatible if you already have nav-close styles in style.css) -->
       <span class="nav-close" id="navCloseBtn">&times;</span>
-
       <li><a href="index.html">Home</a></li>
-      <li><a href="perfume.html">Perfume</a></li>
-      <li><a href="body.html">Body</a></li>
-      <li><a href="skincare.html">Skincare</a></li>
-      <li><a href="cosmetics.html">Cosmetics</a></li>
-      <li><a href="jewellery.html">Jewellery</a></li>
-      <li><a href="gift.html">Gift</a></li>
+      <li><a href="category.html?type=perfume">Perfume</a></li>
+      <li><a href="category.html?type=body">Body</a></li>
+      <li><a href="category.html?type=skincare">Skincare</a></li>
+      <li><a href="category.html?type=cosmetics">Cosmetics</a></li>
+      <li><a href="category.html?type=jewellery">Jewellery</a></li>
+      <li><a href="category.html?type=gift">Gift</a></li>
       <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
       <li><a href="admin.html" class="active">Admin</a></li>
     </ul>
@@ -335,10 +169,8 @@ select:focus{
 </header>
 
 <main class="admin-wrap" style="padding:18px">
-
   <h1>Admin Dashboard</h1>
 
-  <!-- Toolbar -->
   <div class="toolbar">
     <button id="btnSeeOrders" class="btn primary hide">📦 See Orders</button>
     <button id="btnBack" class="btn hide">⬅ Back</button>
@@ -347,23 +179,19 @@ select:focus{
     <span id="auth-status" class="muted"></span>
   </div>
 
-  <!-- Login Section -->
   <section id="auth-section" class="card">
     <h2>Admin Login</h2>
-
     <div class="row row-2">
       <div><label>Email</label><input id="email" type="email"></div>
       <div><label>Password</label><input id="password" type="password"></div>
     </div>
-
     <p class="muted">Leave empty to login with Google.</p>
   </section>
 
   <div id="dashboard-sections" class="hide">
 
-    <!-- SITE SETTINGS -->
     <section id="site-section" class="card">
-      <h2>Site Settings (Homepage)</h2>
+      <h2>Site Settings</h2>
 
       <div class="row row-2">
         <div><label>Hero Title</label><input id="site-heroTitle"></div>
@@ -382,7 +210,6 @@ select:focus{
             <option value="gift">Gift</option>
           </select>
         </div>
-
         <div style="margin-top:26px">
           <label><input id="site-showFeatured" type="checkbox"> Show Featured Products</label>
         </div>
@@ -402,11 +229,9 @@ select:focus{
 
       <button id="site-save" class="btn primary">Save</button>
       <button id="site-reload" class="btn">Reload</button>
-
       <p id="site-status" class="muted"></p>
     </section>
 
-    <!-- PRODUCT FORM -->
     <section id="product-section" class="card">
       <h2>Add / Edit Product</h2>
 
@@ -423,22 +248,35 @@ select:focus{
       </div>
 
       <div class="row row-2">
-        <div><label>Product Name</label><input id="name"></div>
+        <div><label>Product Name</label><input id="name" placeholder="Example: Vanilla Body Lotion"></div>
         <div><label>Base Price (Rs)</label><input id="price" type="number"></div>
       </div>
 
       <div class="row">
-        <label>Discount Price (Black Friday)</label>
+        <label>Discount Price</label>
         <input id="discountPrice" type="number" placeholder="Optional">
       </div>
 
       <div class="row row-2">
-        <div><label>Brand</label><input id="brand"></div>
-        <div style="margin-top:26px"><label><input id="active" type="checkbox" checked> Active</label></div>
+        <div><label>Brand</label><input id="brand" placeholder="Example: Dior, Victoria Secret"></div>
+        <div><label>Subcategory</label><input id="subcategory" placeholder="Example: Body Lotion, Serum, Men Perfume"></div>
       </div>
 
-      <div class="row"><label>Sizes</label><textarea id="sizes" rows="4"></textarea></div>
-      <div class="row"><label>Description</label><textarea id="description" rows="3"></textarea></div>
+      <div class="row">
+        <label><input id="active" type="checkbox" checked> Active</label>
+      </div>
+
+      <div class="row">
+        <label>Sizes</label>
+        <textarea id="sizes" rows="4" placeholder="Example:
+100ml | 450
+250ml | 700"></textarea>
+      </div>
+
+      <div class="row">
+        <label>Description</label>
+        <textarea id="description" rows="3"></textarea>
+      </div>
 
       <div class="row">
         <label>Images</label>
@@ -447,11 +285,9 @@ select:focus{
 
       <button id="saveBtn" class="btn primary">Save Product</button>
       <button id="resetBtn" class="btn">Reset</button>
-
       <input type="hidden" id="docId">
     </section>
 
-    <!-- PRODUCT LIST -->
     <section id="list-section" class="card">
       <h2>Products</h2>
 
@@ -465,7 +301,6 @@ select:focus{
           <option value="jewellery">Jewellery</option>
           <option value="gift">Gift</option>
         </select>
-
         <button id="refreshBtn" class="btn">Refresh</button>
       </div>
 
@@ -475,6 +310,7 @@ select:focus{
             <tr>
               <th>Image</th>
               <th>Name</th>
+              <th>Subcategory</th>
               <th>Sizes</th>
               <th>Base</th>
               <th>Discount</th>
@@ -483,20 +319,16 @@ select:focus{
             </tr>
           </thead>
           <tbody id="tableBody">
-            <tr><td colspan="7">Loading…</td></tr>
+            <tr><td colspan="8">Loading…</td></tr>
           </tbody>
         </table>
       </div>
     </section>
-
   </div>
 
-  <!-- ORDERS SECTION -->
   <section id="orders-section" class="card hide">
-
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
       <h2>Orders</h2>
-
       <div class="filters">
         <input id="orderSearch" type="search" placeholder="Search name/email/id…">
         <select id="orderStatusFilter">
@@ -530,9 +362,7 @@ select:focus{
         <tbody id="orders-body"></tbody>
       </table>
     </div>
-
   </section>
-
 </main>
 
 <footer class="site-footer">
@@ -542,59 +372,56 @@ select:focus{
 <script src="script.js" defer></script>
 <script src="admin.js" defer></script>
 
-
-<!-- Order Filters + CSV Export -->
 <script>
-  (function(){
-    const q=document.getElementById('orderSearch');
-    const f=document.getElementById('orderStatusFilter');
-    const body=document.getElementById('orders-body');
+(function(){
+  const q=document.getElementById('orderSearch');
+  const f=document.getElementById('orderStatusFilter');
+  const body=document.getElementById('orders-body');
 
-    function match(r,txt,status){
-      const t=r.innerText.toLowerCase();
-      const st=r.querySelector('[data-col="status"]')?.dataset.status?.toLowerCase() || "";
-      return (!txt||t.includes(txt)) && (!status||st===status);
-    }
+  function match(r,txt,status){
+    const t=r.innerText.toLowerCase();
+    const st=r.querySelector('[data-col="status"]')?.dataset.status?.toLowerCase() || "";
+    return (!txt||t.includes(txt)) && (!status||st===status);
+  }
 
-    function apply(){
-      const txt=(q.value||"").toLowerCase().trim();
-      const st=(f.value||"").toLowerCase().trim();
-      Array.from(body.querySelectorAll("tr")).forEach(tr=>{
-        tr.style.display=match(tr,txt,st)?"":"none";
-      });
-    }
+  function apply(){
+    const txt=(q.value||"").toLowerCase().trim();
+    const st=(f.value||"").toLowerCase().trim();
+    Array.from(body.querySelectorAll("tr")).forEach(tr=>{
+      tr.style.display=match(tr,txt,st)?"":"none";
+    });
+  }
 
-    q && q.addEventListener('input',apply);
-    f && f.addEventListener('change',apply);
-    window.__applyOrderFilters=apply;
-  })();
+  q && q.addEventListener('input',apply);
+  f && f.addEventListener('change',apply);
+  window.__applyOrderFilters=apply;
+})();
 
-  (function(){
-    const btn=document.getElementById('exportCsvBtn');
-    const body=document.getElementById('orders-body');
-    const head=document.querySelector('#orders-table thead');
+(function(){
+  const btn=document.getElementById('exportCsvBtn');
+  const body=document.getElementById('orders-body');
+  const head=document.querySelector('#orders-table thead');
 
-    function toCSV(){
-      const visible=[...body.querySelectorAll('tr')].filter(tr=>tr.style.display!=='none');
-      const headCols=[...head.querySelectorAll('th')].map(th=>('"'+th.innerText.replace(/"/g,'""')+'"'));
-      const rows=visible.map(tr=>{
-        return [...tr.children].map(td=>('"'+(td.innerText||'').replace(/"/g,'""')+'"'));
-      });
+  function toCSV(){
+    const visible=[...body.querySelectorAll('tr')].filter(tr=>tr.style.display!=='none');
+    const headCols=[...head.querySelectorAll('th')].map(th=>('"'+th.innerText.replace(/"/g,'""')+'"'));
+    const rows=visible.map(tr=>{
+      return [...tr.children].map(td=>('"'+(td.innerText||'').replace(/"/g,'""')+'"'));
+    });
 
-      const csv=[headCols.join(','), ...rows.map(r=>r.join(','))].join('\n');
+    const csv=[headCols.join(','), ...rows.map(r=>r.join(','))].join('\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
 
-      const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
-      const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='orders.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
-      const a=document.createElement('a');
-      a.href=url;
-      a.download='orders.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    btn && btn.addEventListener('click',toCSV);
-  })();
+  btn && btn.addEventListener('click',toCSV);
+})();
 </script>
 
 </body>
