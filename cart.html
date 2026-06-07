@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Checkout - B’s Beauty Blossom</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cart - B’s Beauty Blossom</title>
 <link rel="stylesheet" href="style.css">
 
-<!-- Firebase RTDB only -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -20,13 +20,27 @@
   color: #b30000;
   font-weight: bold;
 }
+.cart-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.qty-btn {
+  min-width: 34px;
+  padding: 6px 10px;
+}
 </style>
-
 </head>
+
 <body>
 <header>
   <nav class="navbar">
-    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
+    <div class="logo">
+      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
+    </div>
+
     <ul class="nav-links">
       <li class="nav-close" aria-label="Close menu">&times;</li>
       <li><a href="index.html">Home</a></li>
@@ -39,12 +53,13 @@
       <li><a class="active" href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
       <li><a href="admin.html">Admin</a></li>
     </ul>
+
     <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
-  </nav><div id="nav-overlay"></div>
+  </nav>
 </header>
 
 <section class="section">
-  <h1>Checkout</h1>
+  <h1>Cart & Checkout</h1>
 
   <div id="cart-items" class="cart-list"></div>
 
@@ -57,9 +72,9 @@
   <h2 style="margin-top:20px">Delivery Method</h2>
 
   <form id="checkout-form">
-    <label><input type="radio" name="delivery" value="Pick Up" required> Pick Up (Free)</label><br>
-    <label><input type="radio" name="delivery" value="Postage"> Postage (+Rs125)</label><br>
-    <label><input type="radio" name="delivery" value="Delivery"> Delivery (+Rs150)</label><br><br>
+    <label><input type="radio" name="delivery" value="pickup" required> Pick Up (Free)</label><br>
+    <label><input type="radio" name="delivery" value="postage"> Postage (+Rs125)</label><br>
+    <label><input type="radio" name="delivery" value="delivery"> Delivery (+Rs150)</label><br><br>
 
     <div id="customer-info" class="card" style="display:none;margin-top:10px">
       <h3 style="font-family:'Playfair Display',serif;margin-bottom:10px">Customer Details</h3>
@@ -70,13 +85,16 @@
       </div>
 
       <div class="row row-2">
-        <div><input type="tel" id="phone" placeholder="Phone (8 digits, starts with 5)" required></div>
-        <div id="address-wrap" style="display:none"><input type="text" id="address" placeholder="Delivery Address"></div>
+        <div><input type="tel" id="phone" placeholder="Phone, example: 58195560" required></div>
+        <div id="address-wrap" style="display:none">
+          <input type="text" id="address" placeholder="Delivery / Postage Address">
+        </div>
       </div>
 
       <h3 style="font-family:'Playfair Display',serif;margin:10px 0 8px">Payment</h3>
-      <label><input type="radio" name="payment" value="Juice" required> Juice Payment</label><br>
-      <label><input type="radio" name="payment" value="Pick Up Payment"> Pay at Pick Up</label><br>
+
+      <label><input type="radio" name="payment" value="juice" required> Juice Payment</label><br>
+      <label><input type="radio" name="payment" value="pickup_payment"> Pay at Pick Up</label><br>
 
       <div id="juice-info" class="card" style="display:none;margin-top:10px;text-align:center">
         <h4>Juice Payment Instructions</h4>
@@ -86,7 +104,9 @@
         <p>3. Send your payment receipt to <strong>+230 58195560</strong></p>
       </div>
 
-      <button type="submit" class="btn btn-primary" style="margin-top:10px">Confirm Order</button>
+      <button type="submit" id="submit-order" class="btn btn-primary" style="margin-top:10px">
+        Confirm Order
+      </button>
     </div>
   </form>
 </section>
@@ -98,187 +118,352 @@
 <script src="script.js"></script>
 
 <script>
-// ========================================================================
-//                     CART + DISCOUNT SUPPORT (FULL)
-// ========================================================================
-(function(){
-  const list = document.getElementById('cart-items');
-  const subtotalEl = document.getElementById('subtotal');
-  const shippingEl = document.getElementById('shipping');
-  const totalEl = document.getElementById('total');
-  const form = document.getElementById('checkout-form');
-  const customerInfo = document.getElementById('customer-info');
-  const addressWrap = document.getElementById('address-wrap');
-  const juiceInfo = document.getElementById('juice-info');
+(function () {
+  const list = document.getElementById("cart-items");
+  const subtotalEl = document.getElementById("subtotal");
+  const shippingEl = document.getElementById("shipping");
+  const totalEl = document.getElementById("total");
 
-  let cart=[], baseSubtotal=0, shipping=0;
+  const form = document.getElementById("checkout-form");
+  const customerInfo = document.getElementById("customer-info");
+  const addressWrap = document.getElementById("address-wrap");
+  const juiceInfo = document.getElementById("juice-info");
+  const submitBtn = document.getElementById("submit-order");
 
-  const money = n => "Rs" + Number(n||0).toFixed(0);
+  let cart = [];
+  let subtotal = 0;
+  let shipping = 0;
+  let isSubmitting = false;
 
-  const getPrice = item => {
-    if (item.discountPrice && Number(item.discountPrice) > 0) return Number(item.discountPrice);
-    return Number(item.price || 0);
-  };
+  function money(n) {
+    return "Rs" + Number(n || 0).toFixed(0);
+  }
 
-  function loadCart(){
-    cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  function getCart() {
+    try {
+      return JSON.parse(localStorage.getItem("cart") || "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  function saveCart() {
+    localStorage.setItem("cart", JSON.stringify(cart));
+    updateCartCount();
+  }
+
+  function getItemPrice(item) {
+    return Number(item.price || item.discountPrice || 0);
+  }
+
+  function getItemQuantity(item) {
+    return Math.max(1, Number(item.quantity || item.qty || 1));
+  }
+
+  function updateCartCount() {
+    const badge = document.getElementById("cart-count");
+    if (!badge) return;
+
+    const totalQty = cart.reduce((sum, item) => {
+      return sum + getItemQuantity(item);
+    }, 0);
+
+    badge.textContent = totalQty;
+  }
+
+  window.updateCartCount = updateCartCount;
+
+  function updateTotals() {
+    subtotalEl.textContent = money(subtotal);
+    shippingEl.textContent = money(shipping);
+    totalEl.textContent = money(subtotal + shipping);
+  }
+
+  function renderCart() {
+    cart = getCart();
     list.innerHTML = "";
-    baseSubtotal = 0;
+    subtotal = 0;
 
-    if (!cart.length){
+    if (!cart.length) {
       list.innerHTML = '<p class="muted">Your cart is empty.</p>';
+      customerInfo.style.display = "none";
+      updateCartCount();
       updateTotals();
       return;
     }
 
-    cart.forEach((it,i)=>{
-      const qty = Number(it.qty || it.quantity || 1);
+    cart.forEach((item, index) => {
+      const qty = getItemQuantity(item);
+      const price = getItemPrice(item);
+      const oldPrice = Number(item.oldPrice || item.basePrice || 0);
+      const lineTotal = price * qty;
 
-      const newPrice = getPrice(it);
-      const oldPrice = it.oldPrice ? Number(it.oldPrice) : null;
+      subtotal += lineTotal;
 
-      const line = newPrice * qty;
-      baseSubtotal += line;
+      const title = item.displayName || item.name || "Product";
+      const img = item.imageURL || "https://via.placeholder.com/80";
 
       const row = document.createElement("div");
       row.className = "cart-row";
+
       row.innerHTML = `
-        <img class="cart-thumb" src="${it.imageURL || 'https://via.placeholder.com/60'}">
-          
+        <img class="cart-thumb" src="${img}" alt="${title}">
+
         <div>
-          <div class="cart-title">${it.name}</div>
+          <div class="cart-title">${title}</div>
 
           <div class="cart-meta">
-            ${oldPrice ? `<span class="old-price-cart">Rs${oldPrice}</span>` : ""}
-            <span class="new-price-cart">Rs${newPrice}</span>
-             × ${qty}
+            ${item.brand ? `${item.brand}<br>` : ""}
+            ${item.size ? `Size: ${item.size}<br>` : ""}
+            ${oldPrice && oldPrice > price ? `<span class="old-price-cart">Rs${oldPrice}</span>` : ""}
+            <span class="new-price-cart">Rs${price}</span> × ${qty}
           </div>
         </div>
 
-        <div class="cart-line">${money(line)}</div>
+        <div class="cart-line">${money(lineTotal)}</div>
 
         <div class="cart-actions">
-          <button class="btn danger" data-del="${i}">Remove</button>
+          <button type="button" class="btn qty-btn" data-minus="${index}">−</button>
+          <button type="button" class="btn qty-btn" data-plus="${index}">+</button>
+          <button type="button" class="btn danger" data-remove="${index}">Remove</button>
         </div>
       `;
 
       list.appendChild(row);
     });
 
-    list.querySelectorAll("[data-del]").forEach(btn=>{
-      btn.addEventListener("click", ()=>{
-        const idx = Number(btn.getAttribute("data-del"));
-        cart.splice(idx,1);
-        localStorage.setItem("cart", JSON.stringify(cart));
-        loadCart();
-        window.updateCartCount?.();
+    list.querySelectorAll("[data-minus]").forEach(btn => {
+      btn.addEventListener("click", function () {
+        const index = Number(this.dataset.minus);
+        const qty = getItemQuantity(cart[index]);
+
+        if (qty <= 1) {
+          cart.splice(index, 1);
+        } else {
+          cart[index].quantity = qty - 1;
+        }
+
+        saveCart();
+        renderCart();
       });
     });
+
+    list.querySelectorAll("[data-plus]").forEach(btn => {
+      btn.addEventListener("click", function () {
+        const index = Number(this.dataset.plus);
+        const qty = getItemQuantity(cart[index]);
+
+        cart[index].quantity = qty + 1;
+
+        saveCart();
+        renderCart();
+      });
+    });
+
+    list.querySelectorAll("[data-remove]").forEach(btn => {
+      btn.addEventListener("click", function () {
+        const index = Number(this.dataset.remove);
+        cart.splice(index, 1);
+
+        saveCart();
+        renderCart();
+      });
+    });
+
+    updateCartCount();
+    updateTotals();
+  }
+
+  function setShipping(deliveryMethod) {
+    if (deliveryMethod === "delivery") {
+      shipping = 150;
+      addressWrap.style.display = "block";
+    } else if (deliveryMethod === "postage") {
+      shipping = 125;
+      addressWrap.style.display = "block";
+    } else {
+      shipping = 0;
+      addressWrap.style.display = "none";
+    }
 
     updateTotals();
   }
 
-  function updateTotals(){
-    subtotalEl.textContent = money(baseSubtotal);
-    shippingEl.textContent = money(shipping);
-    totalEl.textContent = money(baseSubtotal + shipping);
-  }
-
-  loadCart();
-  window.updateCartCount?.();
-
-  // DELIVERY
-  form.querySelectorAll('input[name="delivery"]').forEach(r => 
-    r.addEventListener("change",()=>{
+  form.querySelectorAll('input[name="delivery"]').forEach(radio => {
+    radio.addEventListener("change", function () {
       customerInfo.style.display = "block";
+      setShipping(this.value);
 
-      if (r.value === "Delivery"){ shipping = 150; addressWrap.style.display='block'; }
-      else if (r.value === "Postage"){ shipping = 125; addressWrap.style.display='block'; }
-      else { shipping = 0; addressWrap.style.display='none'; }
+      const juiceRadio = form.querySelector('input[name="payment"][value="juice"]');
 
-      if (r.value !== "Pick Up"){
-        form.querySelector('input[value="Juice"]').checked = true;
+      if (this.value === "delivery" || this.value === "postage") {
+        juiceRadio.checked = true;
         juiceInfo.style.display = "block";
       } else {
-        juiceInfo.style.display = 
-          form.querySelector('input[name="payment"]:checked')?.value === "Juice" 
-          ? "block" : "none";
+        juiceInfo.style.display =
+          form.querySelector('input[name="payment"]:checked')?.value === "juice"
+            ? "block"
+            : "none";
       }
+    });
+  });
 
-      updateTotals();
-    })
-  );
+  form.querySelectorAll('input[name="payment"]').forEach(radio => {
+    radio.addEventListener("change", function () {
+      juiceInfo.style.display = this.value === "juice" ? "block" : "none";
+    });
+  });
 
-  // PAYMENT
-  form.querySelectorAll('input[name="payment"]').forEach(r =>
-    r.addEventListener("change",()=>{
-      juiceInfo.style.display = r.value === "Juice" ? "block" : "none";
-    })
-  );
-
-  // VALIDATION
-  function validate(){
-    const phone = document.getElementById("phone").value.trim();
+  function validateOrder() {
+    const name = document.getElementById("name").value.trim();
     const email = document.getElementById("email").value.trim();
-    const del = form.querySelector('input[name="delivery"]:checked')?.value;
+    const phone = document.getElementById("phone").value.trim();
+    const address = document.getElementById("address").value.trim();
 
-    if (!/^5\d{7}$/.test(phone)){ alert("Phone must start with 5 and be 8 digits."); return false; }
-    if (!/@/.test(email)){ alert("Enter a valid email."); return false; }
-    if ((del==="Delivery" || del==="Postage") &&
-        form.querySelector('input[name="payment"]:checked').value !== "Juice"){
-      alert("For Delivery/Postage, payment must be Juice.");
+    const deliveryMethod = form.querySelector('input[name="delivery"]:checked')?.value;
+    const paymentMethod = form.querySelector('input[name="payment"]:checked')?.value;
+
+    if (!cart.length) {
+      alert("Cart is empty.");
       return false;
     }
+
+    if (name.length < 2) {
+      alert("Please enter your full name.");
+      return false;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      alert("Please enter a valid email.");
+      return false;
+    }
+
+    if (!/^5\d{7}$/.test(phone)) {
+      alert("Phone number must start with 5 and contain 8 digits.");
+      return false;
+    }
+
+    if ((deliveryMethod === "delivery" || deliveryMethod === "postage") && address.length < 5) {
+      alert("Please enter your address.");
+      return false;
+    }
+
+    if ((deliveryMethod === "delivery" || deliveryMethod === "postage") && paymentMethod !== "juice") {
+      alert("Delivery and postage orders must be paid by Juice.");
+      return false;
+    }
+
     return true;
   }
 
-  // SUBMIT ORDER
-  form.addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    if (!cart.length) return alert("Cart is empty.");
-    if (!validate()) return;
+  function buildOrder() {
+    const deliveryMethod = form.querySelector('input[name="delivery"]:checked').value;
+    const paymentMethod = form.querySelector('input[name="payment"]:checked').value;
 
-    const rtdb = firebase.database();
+    const customerName = document.getElementById("name").value.trim();
+    const customerEmail = document.getElementById("email").value.trim();
+    const customerPhone = document.getElementById("phone").value.trim();
+    const customerAddress = document.getElementById("address").value.trim() || "N/A";
 
-    const del = form.querySelector('input[name="delivery"]:checked').value;
-    const pay = form.querySelector('input[name="payment"]:checked').value;
+    const orderItems = cart.map(item => {
+      const qty = getItemQuantity(item);
+      const price = getItemPrice(item);
 
-    const order = {
-      items: cart.map(it => ({
-        name: it.name,
-        quantity: Number(it.qty || it.quantity || 1),
-        price: getPrice(it),
-        oldPrice: it.oldPrice || null,
-        imageURL: it.imageURL || ""
-      })),
-      delivery: del === "Delivery" ? "Delivery" : null,
-      postage: del === "Postage" ? "Postage" : null,
-      pickup: del === "Pick Up" ? "Pick Up" : null,
-      payment: pay,
+      return {
+        productId: item.productId || "",
+        name: item.name || "Product",
+        displayName: item.displayName || item.name || "Product",
+        brand: item.brand || "",
+        size: item.size || "",
+        category: item.category || "",
+        quantity: qty,
+        price: price,
+        basePrice: Number(item.basePrice || item.oldPrice || price),
+        oldPrice: item.oldPrice || null,
+        discountPrice: item.discountPrice || null,
+        lineTotal: price * qty,
+        imageURL: item.imageURL || ""
+      };
+    });
 
-      name: document.getElementById("name").value.trim(),
-      email: document.getElementById("email").value.trim(),
-      phone: document.getElementById("phone").value.trim(),
-      address: document.getElementById("address").value.trim() || "N/A",
+    return {
+      orderNumber: "BBB-" + Date.now(),
 
-      subtotal: baseSubtotal,
+      customer: {
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone,
+        address: customerAddress
+      },
+
+      name: customerName,
+      email: customerEmail,
+      phone: customerPhone,
+      address: customerAddress,
+
+      items: orderItems,
+
+      delivery: {
+        method: deliveryMethod,
+        label:
+          deliveryMethod === "pickup"
+            ? "Pick Up"
+            : deliveryMethod === "postage"
+              ? "Postage"
+              : "Delivery",
+        shippingFee: shipping
+      },
+
+      payment: {
+        method: paymentMethod,
+        label: paymentMethod === "juice" ? "Juice" : "Pay at Pick Up",
+        status: paymentMethod === "juice" ? "awaiting_receipt" : "pay_on_pickup"
+      },
+
+      subtotal: subtotal,
       shipping: shipping,
-      total: baseSubtotal + shipping,
+      total: subtotal + shipping,
 
+      status: "pending",
+      createdAt: new Date().toISOString(),
       timestamp: new Date().toISOString()
     };
+  }
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    if (isSubmitting) return;
+
+    cart = getCart();
+
+    if (!validateOrder()) return;
+
+    isSubmitting = true;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Placing order...";
 
     try {
-      await rtdb.ref("orders").push(order);
-      alert("Order confirmed! Thank you.");
+      const order = buildOrder();
+      const ref = await firebase.database().ref("orders").push(order);
+
       localStorage.removeItem("cart");
-      window.updateCartCount?.();
-      window.location.href="index.html";
-    } catch (err){
-      alert("Error saving order: " + err.message);
+      cart = [];
+      updateCartCount();
+
+      alert("Order confirmed! Your order ID is " + ref.key);
+      window.location.href = "index.html";
+    } catch (error) {
+      console.error("Order error:", error);
+      alert("Failed to place order. Please try again.");
+
+      isSubmitting = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Confirm Order";
     }
   });
 
+  renderCart();
 })();
 </script>
 
