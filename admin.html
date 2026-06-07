@@ -15,6 +15,7 @@
 
   <style>
     .hide{display:none!important}
+
     body{
       background:
         radial-gradient(1200px 600px at 20% 0%, rgba(212,175,55,.12), transparent 60%),
@@ -24,18 +25,21 @@
       overflow-x:hidden;
       min-height:100vh;
     }
+
     header{
       background:rgba(15,23,42,.88)!important;
       backdrop-filter:blur(12px);
       border-bottom:1px solid rgba(212,175,55,.25)!important;
       z-index:10000;
     }
+
     .navbar{gap:12px;position:relative;z-index:10001}
     .nav-links a{color:#f1f1f1!important}
     .nav-links a:hover,.nav-links a.active{
       background:#d4af37!important;
       color:#0b0f1a!important;
     }
+
     .nav-overlay{
       position:fixed;
       inset:0;
@@ -45,7 +49,9 @@
       pointer-events:none;
       transition:.25s ease;
     }
+
     .nav-overlay.show{opacity:1;pointer-events:auto}
+
     @media(max-width:1023px){
       .nav-links{
         position:fixed!important;
@@ -63,7 +69,9 @@
         z-index:10001!important;
         overflow-y:auto;
       }
+
       .nav-links.show{right:0!important}
+
       .hamburger{
         display:block!important;
         cursor:pointer;
@@ -71,6 +79,7 @@
         z-index:10002;
       }
     }
+
     @media(min-width:1024px){
       .nav-links{
         position:static!important;
@@ -82,6 +91,45 @@
         gap:20px!important;
       }
     }
+
+    .admin-wrap{
+      max-width:1180px;
+      margin:0 auto;
+      padding:22px 16px 34px!important;
+    }
+
+    .admin-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:16px;
+      flex-wrap:wrap;
+      margin-bottom:18px;
+    }
+
+    .admin-top h1{
+      margin:0;
+      color:#fff;
+      font-family:'Playfair Display',serif;
+    }
+
+    .admin-subtitle{
+      color:rgba(255,255,255,.65);
+      margin-top:4px;
+    }
+
+    .toolbar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      padding:12px;
+      border:1px solid rgba(212,175,55,.25);
+      border-radius:16px;
+      background:rgba(255,255,255,.04);
+      margin-bottom:16px;
+    }
+
     .btn{
       padding:.62rem .95rem;
       font-weight:700;
@@ -92,52 +140,261 @@
       border:1px solid rgba(212,175,55,.25);
       transition:.22s ease;
     }
+
     .btn:hover{
       transform:translateY(-1px);
       box-shadow:0 10px 22px rgba(0,0,0,.35),0 0 12px rgba(212,175,55,.35);
       border-color:#d4af37;
     }
+
     .btn.primary,#saveBtn,#site-save{
       background:linear-gradient(180deg,#d4af37,#b8962e)!important;
       border-color:transparent!important;
       color:#0b0f1a!important;
       box-shadow:0 10px 26px rgba(212,175,55,.25);
     }
+
     .btn.danger{
       background:linear-gradient(180deg,#ff3b5c,#c91434)!important;
       border-color:transparent!important;
       color:#fff!important;
     }
+
+    .btn.sm{
+      padding:.45rem .65rem;
+      border-radius:10px;
+      font-size:.85rem;
+    }
+
     .card{
       padding:18px;
-      border-radius:16px;
+      border-radius:18px;
       background:rgba(255,255,255,.04);
       color:#fff;
       border:1px solid rgba(212,175,55,.25);
       box-shadow:0 18px 40px rgba(0,0,0,.28);
       margin-bottom:16px;
     }
-    table{width:100%;border-collapse:collapse;color:#fff}
-    th,td{border-bottom:1px solid rgba(212,175,55,.20);padding:10px}
-    th{background:rgba(212,175,55,.10);font-weight:700}
-    tbody tr:hover{background:rgba(212,175,55,.08)}
+
+    .card h2{
+      margin:0 0 14px;
+      color:#fff;
+      font-family:'Playfair Display',serif;
+    }
+
+    .admin-section-note{
+      color:rgba(255,255,255,.62);
+      font-size:.92rem;
+      margin-top:-8px;
+      margin-bottom:14px;
+    }
+
+    .row{
+      margin-bottom:14px;
+    }
+
+    .row-2{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:14px;
+    }
+
+    .row-3{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
+    }
+
+    label{
+      display:block;
+      margin-bottom:6px;
+      color:rgba(255,255,255,.85);
+      font-weight:600;
+    }
+
     input,textarea,select{
       width:100%;
-      padding:.62rem .75rem;
+      padding:.72rem .8rem;
       border-radius:12px;
       background:rgba(0,0,0,.35);
       border:1px solid rgba(212,175,55,.25);
       color:#eee;
+      font:inherit;
     }
-    input:focus,textarea:focus,select:focus{
+
+    input:focus,
+    textarea:focus,
+    select:focus{
       border-color:#d4af37;
       box-shadow:0 0 0 4px rgba(212,175,55,.18);
       outline:none;
     }
+
+    input::placeholder,
+    textarea::placeholder{
+      color:rgba(255,255,255,.42);
+    }
+
+    .admin-tabs{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-bottom:16px;
+    }
+
+    .admin-tab{
+      border:1px solid rgba(212,175,55,.25);
+      background:rgba(255,255,255,.04);
+      color:#fff;
+      border-radius:999px;
+      padding:9px 14px;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    .admin-tab.active{
+      background:#d4af37;
+      color:#0b0f1a;
+    }
+
+    .form-block{
+      padding:14px;
+      border:1px solid rgba(212,175,55,.18);
+      border-radius:16px;
+      background:rgba(0,0,0,.14);
+      margin-bottom:14px;
+    }
+
+    .form-block h3{
+      margin:0 0 10px;
+      color:#d4af37;
+      font-size:1rem;
+    }
+
+    .variant-row{
+      display:grid;
+      grid-template-columns:1fr 140px auto;
+      gap:10px;
+      align-items:end;
+      margin-bottom:10px;
+      padding:10px;
+      border-radius:14px;
+      border:1px solid rgba(212,175,55,.18);
+      background:rgba(255,255,255,.035);
+    }
+
+    .variant-row label{
+      font-size:.85rem;
+      margin-bottom:4px;
+    }
+
+    .product-tools{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:12px;
+    }
+
+    .product-tools-left,
+    .product-tools-right{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .product-tools input,
+    .product-tools select{
+      min-width:210px;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      color:#fff;
+    }
+
+    th,td{
+      border-bottom:1px solid rgba(212,175,55,.20);
+      padding:10px;
+      vertical-align:top;
+    }
+
+    th{
+      background:rgba(212,175,55,.10);
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    tbody tr:hover{
+      background:rgba(212,175,55,.08);
+    }
+
+    .pagination{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:6px;
+      flex-wrap:wrap;
+      margin-top:14px;
+    }
+
+    .page-btn{
+      min-width:36px;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid rgba(212,175,55,.25);
+      background:rgba(255,255,255,.04);
+      color:#fff;
+      cursor:pointer;
+      font-weight:700;
+    }
+
+    .page-btn.active{
+      background:#d4af37;
+      color:#0b0f1a;
+    }
+
+    .preview{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:8px;
+    }
+
+    .preview img{
+      width:86px;
+      height:86px;
+      object-fit:cover;
+      border:1px solid rgba(212,175,55,.25);
+      border-radius:10px;
+    }
+
     .site-footer{
       background:transparent!important;
       border-top:1px solid rgba(212,175,55,.25)!important;
       color:rgba(255,255,255,.70)!important;
+    }
+
+    @media(max-width:850px){
+      .row-2,
+      .row-3,
+      .variant-row{
+        grid-template-columns:1fr;
+      }
+
+      .product-tools{
+        align-items:stretch;
+      }
+
+      .product-tools-left,
+      .product-tools-right,
+      .product-tools input,
+      .product-tools select{
+        width:100%;
+      }
     }
   </style>
 </head>
@@ -168,8 +425,14 @@
   </nav>
 </header>
 
-<main class="admin-wrap" style="padding:18px">
-  <h1>Admin Dashboard</h1>
+<main class="admin-wrap">
+
+  <div class="admin-top">
+    <div>
+      <h1>Admin Dashboard</h1>
+      <p class="admin-subtitle">Manage your homepage, products, variants, stock, and customer orders.</p>
+    </div>
+  </div>
 
   <div class="toolbar">
     <button id="btnSeeOrders" class="btn primary hide">📦 See Orders</button>
@@ -181,21 +444,41 @@
 
   <section id="auth-section" class="card">
     <h2>Admin Login</h2>
+    <p class="admin-section-note">Login with your admin email or leave fields empty to login with Google.</p>
+
     <div class="row row-2">
-      <div><label>Email</label><input id="email" type="email"></div>
-      <div><label>Password</label><input id="password" type="password"></div>
+      <div>
+        <label>Email</label>
+        <input id="email" type="email" placeholder="admin@email.com">
+      </div>
+      <div>
+        <label>Password</label>
+        <input id="password" type="password" placeholder="Password">
+      </div>
     </div>
-    <p class="muted">Leave empty to login with Google.</p>
   </section>
 
   <div id="dashboard-sections" class="hide">
 
+    <div class="admin-tabs">
+      <button class="admin-tab active" type="button" data-admin-jump="site-section">Homepage</button>
+      <button class="admin-tab" type="button" data-admin-jump="product-section">Add Product</button>
+      <button class="admin-tab" type="button" data-admin-jump="list-section">Product List</button>
+    </div>
+
     <section id="site-section" class="card">
-      <h2>Site Settings</h2>
+      <h2>Homepage Settings</h2>
+      <p class="admin-section-note">Update the main banner, homepage title, featured category, and gallery.</p>
 
       <div class="row row-2">
-        <div><label>Hero Title</label><input id="site-heroTitle"></div>
-        <div><label>Hero Subtitle</label><input id="site-heroSubtitle"></div>
+        <div>
+          <label>Hero Title</label>
+          <input id="site-heroTitle" placeholder="Welcome to B’s Beauty Blossom">
+        </div>
+        <div>
+          <label>Hero Subtitle</label>
+          <input id="site-heroSubtitle" placeholder="Curated beauty and fragrances">
+        </div>
       </div>
 
       <div class="row row-2">
@@ -210,98 +493,166 @@
             <option value="gift">Gift</option>
           </select>
         </div>
-        <div style="margin-top:26px">
-          <label><input id="site-showFeatured" type="checkbox"> Show Featured Products</label>
+        <div>
+          <label>Featured Products</label>
+          <label style="display:flex;gap:8px;align-items:center;margin-top:12px">
+            <input id="site-showFeatured" type="checkbox" style="width:auto"> Show Featured Products
+          </label>
         </div>
       </div>
 
       <div class="row">
         <label>Banner Image</label>
-        <input id="site-banner" type="file">
+        <input id="site-banner" type="file" accept="image/*">
         <div id="site-banner-preview" class="preview"></div>
       </div>
 
       <div class="row">
         <label>Gallery Images</label>
-        <input id="site-gallery" type="file" multiple>
+        <input id="site-gallery" type="file" accept="image/*" multiple>
         <div id="site-gallery-preview" class="preview"></div>
       </div>
 
-      <button id="site-save" class="btn primary">Save</button>
+      <button id="site-save" class="btn primary">Save Homepage</button>
       <button id="site-reload" class="btn">Reload</button>
       <p id="site-status" class="muted"></p>
     </section>
 
     <section id="product-section" class="card">
       <h2>Add / Edit Product</h2>
+      <p class="admin-section-note">Use product details, subcategories, and variant rows. No need to type variants manually.</p>
 
-      <div class="row">
-        <label>Category</label>
-        <select id="category">
-          <option value="perfume">Perfume</option>
-          <option value="body">Body</option>
-          <option value="skincare">Skincare</option>
-          <option value="cosmetics">Cosmetics</option>
-          <option value="jewellery">Jewellery</option>
-          <option value="gift">Gift</option>
-        </select>
+      <div class="form-block">
+        <h3>1. Product Details</h3>
+
+        <div class="row row-3">
+          <div>
+            <label>Category</label>
+            <select id="category">
+              <option value="perfume">Perfume</option>
+              <option value="body">Body</option>
+              <option value="skincare">Skincare</option>
+              <option value="cosmetics">Cosmetics</option>
+              <option value="jewellery">Jewellery</option>
+              <option value="gift">Gift</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Subcategory</label>
+            <input id="subcategory" list="subcategoryList" placeholder="Example: Body Lotion, Serum, Men Perfume">
+            <datalist id="subcategoryList">
+              <option value="Women Perfume">
+              <option value="Men Perfume">
+              <option value="Body Mist">
+              <option value="Body Lotion">
+              <option value="Body Scrub">
+              <option value="Shower Gel">
+              <option value="Cleanser">
+              <option value="Toner">
+              <option value="Serum">
+              <option value="Moisturiser">
+              <option value="Sunscreen">
+              <option value="Lipstick">
+              <option value="Foundation">
+              <option value="Earrings">
+              <option value="Bracelet">
+              <option value="Gift Set">
+            </datalist>
+          </div>
+
+          <div>
+            <label>Brand</label>
+            <input id="brand" placeholder="Example: Dior, Victoria Secret">
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Product Name</label>
+          <input id="name" placeholder="Example: Vanilla Body Lotion">
+        </div>
+
+        <div class="row">
+          <label>Description</label>
+          <textarea id="description" rows="3" placeholder="Short product description..."></textarea>
+        </div>
+
+        <div class="row">
+          <label style="display:flex;gap:8px;align-items:center">
+            <input id="active" type="checkbox" checked style="width:auto"> Product is active and visible
+          </label>
+        </div>
       </div>
 
-      <div class="row row-2">
-        <div><label>Product Name</label><input id="name" placeholder="Example: Vanilla Body Lotion"></div>
-        <div><label>Base Price (Rs)</label><input id="price" type="number"></div>
+      <div class="form-block">
+        <h3>2. Pricing</h3>
+
+        <div class="row row-2">
+          <div>
+            <label>Base Price (Rs)</label>
+            <input id="price" type="number" placeholder="Example: 450">
+          </div>
+
+          <div>
+            <label>Discount Price (optional)</label>
+            <input id="discountPrice" type="number" placeholder="Example: 399">
+          </div>
+        </div>
       </div>
 
-      <div class="row">
-        <label>Discount Price</label>
-        <input id="discountPrice" type="number" placeholder="Optional">
+      <div class="form-block">
+        <h3>3. Variants / Sizes</h3>
+        <p class="admin-section-note">Add sizes, ml, colour, set type, or any option with its price.</p>
+
+        <div id="variantRows"></div>
+
+        <button type="button" id="addVariantBtn" class="btn">+ Add Variant</button>
+
+        <textarea id="sizes" rows="4" class="hide"></textarea>
       </div>
 
-      <div class="row row-2">
-        <div><label>Brand</label><input id="brand" placeholder="Example: Dior, Victoria Secret"></div>
-        <div><label>Subcategory</label><input id="subcategory" placeholder="Example: Body Lotion, Serum, Men Perfume"></div>
-      </div>
+      <div class="form-block">
+        <h3>4. Product Images</h3>
 
-      <div class="row">
-        <label><input id="active" type="checkbox" checked> Active</label>
-      </div>
-
-      <div class="row">
-        <label>Sizes</label>
-        <textarea id="sizes" rows="4" placeholder="Example:
-100ml | 450
-250ml | 700"></textarea>
-      </div>
-
-      <div class="row">
-        <label>Description</label>
-        <textarea id="description" rows="3"></textarea>
-      </div>
-
-      <div class="row">
-        <label>Images</label>
-        <input id="images" type="file" multiple>
+        <div class="row">
+          <label>Images</label>
+          <input id="images" type="file" accept="image/*" multiple>
+        </div>
       </div>
 
       <button id="saveBtn" class="btn primary">Save Product</button>
-      <button id="resetBtn" class="btn">Reset</button>
+      <button id="resetBtn" class="btn">Reset Form</button>
       <input type="hidden" id="docId">
     </section>
 
     <section id="list-section" class="card">
       <h2>Products</h2>
+      <p class="admin-section-note">Search, filter, edit, delete, and paginate your products.</p>
 
-      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-        <select id="filterCategory">
-          <option value="all">All</option>
-          <option value="perfume">Perfume</option>
-          <option value="body">Body</option>
-          <option value="skincare">Skincare</option>
-          <option value="cosmetics">Cosmetics</option>
-          <option value="jewellery">Jewellery</option>
-          <option value="gift">Gift</option>
-        </select>
-        <button id="refreshBtn" class="btn">Refresh</button>
+      <div class="product-tools">
+        <div class="product-tools-left">
+          <input id="productSearch" type="search" placeholder="Search product, brand, or subcategory...">
+
+          <select id="filterCategory">
+            <option value="all">All Categories</option>
+            <option value="perfume">Perfume</option>
+            <option value="body">Body</option>
+            <option value="skincare">Skincare</option>
+            <option value="cosmetics">Cosmetics</option>
+            <option value="jewellery">Jewellery</option>
+            <option value="gift">Gift</option>
+          </select>
+        </div>
+
+        <div class="product-tools-right">
+          <select id="productsPerPage">
+            <option value="10">10 per page</option>
+            <option value="20">20 per page</option>
+            <option value="50">50 per page</option>
+          </select>
+
+          <button id="refreshBtn" class="btn">Refresh</button>
+        </div>
       </div>
 
       <div class="table-wrap">
@@ -309,26 +660,31 @@
           <thead>
             <tr>
               <th>Image</th>
-              <th>Name</th>
+              <th>Product</th>
+              <th>Category</th>
               <th>Subcategory</th>
-              <th>Sizes</th>
+              <th>Variants</th>
               <th>Base</th>
               <th>Discount</th>
-              <th>Active</th>
+              <th>Visible</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody id="tableBody">
-            <tr><td colspan="8">Loading…</td></tr>
+            <tr><td colspan="9">Loading…</td></tr>
           </tbody>
         </table>
       </div>
+
+      <div id="productPagination" class="pagination"></div>
     </section>
+
   </div>
 
   <section id="orders-section" class="card hide">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
       <h2>Orders</h2>
+
       <div class="filters">
         <input id="orderSearch" type="search" placeholder="Search name/email/id…">
         <select id="orderStatusFilter">
@@ -363,6 +719,7 @@
       </table>
     </div>
   </section>
+
 </main>
 
 <footer class="site-footer">
@@ -373,6 +730,18 @@
 <script src="admin.js" defer></script>
 
 <script>
+(function(){
+  document.querySelectorAll("[data-admin-jump]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll(".admin-tab").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+
+      const target = document.getElementById(btn.dataset.adminJump);
+      if (target) target.scrollIntoView({behavior:"smooth", block:"start"});
+    });
+  });
+})();
+
 (function(){
   const q=document.getElementById('orderSearch');
   const f=document.getElementById('orderStatusFilter');
