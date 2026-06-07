@@ -1,1 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Category – B’s Beauty Blossom</title>
 
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
+</head>
+
+<body>
+
+<header>
+  <nav class="navbar">
+    <div class="logo">
+      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
+    </div>
+
+    <ul class="nav-links">
+      <li class="nav-close" aria-label="Close menu">&times;</li>
+
+      <li><a href="index.html">Home</a></li>
+      <li><a data-category-link="perfume" href="category.html?type=perfume">Perfume</a></li>
+      <li><a data-category-link="body" href="category.html?type=body">Body</a></li>
+      <li><a data-category-link="skincare" href="category.html?type=skincare">Skincare</a></li>
+      <li><a data-category-link="cosmetics" href="category.html?type=cosmetics">Cosmetics</a></li>
+      <li><a data-category-link="jewellery" href="category.html?type=jewellery">Jewellery</a></li>
+      <li><a data-category-link="gift" href="category.html?type=gift">Gift</a></li>
+
+      <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
+      <li><a href="admin.html">Admin</a></li>
+    </ul>
+
+    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
+  </nav>
+
+  <div id="nav-overlay"></div>
+</header>
+
+<div class="section" style="padding-top:16px">
+  <div class="search-container">
+    <input type="text" id="search-bar" placeholder="Search by brand or product name…">
+    <ul id="search-suggestions"></ul>
+  </div>
+</div>
+
+<section class="section">
+  <h1 id="category-title">Products</h1>
+
+  <div class="card" style="display:flex;gap:10px;align-items:center;justify-content:flex-end">
+    <label class="muted" for="sort">Sort</label>
+    <select id="sort" style="max-width:180px">
+      <option value="default">Recommended</option>
+      <option value="name-asc">Name: A → Z</option>
+      <option value="price-asc">Price: Low to High</option>
+      <option value="price-desc">Price: High to Low</option>
+    </select>
+  </div>
+
+  <div id="product-grid"></div>
+</section>
+
+<footer class="site-footer">
+  <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
+</footer>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+
+  const allowedCategories = [
+    "perfume",
+    "body",
+    "skincare",
+    "cosmetics",
+    "jewellery",
+    "gift"
+  ];
+
+  let selectedCategory = (params.get("type") || "perfume").toLowerCase();
+
+  if (!allowedCategories.includes(selectedCategory)) {
+    selectedCategory = "perfume";
+  }
+
+  const categoryNames = {
+    perfume: "Perfume",
+    body: "Body",
+    skincare: "Skincare",
+    cosmetics: "Cosmetics",
+    jewellery: "Jewellery",
+    gift: "Gift"
+  };
+
+  window.PRODUCT_CATEGORY = selectedCategory;
+  window.GROUP_BY_BRAND = true;
+
+  document.title = categoryNames[selectedCategory] + " – B’s Beauty Blossom";
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const heading = document.getElementById("category-title");
+    if (heading) heading.textContent = categoryNames[selectedCategory];
+
+    document.querySelectorAll("[data-category-link]").forEach(link => {
+      if (link.dataset.categoryLink === selectedCategory) {
+        link.classList.add("active");
+      }
+    });
+  });
+</script>
+
+<script src="script.js" defer></script>
+<script src="products.js" defer></script>
+<script src="search.js" defer></script>
+
+<script>
+  document.getElementById("sort")?.addEventListener("change", function () {
+    window.sortCategoryProducts?.(this.value);
+  });
+</script>
+
+</body>
+</html>
