@@ -1,4 +1,4 @@
-/* admin.js — Auth, Admin UI, Products, Subcategories, Orders */
+/* admin.js — Auth, Admin UI, Products, Variants, Search, Pagination, Subcategories, Orders */
 
 if (!window.firebase) throw new Error("❌ Firebase SDK missing");
 
@@ -16,17 +16,9 @@ const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const show = (el) => el && el.classList.remove("hide");
 const hide = (el) => el && el.classList.add("hide");
 
-const parseSizes = (t) => String(t || "")
-  .split("\n")
-  .map(l => l.trim())
-  .filter(Boolean)
-  .map(l => {
-    const [label, p] = l.split("|").map(x => (x || "").trim());
-    return { label, price: Number(p || 0) };
-  });
-
-const renderSizes = (arr) =>
-  (arr || []).map(s => `${s.label} (Rs${isFinite(s.price) ? s.price : 0})`).join(", ");
+let allProducts = [];
+let filteredProducts = [];
+let currentPage = 1;
 
 function esc(v) {
   return String(v ?? "-").replace(/[&<>"']/g, s => ({
@@ -51,7 +43,18 @@ function fmtTime(t) {
   return isNaN(d) ? String(t) : d.toLocaleString();
 }
 
-const canSeeAdmin = (user) => !!user && ALLOWED_UIDS.includes(user.uid);
+function normalizeCategory(raw) {
+  const v = String(raw || "").toLowerCase().trim();
+  return v === "jewelry" ? "jewellery" : v;
+}
+
+function normalizeSubcategory(raw) {
+  return String(raw || "").trim();
+}
+
+function canSeeAdmin(user) {
+  return !!user && ALLOWED_UIDS.includes(user.uid);
+}
 
 async function uploadToFirebase(file, folder) {
   const uid = auth.currentUser?.uid || "anon";
@@ -62,7 +65,14 @@ async function uploadToFirebase(file, folder) {
   return await ref.getDownloadURL();
 }
 
-/* UI refs */
+function renderSizes(arr) {
+  if (!Array.isArray(arr) || !arr.length) return "-";
+  return arr.map(s => `${esc(s.label)} (Rs${Number(s.price || 0)})`).join("<br>");
+}
+
+/* =========================
+   UI refs
+========================= */
 const loginBtn = $("loginBtn");
 const logoutBtn = $("logoutBtn");
 const authStatus = $("auth-status");
@@ -80,7 +90,9 @@ const ordersSection = $("orders-section");
 const ordersStatus = $("orders-status");
 const ordersBody = $("orders-body");
 
-/* Login / Logout */
+/* =========================
+   Auth
+========================= */
 loginBtn?.addEventListener("click", async () => {
   try {
     if (emailEl?.value && passEl?.value) {
@@ -89,6 +101,7 @@ loginBtn?.addEventListener("click", async () => {
       const provider = new firebase.auth.GoogleAuthProvider();
       await auth.signInWithPopup(provider);
     }
+
     authStatus.textContent = "✅ Logged in";
   } catch (e) {
     authStatus.textContent = "❌ " + (e?.message || e);
@@ -105,7 +118,9 @@ logoutBtn?.addEventListener("click", async () => {
   }
 });
 
-/* Orders */
+/* =========================
+   Orders
+========================= */
 btnSeeOrders?.addEventListener("click", () => {
   const u = auth.currentUser;
   if (!canSeeAdmin(u)) return;
@@ -133,7 +148,8 @@ function rowHTML(id, order) {
     ? order.items.map(i => `${i.displayName || i.name || i.title || "item"} x${i.qty || i.quantity || 1}`).join(", ")
     : "";
 
-  const status = (order.status || "pending").toLowerCase();
+  const status = String(order.status || "pending").toLowerCase();
+
   const cls = {
     pending: "status pending",
     shipped: "status shipped",
@@ -152,15 +168,15 @@ function rowHTML(id, order) {
     <td data-col="total">${fmtMoney(total)}</td>
     <td data-col="address">${esc(order.address || order.customer?.address)}</td>
     <td data-col="time">${fmtTime(order.timestamp || order.createdAt)}</td>
-    <td data-col="status" data-status="${status}">
-      <span class="${cls}">${status[0].toUpperCase() + status.slice(1)}</span>
+    <td data-col="status" data-status="${esc(status)}">
+      <span class="${esc(cls)}">${esc(status[0].toUpperCase() + status.slice(1))}</span>
     </td>
     <td data-col="action">
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn sm" data-set-status="pending" data-id="${id}">Pending</button>
-        <button class="btn sm" data-set-status="shipped" data-id="${id}">Shipped</button>
-        <button class="btn sm" data-set-status="completed" data-id="${id}">Completed</button>
-        <button class="btn sm danger" data-delete-id="${id}">Delete</button>
+        <button class="btn sm" data-set-status="pending" data-id="${esc(id)}">Pending</button>
+        <button class="btn sm" data-set-status="shipped" data-id="${esc(id)}">Shipped</button>
+        <button class="btn sm" data-set-status="completed" data-id="${esc(id)}">Completed</button>
+        <button class="btn sm danger" data-delete-id="${esc(id)}">Delete</button>
       </div>
     </td>
   `;
@@ -173,6 +189,7 @@ function attachOrdersListener() {
 
   ref.on("value", snap => {
     ordersBody.innerHTML = "";
+
     const data = snap.val() || {};
     const rows = [];
 
@@ -225,7 +242,9 @@ document.addEventListener("click", async (e) => {
   }
 });
 
-/* Site Settings */
+/* =========================
+   Site Settings
+========================= */
 const site = {
   heroTitle: $("site-heroTitle"),
   heroSubtitle: $("site-heroSubtitle"),
@@ -245,6 +264,7 @@ const siteDocRef = db.collection("site").doc("home");
 async function loadSite() {
   try {
     site.status.textContent = "Loading…";
+
     const snap = await siteDocRef.get();
     const data = snap.data() || {};
 
@@ -281,7 +301,9 @@ site.saveBtn?.addEventListener("click", async () => {
     }
 
     if (site.gallery.files.length) {
-      galleryUrls = await Promise.all([...site.gallery.files].map(f => uploadToFirebase(f, "site/gallery")));
+      galleryUrls = await Promise.all(
+        [...site.gallery.files].map(f => uploadToFirebase(f, "site/gallery"))
+      );
     }
 
     const data = {
@@ -295,6 +317,7 @@ site.saveBtn?.addEventListener("click", async () => {
     if (galleryUrls.length) data.gallery = galleryUrls;
 
     await siteDocRef.set(data, { merge: true });
+
     site.status.textContent = "Saved ✓";
     loadSite();
   } catch (e) {
@@ -302,7 +325,9 @@ site.saveBtn?.addEventListener("click", async () => {
   }
 });
 
-/* Products */
+/* =========================
+   Product refs
+========================= */
 const nameEl = $("name");
 const priceEl = $("price");
 const discountPriceEl = $("discountPrice");
@@ -314,22 +339,99 @@ const categoryEl = $("category");
 const activeEl = $("active");
 const imagesEl = $("images");
 
+const variantRows = $("variantRows");
+const addVariantBtn = $("addVariantBtn");
+
 const tableBody = $("tableBody");
 const filterCategory = $("filterCategory");
+const productSearch = $("productSearch");
+const productsPerPage = $("productsPerPage");
+const productPagination = $("productPagination");
+
 const refreshBtn = $("refreshBtn");
 const resetBtn = $("resetBtn");
 const saveBtn = $("saveBtn");
 const docIdEl = $("docId");
 
-function normalizeCategory(raw) {
-  const v = (raw || "").toLowerCase().trim();
-  return v === "jewelry" ? "jewellery" : v;
+/* =========================
+   Variant builder
+========================= */
+function addVariantRow(label = "", price = "") {
+  if (!variantRows) return;
+
+  const row = document.createElement("div");
+  row.className = "variant-row";
+
+  row.innerHTML = `
+    <div>
+      <label>Variant / Size</label>
+      <input class="variant-label" type="text" placeholder="Example: 100ml, Small, Red" value="${esc(label)}">
+    </div>
+
+    <div>
+      <label>Price Rs</label>
+      <input class="variant-price" type="number" placeholder="450" value="${esc(price)}">
+    </div>
+
+    <button type="button" class="btn danger remove-variant">Remove</button>
+  `;
+
+  variantRows.appendChild(row);
+
+  row.querySelector(".remove-variant").addEventListener("click", () => {
+    row.remove();
+    syncVariantsToTextarea();
+  });
+
+  row.querySelectorAll("input").forEach(input => {
+    input.addEventListener("input", syncVariantsToTextarea);
+  });
+
+  syncVariantsToTextarea();
 }
 
-function normalizeSubcategory(raw) {
-  return String(raw || "").trim();
+function getVariantsFromRows() {
+  const rows = Array.from(document.querySelectorAll(".variant-row"));
+
+  return rows
+    .map(row => {
+      const label = row.querySelector(".variant-label")?.value.trim() || "";
+      const price = Number(row.querySelector(".variant-price")?.value || 0);
+
+      return { label, price };
+    })
+    .filter(v => v.label && Number.isFinite(v.price) && v.price > 0);
 }
 
+function syncVariantsToTextarea() {
+  const variants = getVariantsFromRows();
+
+  if (sizesEl) {
+    sizesEl.value = variants.map(v => `${v.label} | ${v.price}`).join("\n");
+  }
+}
+
+function loadVariantsIntoRows(sizes = []) {
+  if (!variantRows) return;
+
+  variantRows.innerHTML = "";
+
+  if (Array.isArray(sizes) && sizes.length) {
+    sizes.forEach(s => addVariantRow(s.label || "", s.price || ""));
+  } else {
+    addVariantRow("", "");
+  }
+
+  syncVariantsToTextarea();
+}
+
+addVariantBtn?.addEventListener("click", () => {
+  addVariantRow("", "");
+});
+
+/* =========================
+   Products
+========================= */
 function resetForm() {
   docIdEl.value = "";
   nameEl.value = "";
@@ -342,109 +444,238 @@ function resetForm() {
   categoryEl.value = "perfume";
   activeEl.checked = true;
   imagesEl.value = "";
+
+  loadVariantsIntoRows([]);
 }
 
 resetBtn?.addEventListener("click", resetForm);
 
-async function loadProducts() {
-  tableBody.innerHTML = `<tr><td colspan="8">Loading…</td></tr>`;
+function getProductsPerPage() {
+  return Number(productsPerPage?.value || 10);
+}
 
-  const cat = normalizeCategory(filterCategory.value);
+function applyProductFilters() {
+  const cat = normalizeCategory(filterCategory?.value || "all");
+  const q = String(productSearch?.value || "").toLowerCase().trim();
 
-  let snap;
-  if (cat === "all") {
-    snap = await db.collection("products").get();
-  } else {
-    snap = await db.collection("products").where("category", "==", cat).get();
-  }
+  filteredProducts = allProducts.filter(item => {
+    const p = item.data;
+
+    const matchesCategory =
+      cat === "all" || normalizeCategory(p.category) === cat;
+
+    const haystack = [
+      p.name,
+      p.brand,
+      p.subcategory,
+      p.category,
+      p.description
+    ].join(" ").toLowerCase();
+
+    const matchesSearch = !q || haystack.includes(q);
+
+    return matchesCategory && matchesSearch;
+  });
+
+  currentPage = 1;
+  renderProductsTable();
+}
+
+function renderProductsTable() {
+  const perPage = getProductsPerPage();
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / perPage));
+
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
 
   tableBody.innerHTML = "";
 
-  if (snap.empty) {
-    tableBody.innerHTML = `<tr><td colspan="8">No products found</td></tr>`;
+  if (!filteredProducts.length) {
+    tableBody.innerHTML = `<tr><td colspan="9">No products found</td></tr>`;
+    productPagination.innerHTML = "";
     return;
   }
 
-  snap.forEach(doc => {
-    const p = doc.data();
+  const start = (currentPage - 1) * perPage;
+  const pageItems = filteredProducts.slice(start, start + perPage);
+
+  pageItems.forEach(item => {
+    const doc = item;
+    const p = item.data;
+
     const img = p.imageURL || p.images?.[0] || "";
-    const isOut = (p.stockStatus || "").toLowerCase() === "out";
+    const isOut = String(p.stockStatus || "").toLowerCase() === "out";
 
     const tr = document.createElement("tr");
     tr.style.opacity = isOut ? "0.5" : "1";
 
     tr.innerHTML = `
-      <td>${img ? `<img src="${img}" width="60" height="60" style="object-fit:cover;border-radius:6px">` : ""}</td>
       <td>
-        ${esc(p.name)}
+        ${img ? `<img src="${esc(img)}" width="60" height="60" style="object-fit:cover;border-radius:6px">` : ""}
+      </td>
+
+      <td>
+        <strong>${esc(p.name)}</strong>
         <div class="muted">${esc(p.brand || "")}</div>
       </td>
+
+      <td>${esc(p.category || "-")}</td>
       <td>${esc(p.subcategory || "-")}</td>
       <td>${renderSizes(p.sizes)}</td>
       <td>Rs${Number(p.basePrice || 0).toFixed(2)}</td>
       <td>${p.discountPrice ? `Rs${p.discountPrice}` : "-"}</td>
       <td>${p.active ? "Yes" : "No"}</td>
+
       <td>
-        <button class="btn edit" data-id="${doc.id}">Edit</button>
-        <button class="btn danger delete" data-id="${doc.id}">Delete</button>
-        <button class="btn stock" data-id="${doc.id}" data-status="${isOut ? "out" : "in"}">
-          ${isOut ? "Set In Stock" : "Set Out of Stock"}
-        </button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn sm edit" data-id="${esc(doc.id)}">Edit</button>
+          <button class="btn sm danger delete" data-id="${esc(doc.id)}">Delete</button>
+          <button class="btn sm stock" data-id="${esc(doc.id)}" data-status="${isOut ? "out" : "in"}">
+            ${isOut ? "Set In Stock" : "Set Out of Stock"}
+          </button>
+        </div>
       </td>
     `;
 
     tableBody.appendChild(tr);
   });
 
-  $$(".edit").forEach(btn => btn.addEventListener("click", async () => {
-    const snap = await db.collection("products").doc(btn.dataset.id).get();
-    if (!snap.exists) return;
+  bindProductButtons();
+  renderPagination(totalPages);
+}
 
-    const p = snap.data();
+function renderPagination(totalPages) {
+  if (!productPagination) return;
 
-    docIdEl.value = snap.id;
-    nameEl.value = p.name || "";
-    priceEl.value = p.basePrice || "";
-    discountPriceEl.value = p.discountPrice || "";
-    brandEl.value = p.brand || "";
-    subcategoryEl.value = p.subcategory || "";
-    descEl.value = p.description || "";
-    sizesEl.value = (p.sizes || []).map(s => `${s.label} | ${s.price}`).join("\n");
-    categoryEl.value = normalizeCategory(p.category);
-    activeEl.checked = !!p.active;
+  productPagination.innerHTML = "";
 
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  if (totalPages <= 1) return;
+
+  const prev = document.createElement("button");
+  prev.className = "page-btn";
+  prev.textContent = "‹";
+  prev.disabled = currentPage === 1;
+  prev.addEventListener("click", () => {
+    currentPage--;
+    renderProductsTable();
+  });
+  productPagination.appendChild(prev);
+
+  for (let i = 1; i <= totalPages; i++) {
+    const btn = document.createElement("button");
+    btn.className = "page-btn" + (i === currentPage ? " active" : "");
+    btn.textContent = i;
+
+    btn.addEventListener("click", () => {
+      currentPage = i;
+      renderProductsTable();
+    });
+
+    productPagination.appendChild(btn);
+  }
+
+  const next = document.createElement("button");
+  next.className = "page-btn";
+  next.textContent = "›";
+  next.disabled = currentPage === totalPages;
+  next.addEventListener("click", () => {
+    currentPage++;
+    renderProductsTable();
+  });
+  productPagination.appendChild(next);
+}
+
+function bindProductButtons() {
+  $$(".edit").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const snap = await db.collection("products").doc(btn.dataset.id).get();
+      if (!snap.exists) return;
+
+      const p = snap.data();
+
+      docIdEl.value = snap.id;
+      nameEl.value = p.name || "";
+      priceEl.value = p.basePrice || "";
+      discountPriceEl.value = p.discountPrice || "";
+      brandEl.value = p.brand || "";
+      subcategoryEl.value = p.subcategory || "";
+      descEl.value = p.description || "";
+      categoryEl.value = normalizeCategory(p.category);
+      activeEl.checked = !!p.active;
+
+      loadVariantsIntoRows(p.sizes || []);
+
+      productSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+
+  $$(".delete").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Delete this product?")) return;
+
+      await db.collection("products").doc(btn.dataset.id).delete();
+      await loadProducts();
+    });
+  });
+
+  $$(".stock").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const next = btn.dataset.status === "out" ? "in" : "out";
+
+      await db.collection("products").doc(id).set(
+        { stockStatus: next },
+        { merge: true }
+      );
+
+      await loadProducts();
+    });
+  });
+}
+
+async function loadProducts() {
+  tableBody.innerHTML = `<tr><td colspan="9">Loading…</td></tr>`;
+
+  const snap = await db.collection("products").get();
+
+  allProducts = snap.docs.map(doc => ({
+    id: doc.id,
+    data: doc.data() || {}
   }));
 
-  $$(".delete").forEach(btn => btn.addEventListener("click", async () => {
-    if (!confirm("Delete this product?")) return;
-    await db.collection("products").doc(btn.dataset.id).delete();
-    loadProducts();
-  }));
+  allProducts.sort((a, b) => {
+    const an = String(a.data.name || "").toLowerCase();
+    const bn = String(b.data.name || "").toLowerCase();
+    return an.localeCompare(bn);
+  });
 
-  $$(".stock").forEach(btn => btn.addEventListener("click", async () => {
-    const id = btn.dataset.id;
-    const next = btn.dataset.status === "out" ? "in" : "out";
-
-    await db.collection("products").doc(id).set({ stockStatus: next }, { merge: true });
-
-    alert("Updated.");
-    loadProducts();
-  }));
+  applyProductFilters();
 }
 
 refreshBtn?.addEventListener("click", loadProducts);
-filterCategory?.addEventListener("change", loadProducts);
+filterCategory?.addEventListener("change", applyProductFilters);
+productSearch?.addEventListener("input", applyProductFilters);
+productsPerPage?.addEventListener("change", () => {
+  currentPage = 1;
+  renderProductsTable();
+});
 
 saveBtn?.addEventListener("click", async () => {
   try {
+    syncVariantsToTextarea();
+
     const id = docIdEl.value || db.collection("products").doc().id;
-    const sizes = parseSizes(sizesEl.value);
+    const sizes = getVariantsFromRows();
+
+    const basePrice = Number(priceEl.value || 0);
+    const discountPrice = discountPriceEl.value
+      ? Number(discountPriceEl.value)
+      : null;
 
     const data = {
       name: nameEl.value.trim(),
-      basePrice: Number(priceEl.value),
-      discountPrice: discountPriceEl.value ? Number(discountPriceEl.value) : null,
+      basePrice,
+      discountPrice,
       brand: brandEl.value.trim(),
       subcategory: normalizeSubcategory(subcategoryEl.value),
       sizes,
@@ -458,12 +689,26 @@ saveBtn?.addEventListener("click", async () => {
     if (!data.category) return alert("Category is required.");
     if (!data.basePrice || data.basePrice <= 0) return alert("Base price is required.");
 
+    if (discountPrice && discountPrice >= basePrice) {
+      return alert("Discount price must be lower than base price.");
+    }
+
+    if (!sizes.length) {
+      const useBase = confirm("No variants added. Use base price as one default variant?");
+      if (useBase) {
+        data.sizes = [{ label: "Default", price: basePrice }];
+      }
+    }
+
     if (!docIdEl.value) {
       data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
     }
 
     if (imagesEl.files.length) {
-      const urls = await Promise.all([...imagesEl.files].map(f => uploadToFirebase(f, "products")));
+      const urls = await Promise.all(
+        [...imagesEl.files].map(f => uploadToFirebase(f, "products"))
+      );
+
       data.images = urls;
       data.imageURL = urls[0];
     }
@@ -471,14 +716,18 @@ saveBtn?.addEventListener("click", async () => {
     await db.collection("products").doc(id).set(data, { merge: true });
 
     alert("Saved ✓");
+
     resetForm();
-    loadProducts();
+    await loadProducts();
   } catch (e) {
     alert("Save failed: " + e.message);
+    console.error(e);
   }
 });
 
-/* Auth state */
+/* =========================
+   Auth state
+========================= */
 auth.onAuthStateChanged(user => {
   const logged = !!user;
 
@@ -503,6 +752,7 @@ auth.onAuthStateChanged(user => {
     productSection.style.display = "block";
     listSection.style.display = "block";
 
+    loadVariantsIntoRows([]);
     loadSite();
     loadProducts();
   } else {
