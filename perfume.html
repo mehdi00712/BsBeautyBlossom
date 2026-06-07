@@ -1,80 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Perfume – B’s Beauty Blossom</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css"/>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="0;url=category.html?type=perfume">
+  <title>Redirecting...</title>
+
+  <script>
+    window.location.replace("category.html?type=body");
+  </script>
 </head>
+
 <body>
-
-<header>
-  <nav class="navbar">
-    <div class="logo">
-      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
-    </div>
-    <ul class="nav-links">
-      <li class="nav-close" aria-label="Close menu">&times;</li>
-      <li><a href="index.html">Home</a></li>
-      <li><a class="active" href="perfume.html">Perfume</a></li>
-      <li><a href="body.html">Body</a></li>
-      <li><a href="skincare.html">Skincare</a></li>
-      <li><a href="cosmetics.html">Cosmetics</a></li>
-      <li><a href="jewellery.html">Jewellery</a></li>
-      <li><a href="gift.html">Gift</a></li>
-      <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
-      <li><a href="admin.html">Admin</a></li>
-    </ul>
-    <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
-  </nav>
-</header>
-
-<section class="section">
-  <div class="section-header">
-    <h1 class="page-title">Perfume</h1>
-
-    <!-- Optional: a simple sort (not required for grouping) -->
-    <!--
-    <div class="sort-wrap">
-      <label for="sort">Sort</label>
-      <select id="sort">
-        <option value="recommended">Recommended</option>
-        <option value="price-asc">Price: Low → High</option>
-        <option value="price-desc">Price: High → Low</option>
-      </select>
-    </div>
-    -->
-  </div>
-
-  <!-- Search (optional, if you use global search.js) -->
-  <div class="search-container" style="margin:0 0 14px">
-    <input type="text" id="search-bar" placeholder="Search by brand or product name…">
-    <ul id="search-suggestions" class="search-suggestions"></ul>
-  </div>
-
-  <!-- BRAND GROUPS WILL RENDER HERE -->
-  <div id="brand-container"></div>
-</section>
-
-<footer class="site-footer">
-  <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
-</footer>
-
-<!-- Firebase (Compat) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js"></script>
-
-<!-- Navbar + cart badge -->
-<script src="script.js" defer></script>
-
-<!-- Category renderer (group by brand) -->
-<script>window.PRODUCT_CATEGORY='perfume';</script>
-<script src="products.js" defer></script>
-
-<!-- Optional: your global search/autocomplete -->
-<!-- <script src="search.js" defer></script> -->
-
+  <p>Redirecting to perfume products...</p>
 </body>
 </html>
