@@ -21,6 +21,12 @@ let allProducts = [];
 let filteredProducts = [];
 let currentPage = 1;
 
+let ordersListenerAttached = false;
+let allOrders = [];
+let filteredOrders = [];
+let currentOrderPage = 1;
+const ORDERS_PER_PAGE = 10;
+
 function esc(v) {
   return String(v ?? "-").replace(/[&<>"']/g, s => ({
     "&": "&amp;",
@@ -86,6 +92,17 @@ async function uploadToR2(file, folder = "products") {
 function renderSizes(arr) {
   if (!Array.isArray(arr) || !arr.length) return "-";
   return arr.map(s => `${esc(s.label)} (Rs${Number(s.price || 0)})`).join("<br>");
+}
+
+function getPaymentProofUrl(order) {
+  return (
+    order.paymentProofUrl ||
+    order.payment?.proofUrl ||
+    order.payment?.paymentProofUrl ||
+    order.payment?.paymentProof ||
+    order.proofUrl ||
+    ""
+  );
 }
 
 /* =========================
@@ -159,8 +176,6 @@ btnBack?.addEventListener("click", () => {
   show(btnSeeOrders);
 });
 
-let ordersListenerAttached = false;
-
 function rowHTML(id, order) {
   const itemsText = Array.isArray(order.items)
     ? order.items.map(i => `${i.displayName || i.name || i.title || "item"} x${i.qty || i.quantity || 1}`).join(", ")
@@ -170,12 +185,14 @@ function rowHTML(id, order) {
 
   const cls = {
     pending: "status pending",
+    pending_verification: "status pending",
     shipped: "status shipped",
     completed: "status completed"
   }[status] || "status";
 
   const phone = String(order.phone || order.customer?.phone || "").trim();
   const total = order.total ?? order.totalAmount;
+  const proofUrl = getPaymentProofUrl(order);
 
   return `
     <td data-col="id">${esc(order.orderNumber || id)}</td>
@@ -184,11 +201,22 @@ function rowHTML(id, order) {
     <td data-col="phone">${esc(phone)}</td>
     <td data-col="items">${esc(itemsText)}</td>
     <td data-col="total">${fmtMoney(total)}</td>
+
+    <td data-col="payment">
+      ${
+        proofUrl
+          ? `<a class="btn sm primary" href="${esc(proofUrl)}" target="_blank" rel="noopener">View Proof</a>`
+          : `<span class="muted">No proof</span>`
+      }
+    </td>
+
     <td data-col="address">${esc(order.address || order.customer?.address)}</td>
     <td data-col="time">${fmtTime(order.timestamp || order.createdAt)}</td>
+
     <td data-col="status" data-status="${esc(status)}">
-      <span class="${esc(cls)}">${esc(status[0].toUpperCase() + status.slice(1))}</span>
+      <span class="${esc(cls)}">${esc(status.replaceAll("_", " "))}</span>
     </td>
+
     <td data-col="action">
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn sm" data-set-status="pending" data-id="${esc(id)}">Pending</button>
@@ -206,27 +234,24 @@ function attachOrdersListener() {
   const ref = firebase.database().ref("orders").limitToLast(500);
 
   ref.on("value", snap => {
-    if (!ordersBody) return;
-
-    ordersBody.innerHTML = "";
-
     const data = snap.val() || {};
-    const rows = [];
 
-    Object.entries(data).forEach(([id, order]) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = rowHTML(id, order || {});
-      rows.push([order.timestamp || order.createdAt || 0, tr]);
+    allOrders = Object.entries(data).map(([id, order]) => ({
+      id,
+      order: order || {},
+      time: order?.timestamp || order?.createdAt || 0
+    }));
+
+    allOrders.sort((a, b) => {
+      return new Date(b.time).getTime() - new Date(a.time).getTime();
     });
 
-    rows.sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
-    rows.forEach(([, tr]) => ordersBody.appendChild(tr));
+    currentOrderPage = 1;
+    applyOrderFilters();
 
-    ordersStatus.textContent = rows.length
-      ? `Loaded ${rows.length} order(s).`
+    ordersStatus.textContent = allOrders.length
+      ? `Loaded ${allOrders.length} order(s).`
       : "No orders yet.";
-
-    window.__applyOrderFilters?.();
   }, err => {
     console.error(err);
     ordersStatus.textContent = "Permission error or missing rules.";
@@ -234,6 +259,112 @@ function attachOrdersListener() {
 
   ordersListenerAttached = true;
 }
+
+function applyOrderFilters() {
+  const q = $("orderSearch");
+  const f = $("orderStatusFilter");
+
+  const txt = String(q?.value || "").toLowerCase().trim();
+  const status = String(f?.value || "").toLowerCase().trim();
+
+  filteredOrders = allOrders.filter(({ id, order }) => {
+    const proofUrl = getPaymentProofUrl(order);
+
+    const haystack = [
+      id,
+      order.orderNumber,
+      order.name,
+      order.email,
+      order.phone,
+      order.customer?.name,
+      order.customer?.email,
+      order.customer?.phone,
+      order.address,
+      order.customer?.address,
+      proofUrl
+    ].join(" ").toLowerCase();
+
+    const orderStatus = String(order.status || "pending").toLowerCase();
+
+    return (!txt || haystack.includes(txt)) && (!status || orderStatus === status);
+  });
+
+  renderOrdersPage();
+}
+
+function renderOrdersPage() {
+  if (!ordersBody) return;
+
+  ordersBody.innerHTML = "";
+
+  if (!filteredOrders.length) {
+    ordersBody.innerHTML = `<tr><td colspan="11">No orders found.</td></tr>`;
+    renderOrderPagination();
+    return;
+  }
+
+  const start = (currentOrderPage - 1) * ORDERS_PER_PAGE;
+  const pageItems = filteredOrders.slice(start, start + ORDERS_PER_PAGE);
+
+  pageItems.forEach(({ id, order }) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = rowHTML(id, order);
+    ordersBody.appendChild(tr);
+  });
+
+  renderOrderPagination();
+}
+
+function renderOrderPagination() {
+  const wrap = $("orderPagination");
+  if (!wrap) return;
+
+  const totalPages = Math.ceil(filteredOrders.length / ORDERS_PER_PAGE);
+  wrap.innerHTML = "";
+
+  if (totalPages <= 1) return;
+
+  const prev = document.createElement("button");
+  prev.className = "page-btn";
+  prev.textContent = "‹";
+  prev.disabled = currentOrderPage === 1;
+  prev.addEventListener("click", () => {
+    currentOrderPage--;
+    renderOrdersPage();
+  });
+  wrap.appendChild(prev);
+
+  for (let i = 1; i <= totalPages; i++) {
+    const btn = document.createElement("button");
+    btn.className = "page-btn" + (i === currentOrderPage ? " active" : "");
+    btn.textContent = i;
+
+    btn.addEventListener("click", () => {
+      currentOrderPage = i;
+      renderOrdersPage();
+    });
+
+    wrap.appendChild(btn);
+  }
+
+  const next = document.createElement("button");
+  next.className = "page-btn";
+  next.textContent = "›";
+  next.disabled = currentOrderPage === totalPages;
+  next.addEventListener("click", () => {
+    currentOrderPage++;
+    renderOrdersPage();
+  });
+  wrap.appendChild(next);
+}
+
+window.__applyOrderFilters = function () {
+  currentOrderPage = 1;
+  applyOrderFilters();
+};
+
+$("orderSearch")?.addEventListener("input", window.__applyOrderFilters);
+$("orderStatusFilter")?.addEventListener("change", window.__applyOrderFilters);
 
 document.addEventListener("click", async (e) => {
   const setBtn = e.target.closest("[data-set-status]");
