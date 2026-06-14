@@ -1,4 +1,6 @@
 // product-detail.js — product page interactions + clean cart saving
+// Supports: image gallery, variants/sizes, discount price, stock status, perfume details, localStorage cart
+
 (function () {
   const main = document.getElementById("product-main");
   if (!main) return;
@@ -21,6 +23,11 @@
   const brandEl = document.getElementById("product-brand");
   const descEl = document.getElementById("product-desc");
 
+  const genderEl = document.getElementById("product-gender");
+  const concentrationEl = document.getElementById("product-concentration");
+  const notesEl = document.getElementById("product-notes");
+  const stockEl = document.getElementById("product-stock");
+
   const data = window.__productData || {};
 
   function getProductId() {
@@ -28,8 +35,30 @@
     return params.get("id") || data.id || "";
   }
 
+  function escapeHtml(value = "") {
+    return String(value).replace(/[&<>"']/g, function (m) {
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[m];
+    });
+  }
+
   function money(n) {
-    return "Rs" + Number(n || 0).toFixed(0);
+    const value = Number(n || 0);
+    return "Rs" + value.toFixed(0);
+  }
+
+  function isOutOfStock() {
+    if (String(data.stockStatus || "").toLowerCase() === "out") return true;
+
+    const stock = Number(data.stock);
+    if (Number.isFinite(stock)) return stock <= 0;
+
+    return false;
   }
 
   function getSelectedOption() {
@@ -55,10 +84,7 @@
     const base = getBasePrice();
     const discount = getDiscountPrice();
 
-    if (discount > 0 && discount < base) {
-      return discount;
-    }
-
+    if (discount > 0 && discount < base) return discount;
     return base;
   }
 
@@ -73,7 +99,7 @@
     const finalPrice = getFinalPrice();
 
     if (priceLabel) {
-      priceLabel.textContent = money(finalPrice);
+      priceLabel.textContent = finalPrice > 0 ? money(finalPrice) : "Price unavailable";
     }
 
     if (oldPriceEl) {
@@ -89,9 +115,54 @@
     return finalPrice;
   }
 
+  function updateStockUI() {
+    const out = isOutOfStock();
+
+    if (stockEl) {
+      stockEl.textContent = out ? "Out of Stock" : "In Stock";
+      stockEl.classList.toggle("out", out);
+      stockEl.classList.toggle("in", !out);
+    }
+
+    if (addBtn) {
+      addBtn.disabled = out;
+      addBtn.textContent = out ? "Out of Stock" : "Add to Cart";
+      addBtn.classList.toggle("disabled", out);
+    }
+  }
+
+  function updatePerfumeInfo() {
+    if (genderEl && data.gender) {
+      genderEl.textContent = data.gender;
+    }
+
+    if (concentrationEl && data.concentration) {
+      concentrationEl.textContent = data.concentration;
+    }
+
+    if (notesEl && data.notes) {
+      const notes = data.notes;
+
+      if (typeof notes === "string") {
+        notesEl.textContent = notes;
+      } else if (typeof notes === "object") {
+        const top = Array.isArray(notes.top) ? notes.top.join(", ") : "";
+        const middle = Array.isArray(notes.middle) ? notes.middle.join(", ") : "";
+        const base = Array.isArray(notes.base) ? notes.base.join(", ") : "";
+
+        notesEl.innerHTML = `
+          ${top ? `<p><strong>Top notes:</strong> ${escapeHtml(top)}</p>` : ""}
+          ${middle ? `<p><strong>Middle notes:</strong> ${escapeHtml(middle)}</p>` : ""}
+          ${base ? `<p><strong>Base notes:</strong> ${escapeHtml(base)}</p>` : ""}
+        `;
+      }
+    }
+  }
+
   function updateCartCount() {
     try {
       const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
       const total = cart.reduce((sum, item) => {
         return sum + Number(item.quantity || item.qty || 0);
       }, 0);
@@ -108,6 +179,7 @@
 
   function bindThumbnails() {
     if (!thumbWrap || thumbWrap.dataset.bound === "1") return;
+
     thumbWrap.dataset.bound = "1";
 
     thumbWrap.addEventListener("click", function (e) {
@@ -178,6 +250,7 @@
   function bindQtyControls() {
     if (qtyMinus && qtyInput && qtyMinus.dataset.bound !== "1") {
       qtyMinus.dataset.bound = "1";
+
       qtyMinus.addEventListener("click", function () {
         const value = Number(qtyInput.value || 1);
         qtyInput.value = Math.max(1, value - 1);
@@ -186,6 +259,7 @@
 
     if (qtyPlus && qtyInput && qtyPlus.dataset.bound !== "1") {
       qtyPlus.dataset.bound = "1";
+
       qtyPlus.addEventListener("click", function () {
         const value = Number(qtyInput.value || 1);
         qtyInput.value = value + 1;
@@ -216,7 +290,8 @@
 
   function getCart() {
     try {
-      return JSON.parse(localStorage.getItem("cart") || "[]");
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      return Array.isArray(cart) ? cart : [];
     } catch {
       return [];
     }
@@ -264,12 +339,25 @@
       imageURL,
 
       category: data.category || "",
+      gender: data.gender || "",
+      concentration: data.concentration || "",
+
       addedAt: new Date().toISOString()
     };
   }
 
   function addToCart() {
+    if (isOutOfStock()) {
+      alert("This product is currently out of stock.");
+      return;
+    }
+
     const item = buildCartItem();
+
+    if (!item.productId) {
+      alert("Product ID missing.");
+      return;
+    }
 
     if (!item.price || item.price <= 0) {
       alert("This product has no valid price.");
@@ -296,7 +384,12 @@
     }
 
     saveCart(cart);
-    alert("Added to cart!");
+
+    addBtn.textContent = "Added ✓";
+
+    setTimeout(function () {
+      if (!isOutOfStock()) addBtn.textContent = "Add to Cart";
+    }, 1200);
   }
 
   function bindAddToCart() {
@@ -315,5 +408,7 @@
   bindAddToCart();
 
   updatePrice();
+  updateStockUI();
+  updatePerfumeInfo();
   updateCartCount();
 })();
