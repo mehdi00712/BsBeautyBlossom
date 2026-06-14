@@ -5,223 +5,112 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
   <title>B’s Beauty Blossom Mauritius | Perfume, Skincare, Cosmetics & Gifts</title>
-  <meta name="description" content="Shop perfumes, skincare, cosmetics, body care, jewellery and beauty gifts in Mauritius at B’s Beauty Blossom. Curated beauty products with WhatsApp support.">
-  <meta name="keywords" content="B's Beauty Blossom, perfume Mauritius, skincare Mauritius, cosmetics Mauritius, beauty shop Mauritius, body care Mauritius, jewellery Mauritius, beauty gifts Mauritius">
+  <meta name="description" content="Shop perfumes, skincare, cosmetics, body care, jewellery and beauty gifts in Mauritius at B’s Beauty Blossom.">
+  <meta name="keywords" content="B's Beauty Blossom, perfume Mauritius, skincare Mauritius, cosmetics Mauritius, beauty shop Mauritius, beauty gifts Mauritius">
   <meta name="author" content="B’s Beauty Blossom">
   <meta name="robots" content="index, follow">
 
   <meta property="og:title" content="B’s Beauty Blossom Mauritius">
-  <meta property="og:description" content="Shop perfumes, skincare, cosmetics, body care, jewellery and beauty gifts in Mauritius.">
+  <meta property="og:description" content="Perfumes, skincare, cosmetics, body care, jewellery and gifts in Mauritius.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="22.jpg">
-  <meta property="og:url" content="https://mehdi00712.github.io/BsBeautyBlossom/">
 
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="B’s Beauty Blossom Mauritius">
-  <meta name="twitter:description" content="Curated perfume, skincare, cosmetics and gifts in Mauritius.">
-  <meta name="twitter:image" content="22.jpg">
-
-  <link rel="canonical" href="https://mehdi00712.github.io/BsBeautyBlossom/">
   <link rel="icon" href="22.jpg">
-
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
-
-  <script type="application/ld+json">
-  {
-    "@context":"https://schema.org",
-    "@type":"Store",
-    "name":"B’s Beauty Blossom",
-    "description":"Perfume, skincare, cosmetics, body care, jewellery and beauty gifts in Mauritius.",
-    "url":"https://mehdi00712.github.io/BsBeautyBlossom/",
-    "sameAs":[
-      "https://www.instagram.com/bsbeautyblossom2023/",
-      "https://www.tiktok.com/@bs.beauty.blossom"
-    ],
-    "areaServed":"Mauritius",
-    "contactPoint":{
-      "@type":"ContactPoint",
-      "telephone":"+23058195560",
-      "contactType":"customer service"
-    }
-  }
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
-    .home-hero{
-      position:relative;
-      min-height:72vh;
-      display:flex;
-      align-items:center;
-      overflow:hidden;
-      background:
-        radial-gradient(circle at 20% 20%, rgba(217,108,138,.18), transparent 34%),
-        linear-gradient(135deg,#fffafc 0%,#fff 48%,#fff3f7 100%);
-      border-bottom:1px solid var(--line);
-    }
+    .home-search-shell{background:#fff;border-bottom:1px solid var(--line)}
+    .home-search{max-width:760px;margin:0 auto;padding:16px 20px;position:relative}
+    .home-search input{min-height:52px;border-radius:999px;padding:0 20px;box-shadow:var(--shadow)}
 
-    .home-hero-inner{
-      width:100%;
-      max-width:1200px;
-      margin:0 auto;
-      padding:56px 20px;
+    .wow-hero{
+      min-height:76vh;
       display:grid;
-      grid-template-columns:1.05fr .95fr;
-      gap:34px;
-      align-items:center;
-      position:relative;
-      z-index:2;
+      place-items:center;
+      background:linear-gradient(135deg,#fff 0%,#fff5f8 45%,#f8eef3 100%);
+      border-bottom:1px solid var(--line);
+      overflow:hidden;
     }
-
-    .hero-kicker{
-      display:inline-flex;
+    .wow-hero-inner{
+      max-width:1200px;
+      width:100%;
+      padding:54px 20px;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:40px;
       align-items:center;
-      gap:8px;
-      width:max-content;
+    }
+    .hero-kicker{
+      display:inline-block;
       padding:8px 14px;
       border-radius:999px;
       background:#fff;
-      border:1px solid var(--line);
       color:var(--brand);
+      border:1px solid var(--line);
       font-weight:800;
-      font-size:.85rem;
+      margin-bottom:18px;
       box-shadow:var(--shadow);
-      margin-bottom:16px;
     }
-
-    .home-hero h1{
+    .wow-hero h1{
       font-family:'Playfair Display',serif;
-      font-size:clamp(2.4rem,5vw,5rem);
+      font-size:clamp(2.5rem,5vw,5.2rem);
       line-height:.98;
       color:#1f2933;
+      margin-bottom:20px;
       letter-spacing:-1px;
-      margin-bottom:18px;
     }
-
-    .home-hero h1 span{
-      color:var(--brand);
-    }
-
-    .home-hero p{
-      font-size:1.08rem;
+    .wow-hero h1 span{color:var(--brand)}
+    .wow-hero p{
+      max-width:570px;
       color:#4b5563;
-      max-width:580px;
+      font-size:1.08rem;
       margin-bottom:24px;
     }
-
-    .hero-actions{
-      display:flex;
-      gap:12px;
-      flex-wrap:wrap;
-      align-items:center;
-      margin-bottom:26px;
-    }
-
+    .hero-actions{display:flex;gap:12px;flex-wrap:wrap}
     .hero-btn{
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      gap:8px;
       min-height:48px;
-      padding:12px 18px;
+      padding:12px 20px;
       border-radius:999px;
       font-weight:800;
       border:1px solid var(--line);
-      transition:.2s ease;
+      transition:.22s ease;
     }
+    .hero-btn.primary{background:var(--brand);color:#fff;border-color:var(--brand);box-shadow:0 14px 30px rgba(217,108,138,.28)}
+    .hero-btn.secondary{background:#fff;color:#1f2933}
+    .hero-btn:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(31,41,51,.14)}
 
-    .hero-btn.primary{
-      background:var(--brand);
-      color:#fff;
-      border-color:var(--brand);
-      box-shadow:0 12px 28px rgba(217,108,138,.26);
-    }
-
-    .hero-btn.secondary{
-      background:#fff;
-      color:#1f2933;
-    }
-
-    .hero-btn:hover,
-    .hero-stat:hover,
-    .luxury-item:hover,
-    .floating-card:hover,
-    .brand-pill:hover{
-      transform:translateY(-2px);
-      box-shadow:0 14px 28px rgba(31,41,51,.12);
-    }
-
-    .hero-stats{
-      display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
-      gap:12px;
-      max-width:560px;
-    }
-
-    .hero-stat{
-      background:rgba(255,255,255,.8);
-      border:1px solid var(--line);
-      border-radius:18px;
-      padding:14px;
-      box-shadow:var(--shadow);
-      transition:.2s ease;
-    }
-
-    .hero-stat strong{
-      display:block;
-      font-size:1.35rem;
-      color:#1f2933;
-      line-height:1;
-    }
-
-    .hero-stat span{
-      display:block;
-      color:#6b7280;
-      font-size:.86rem;
-      margin-top:5px;
-    }
-
-    .hero-visual{
+    .hero-image-wrap{
       position:relative;
-      min-height:500px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      min-height:480px;
+      display:grid;
+      place-items:center;
     }
-
     .hero-glow{
       position:absolute;
-      width:420px;
-      height:420px;
+      width:430px;
+      height:430px;
       border-radius:50%;
-      background:radial-gradient(circle,rgba(217,108,138,.25),transparent 65%);
-      filter:blur(6px);
+      background:radial-gradient(circle,rgba(217,108,138,.25),transparent 68%);
+      filter:blur(8px);
     }
-
-    .hero-img-card{
-      position:relative;
-      width:min(440px,92vw);
+    .hero-main-card{
+      width:min(440px,90vw);
       aspect-ratio:4/5;
-      border-radius:36px;
+      border-radius:34px;
       overflow:hidden;
-      background:#fff;
       border:1px solid var(--line);
+      background:#fff;
       box-shadow:0 28px 70px rgba(31,41,51,.18);
+      position:relative;
       transform:rotate(2deg);
-      display:block;
-      transition:.2s ease;
+      transition:.25s ease;
     }
-
-    .hero-img-card:hover{
-      transform:rotate(0deg) translateY(-4px);
-    }
-
-    .hero-img-card img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      filter:brightness(93%);
-    }
+    .hero-main-card:hover{transform:rotate(0deg) translateY(-5px)}
+    .hero-main-card img{width:100%;height:100%;object-fit:cover}
 
     .floating-card{
       position:absolute;
@@ -229,232 +118,155 @@
       border:1px solid var(--line);
       border-radius:20px;
       padding:14px 16px;
-      box-shadow:0 18px 44px rgba(31,41,51,.16);
+      box-shadow:0 18px 44px rgba(31,41,51,.14);
       color:#1f2933;
-      max-width:210px;
-      transition:.2s ease;
+      width:210px;
+      transition:.22s ease;
     }
+    .floating-card:hover{transform:translateY(-3px)}
+    .floating-card.one{left:0;top:85px}
+    .floating-card.two{right:0;bottom:75px}
+    .floating-card strong{display:block}
+    .floating-card span{color:#6b7280;font-size:.9rem}
 
-    .floating-card.one{
-      left:0;
-      top:80px;
-    }
-
-    .floating-card.two{
-      right:0;
-      bottom:80px;
-    }
-
-    .floating-card strong{
-      display:block;
-      font-size:.95rem;
-    }
-
-    .floating-card span{
-      color:#6b7280;
-      font-size:.85rem;
-    }
-
-    .home-search-shell{
-      background:#fff;
-      border-bottom:1px solid var(--line);
-    }
-
-    .home-search{
-      max-width:760px;
+    .trust-strip{
+      max-width:1200px;
       margin:0 auto;
-      padding:18px 20px;
-      position:relative;
+      padding:26px 20px 6px;
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:14px;
     }
-
-    .home-search input{
-      min-height:52px;
-      border-radius:999px;
-      padding-left:20px;
-      padding-right:20px;
+    .trust-card{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:18px;
       box-shadow:var(--shadow);
+      display:flex;
+      align-items:center;
+      gap:12px;
+      transition:.22s ease;
     }
+    .trust-card:hover{transform:translateY(-3px)}
+    .trust-icon{
+      width:46px;height:46px;border-radius:16px;
+      display:grid;place-items:center;
+      background:#fff3f7;
+      font-size:1.3rem;
+      flex:0 0 auto;
+    }
+    .trust-card strong{display:block;color:#1f2933}
+    .trust-card span{display:block;color:#6b7280;font-size:.9rem}
 
     .section-head{
       display:flex;
       justify-content:space-between;
       align-items:flex-end;
-      gap:18px;
-      margin-bottom:18px;
+      gap:16px;
+      margin-bottom:20px;
     }
+    .section-head p{color:#6b7280}
 
-    .section-head h2{
-      margin-bottom:4px;
-    }
-
-    .section-head p{
-      color:#6b7280;
-    }
-
-    .category-card{
-      transition:.22s ease;
-    }
-
-    .category-card:hover{
-      transform:translateY(-4px);
-    }
-
-    .luxury-strip{
-      max-width:1200px;
-      margin:0 auto;
-      padding:24px 20px 8px;
+    .premium-category-grid{
       display:grid;
       grid-template-columns:repeat(3,1fr);
-      gap:14px;
+      gap:20px;
     }
-
-    .luxury-item{
-      background:#fff;
+    .premium-category-card{
+      position:relative;
+      min-height:310px;
+      border-radius:28px;
+      overflow:hidden;
       border:1px solid var(--line);
-      border-radius:22px;
-      padding:18px;
-      display:flex;
-      gap:12px;
-      align-items:center;
+      background:#fff;
       box-shadow:var(--shadow);
-      transition:.2s ease;
+      transition:.25s ease;
     }
-
-    .luxury-icon{
-      width:44px;
-      height:44px;
-      border-radius:16px;
-      display:grid;
-      place-items:center;
-      background:#fff3f7;
-      font-size:1.35rem;
-      flex:0 0 auto;
+    .premium-category-card:hover{transform:translateY(-6px);box-shadow:0 22px 45px rgba(31,41,51,.16)}
+    .premium-category-card img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      position:absolute;
+      inset:0;
+      transition:.35s ease;
     }
-
-    .luxury-item strong{
-      color:#1f2933;
-      display:block;
+    .premium-category-card:hover img{transform:scale(1.06)}
+    .premium-category-card::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(to top,rgba(31,41,51,.68),rgba(31,41,51,.12),transparent);
     }
-
-    .luxury-item span{
-      color:#6b7280;
-      font-size:.9rem;
+    .category-content{
+      position:absolute;
+      left:20px;
+      right:20px;
+      bottom:18px;
+      z-index:2;
+      color:#fff;
     }
+    .category-content h3{
+      font-family:'Playfair Display',serif;
+      font-size:1.8rem;
+      margin-bottom:4px;
+    }
+    .category-content p{font-size:.95rem;opacity:.92}
 
-    .brand-banner{
+    .promo-banner{
       max-width:1200px;
       margin:0 auto;
       padding:20px;
     }
-
-    .brand-banner-inner{
-      background:
-        linear-gradient(135deg,rgba(217,108,138,.12),rgba(255,255,255,.95)),
-        #fff;
-      border:1px solid var(--line);
-      border-radius:28px;
-      padding:28px;
+    .promo-inner{
+      border-radius:30px;
+      padding:34px;
+      background:linear-gradient(135deg,#1f2933,#3a2a32);
+      color:#fff;
       display:grid;
       grid-template-columns:1fr auto;
-      gap:18px;
+      gap:20px;
       align-items:center;
-      box-shadow:var(--shadow);
+      box-shadow:0 24px 55px rgba(31,41,51,.22);
     }
-
-    .brand-banner h2{
+    .promo-inner h2{
+      color:#fff;
       font-family:'Playfair Display',serif;
-      color:#1f2933;
-      margin-bottom:6px;
-      font-size:1.8rem;
+      font-size:2rem;
+      margin-bottom:8px;
     }
-
-    .brand-banner p{
-      color:#6b7280;
-    }
-
-    .brand-pill-row{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-    }
-
-    .brand-pill{
+    .promo-inner p{color:#f3dfe7}
+    .promo-pills{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    .promo-pills a{
       background:#fff;
-      border:1px solid var(--line);
-      border-radius:999px;
-      padding:8px 12px;
-      font-weight:700;
       color:#1f2933;
-      transition:.2s ease;
+      padding:10px 14px;
+      border-radius:999px;
+      font-weight:800;
     }
 
-    .home-gallery-polish .product{
-      border-radius:22px;
+    .home-gallery-polish .product{border-radius:22px}
+    .home-gallery-polish .product img{height:260px}
+
+    @media(max-width:900px){
+      .wow-hero-inner{grid-template-columns:1fr;padding:34px 20px}
+      .hero-image-wrap{min-height:390px}
+      .floating-card{display:none}
+      .trust-strip{grid-template-columns:1fr}
+      .premium-category-grid{grid-template-columns:1fr 1fr}
+      .premium-category-card{min-height:250px}
+      .promo-inner{grid-template-columns:1fr}
+      .promo-pills{justify-content:flex-start}
     }
-
-    .home-gallery-polish .product img{
-      height:260px;
-    }
-
-    @media (max-width:900px){
-      .home-hero-inner{
-        grid-template-columns:1fr;
-        padding-top:34px;
-      }
-
-      .hero-visual{
-        min-height:390px;
-      }
-
-      .floating-card.one{
-        left:10px;
-        top:40px;
-      }
-
-      .floating-card.two{
-        right:10px;
-        bottom:45px;
-      }
-
-      .luxury-strip{
-        grid-template-columns:1fr;
-      }
-
-      .brand-banner-inner{
-        grid-template-columns:1fr;
-      }
-
-      .brand-pill-row{
-        justify-content:flex-start;
-      }
-    }
-
-    @media (max-width:520px){
-      .home-hero{
-        min-height:auto;
-      }
-
-      .hero-stats{
-        grid-template-columns:1fr;
-      }
-
-      .hero-visual{
-        min-height:340px;
-      }
-
-      .hero-img-card{
-        width:82vw;
-        border-radius:26px;
-      }
-
-      .floating-card{
-        display:none;
-      }
-
-      .section-head{
-        display:block;
-      }
+    @media(max-width:520px){
+      .wow-hero h1{font-size:2.6rem}
+      .hero-actions .hero-btn{width:100%}
+      .hero-image-wrap{min-height:330px}
+      .hero-main-card{width:82vw;border-radius:26px}
+      .premium-category-grid{grid-template-columns:1fr}
+      .premium-category-card{min-height:270px}
+      .section-head{display:block}
     }
   </style>
 </head>
@@ -462,12 +274,7 @@
 <body>
 <header>
   <nav class="navbar">
-    <div class="logo">
-      <a href="index.html" aria-label="B’s Beauty Blossom Home">
-        <span class="logo-mark">B’s</span> Beauty Blossom
-      </a>
-    </div>
-
+    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
     <ul class="nav-links">
       <li class="nav-close" aria-label="Close menu">&times;</li>
       <li><a class="active" href="index.html">Home</a></li>
@@ -480,7 +287,6 @@
       <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
       <li><a href="admin.html">Admin</a></li>
     </ul>
-
     <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
   </nav>
   <div id="nav-overlay"></div>
@@ -493,85 +299,65 @@
   </div>
 </div>
 
-<section id="hero" class="home-hero">
-  <div class="home-hero-inner">
+<section class="wow-hero">
+  <div class="wow-hero-inner">
     <div>
-      <div class="hero-kicker">✨ Beauty, perfume & gifts in Mauritius</div>
-
-      <h1 id="hero-title">Bloom into your <span>signature scent</span></h1>
-
-      <p id="hero-subtitle">
-        Discover perfumes, skincare, cosmetics, body care and gifts selected to make every day feel elegant.
-      </p>
+      <div class="hero-kicker">✨ Premium beauty picks in Mauritius</div>
+      <h1 id="hero-title">Find your <span>signature scent</span></h1>
+      <p id="hero-subtitle">Discover perfumes, skincare, cosmetics, body care and gifts selected to make every day feel elegant.</p>
 
       <div class="hero-actions">
         <a class="hero-btn primary" href="perfume.html">Shop Perfumes</a>
+        <a class="hero-btn secondary" href="skincare.html">Shop Skincare</a>
         <a class="hero-btn secondary" href="gift.html">Explore Gifts</a>
-        <a class="hero-btn secondary" href="cart.html">View Cart</a>
-      </div>
-
-      <div class="hero-stats">
-        <a class="hero-stat" href="perfume.html" aria-label="Shop perfume">
-          <strong>Perfume</strong>
-          <span>Shop fragrances</span>
-        </a>
-
-        <a class="hero-stat" href="skincare.html" aria-label="Shop skincare">
-          <strong>Skincare</strong>
-          <span>Glow essentials</span>
-        </a>
-
-        <a class="hero-stat" href="https://wa.me/23058195560" target="_blank" rel="noopener" aria-label="Contact B’s Beauty Blossom on WhatsApp">
-          <strong>💬</strong>
-          <span>WhatsApp support</span>
-        </a>
       </div>
     </div>
 
-    <div class="hero-visual">
+    <div class="hero-image-wrap">
       <div class="hero-glow"></div>
-
-      <a class="hero-img-card" href="perfume.html" aria-label="Shop perfume collection">
-        <img id="hero-banner" src="22.jpg" alt="Perfume and beauty collection at B’s Beauty Blossom Mauritius">
+      <a class="hero-main-card" href="perfume.html">
+        <img id="hero-banner" src="22.jpg" alt="B’s Beauty Blossom perfume collection">
       </a>
-
-      <a class="floating-card one" href="perfume.html" aria-label="Shop luxury perfume">
-        <strong>Luxury feel</strong>
-        <span>Perfumes, body care and gifts in one place.</span>
+      <a class="floating-card one" href="perfume.html">
+        <strong>Luxury Fragrances</strong>
+        <span>Discover perfumes for every mood.</span>
       </a>
-
-      <a class="floating-card two" href="cart.html" aria-label="View shopping cart">
-        <strong>Easy shopping</strong>
-        <span>Browse, add to cart and order smoothly.</span>
+      <a class="floating-card two" href="cart.html">
+        <strong>Easy Ordering</strong>
+        <span>Add to cart and send your order.</span>
       </a>
     </div>
   </div>
 </section>
 
-<section class="luxury-strip">
-  <a class="luxury-item" href="perfume.html" aria-label="Shop quality beauty products">
-    <div class="luxury-icon">✨</div>
-    <div>
-      <strong>Quality Assured</strong>
-      <span>Selected beauty products and fragrances</span>
-    </div>
+<section class="trust-strip">
+  <a class="trust-card" href="perfume.html">
+    <div class="trust-icon">✨</div>
+    <div><strong>Quality Assured</strong><span>Selected beauty products</span></div>
   </a>
+  <a class="trust-card" href="cart.html">
+    <div class="trust-icon">🛒</div>
+    <div><strong>Easy Cart</strong><span>Simple ordering process</span></div>
+  </a>
+  <a class="trust-card" href="https://wa.me/23058195560" target="_blank" rel="noopener">
+    <div class="trust-icon">💬</div>
+    <div><strong>WhatsApp Help</strong><span>Fast customer support</span></div>
+  </a>
+  <a class="trust-card" href="gift.html">
+    <div class="trust-icon">🎁</div>
+    <div><strong>Gift Ready</strong><span>Beautiful picks for gifting</span></div>
+  </a>
+</section>
 
-  <a class="luxury-item" href="cart.html" aria-label="Open cart and order">
-    <div class="luxury-icon">🚚</div>
+<section id="featured-section" class="section">
+  <div class="section-head">
     <div>
-      <strong>Easy Ordering</strong>
-      <span>Add to cart and send your order</span>
+      <h2>Featured Products</h2>
+      <p>Hand-picked favourites from the collection.</p>
     </div>
-  </a>
-
-  <a class="luxury-item" href="https://wa.me/23058195560" target="_blank" rel="noopener" aria-label="WhatsApp support">
-    <div class="luxury-icon">💬</div>
-    <div>
-      <strong>Friendly Support</strong>
-      <span>Quick help through WhatsApp</span>
-    </div>
-  </a>
+    <a class="hero-btn secondary" href="perfume.html">View All</a>
+  </div>
+  <div id="home-featured" class="product-grid"><p class="muted">Loading featured products…</p></div>
 </section>
 
 <section class="section">
@@ -582,67 +368,51 @@
     </div>
   </div>
 
-  <div class="category-grid">
-    <a class="category-card" href="perfume.html" aria-label="Shop perfumes">
-      <img src="22.jpg" alt="Perfume collection Mauritius">
-      <span>Perfume</span>
+  <div class="premium-category-grid">
+    <a class="premium-category-card" href="perfume.html">
+      <img src="22.jpg" alt="Perfume">
+      <div class="category-content"><h3>Perfume</h3><p>Luxury fragrances</p></div>
     </a>
 
-    <a class="category-card" href="body.html" aria-label="Shop body care">
-      <img src="33.jpg" alt="Body care products Mauritius">
-      <span>Body</span>
+    <a class="premium-category-card" href="body.html">
+      <img src="33.jpg" alt="Body care">
+      <div class="category-content"><h3>Body</h3><p>Body care essentials</p></div>
     </a>
 
-    <a class="category-card" href="skincare.html" aria-label="Shop skincare">
-      <img src="11.jpg" alt="Skincare products Mauritius">
-      <span>Skincare</span>
+    <a class="premium-category-card" href="skincare.html">
+      <img src="11.jpg" alt="Skincare">
+      <div class="category-content"><h3>Skincare</h3><p>Glow and care</p></div>
     </a>
 
-    <a class="category-card" href="cosmetics.html" aria-label="Shop cosmetics">
-      <img src="55.jpg" alt="Cosmetics and makeup Mauritius">
-      <span>Cosmetics</span>
+    <a class="premium-category-card" href="cosmetics.html">
+      <img src="55.jpg" alt="Cosmetics">
+      <div class="category-content"><h3>Cosmetics</h3><p>Makeup favourites</p></div>
     </a>
 
-    <a class="category-card" href="jewellery.html" aria-label="Shop jewellery">
-      <img src="66.jpg" alt="Jewellery accessories Mauritius">
-      <span>Jewellery</span>
+    <a class="premium-category-card" href="jewellery.html">
+      <img src="66.jpg" alt="Jewellery">
+      <div class="category-content"><h3>Jewellery</h3><p>Elegant accessories</p></div>
     </a>
 
-    <a class="category-card" href="gift.html" aria-label="Shop gifts">
-      <img src="44.jpg" alt="Beauty gifts Mauritius">
-      <span>Gift</span>
+    <a class="premium-category-card" href="gift.html">
+      <img src="44.jpg" alt="Gift">
+      <div class="category-content"><h3>Gifts</h3><p>Perfect beauty presents</p></div>
     </a>
   </div>
 </section>
 
-<section class="brand-banner">
-  <div class="brand-banner-inner">
+<section class="promo-banner">
+  <div class="promo-inner">
     <div>
-      <h2>Beauty that feels personal</h2>
-      <p>From everyday freshness to statement fragrances, find products that match your style.</p>
+      <h2>Beauty that feels premium</h2>
+      <p>Shop products that look beautiful, feel special, and make gifting easier.</p>
     </div>
-
-    <div class="brand-pill-row">
-      <a class="brand-pill" href="perfume.html">Perfume</a>
-      <a class="brand-pill" href="skincare.html">Skincare</a>
-      <a class="brand-pill" href="body.html">Body Care</a>
-      <a class="brand-pill" href="gift.html">Gifts</a>
+    <div class="promo-pills">
+      <a href="perfume.html">Perfume</a>
+      <a href="skincare.html">Skincare</a>
+      <a href="body.html">Body Care</a>
+      <a href="gift.html">Gifts</a>
     </div>
-  </div>
-</section>
-
-<section id="featured-section" class="section">
-  <div class="section-head">
-    <div>
-      <h2>Featured Products</h2>
-      <p>Hand-picked favourites from the collection.</p>
-    </div>
-
-    <a class="hero-btn secondary" href="perfume.html">View all</a>
-  </div>
-
-  <div id="home-featured" class="product-grid">
-    <p class="muted">Loading featured products…</p>
   </div>
 </section>
 
@@ -653,17 +423,15 @@
       <p>A preview of the beauty world inside B’s Beauty Blossom.</p>
     </div>
   </div>
-
   <div id="home-gallery" class="product-grid"></div>
 </section>
 
 <footer class="site-footer">
   <p>© 2025 B’s Beauty Blossom • Perfume, skincare, cosmetics and gifts in Mauritius</p>
-
   <div class="social-links">
-    <a href="https://wa.me/23058195560" target="_blank" rel="noopener" aria-label="WhatsApp">💬 WhatsApp</a>
-    <a href="https://www.instagram.com/bsbeautyblossom2023/" target="_blank" rel="noopener" aria-label="Instagram">📸 Instagram</a>
-    <a href="https://www.tiktok.com/@bs.beauty.blossom" target="_blank" rel="noopener" aria-label="TikTok">🎵 TikTok</a>
+    <a href="https://wa.me/23058195560" target="_blank" rel="noopener">💬 WhatsApp</a>
+    <a href="https://www.instagram.com/bsbeautyblossom2023/" target="_blank" rel="noopener">📸 Instagram</a>
+    <a href="https://www.tiktok.com/@bs.beauty.blossom" target="_blank" rel="noopener">🎵 TikTok</a>
   </div>
 </footer>
 
@@ -675,65 +443,48 @@
 
 <script>
 (function(){
-  function safeImg(url){
-    return url || "22.jpg";
-  }
-
-  function escapeHtml(value = ""){
-    return String(value).replace(/[&<>"']/g, function(m){
-      return {
-        "&":"&amp;",
-        "<":"&lt;",
-        ">":"&gt;",
-        '"':"&quot;",
-        "'":"&#39;"
-      }[m];
-    });
-  }
+  function safeImg(url){ return url || "22.jpg"; }
+  function esc(v=""){ return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
 
   function getFromPrice(p){
     const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-    const prices = sizes.map(s => Number(s && s.price || 0)).filter(n => n > 0);
-    return prices.length ? Math.min(...prices) : Number(p.basePrice || 0);
+    const prices = sizes.map(s=>Number(s?.price||0)).filter(n=>n>0);
+    return prices.length ? Math.min(...prices) : Number(p.basePrice||0);
   }
 
   function getFinalPrice(p){
     const original = getFromPrice(p);
-    const discount = Number(p.discountPrice || 0);
+    const discount = Number(p.discountPrice||0);
     return discount > 0 && discount < original ? discount : original;
   }
 
   function isOutOfStock(p){
-    if (String(p.stockStatus || "").toLowerCase() === "out") return true;
+    if(String(p.stockStatus||"").toLowerCase()==="out") return true;
     const stock = Number(p.stock);
     return Number.isFinite(stock) ? stock <= 0 : false;
   }
 
-  function productCard(id, p){
+  function productCard(id,p){
     const img = p.imageURL || (Array.isArray(p.images) && p.images[0]) || "";
     const from = getFinalPrice(p);
     const original = getFromPrice(p);
-    const discount = Number(p.discountPrice || 0);
-    const hasDiscount = discount > 0 && discount < original;
+    const discount = Number(p.discountPrice||0);
+    const sale = discount > 0 && discount < original;
     const out = isOutOfStock(p);
 
     return `
       <a class="product ${out ? "out-of-stock" : ""}" href="product.html?id=${encodeURIComponent(id)}">
         <div style="position:relative">
-          <img src="${escapeHtml(safeImg(img))}" alt="${escapeHtml(p.name || "Beauty product")}" loading="lazy">
-          ${hasDiscount ? `<span class="sale-tag">Sale</span>` : ""}
+          <img src="${esc(safeImg(img))}" alt="${esc(p.name || "Beauty product")}" loading="lazy">
+          ${sale ? `<span class="sale-tag">Sale</span>` : ""}
           ${out ? `<span class="soldout-tag">Out of Stock</span>` : ""}
         </div>
         <div class="pad">
-          ${p.brand ? `<div class="muted">${escapeHtml(p.brand)}</div>` : ""}
-          <h3>${escapeHtml(p.name || "Product")}</h3>
-          <div class="price">
-            ${from > 0 ? `From Rs${from}` : ""}
-            ${hasDiscount ? `<span class="old-price">Rs${original}</span>` : ""}
-          </div>
+          ${p.brand ? `<div class="muted">${esc(p.brand)}</div>` : ""}
+          <h3>${esc(p.name || "Product")}</h3>
+          <div class="price">${from > 0 ? `From Rs${from}` : ""}${sale ? `<span class="old-price">Rs${original}</span>` : ""}</div>
         </div>
-      </a>
-    `;
+      </a>`;
   }
 
   window.applyHomeData = async function(h){
@@ -741,51 +492,39 @@
     const sub = document.getElementById("hero-subtitle");
     const img = document.getElementById("hero-banner");
 
-    if (h.heroTitle) title.innerHTML = escapeHtml(h.heroTitle);
-    if (h.heroSubtitle) sub.textContent = h.heroSubtitle;
-    if (h.bannerImage) img.src = safeImg(h.bannerImage);
+    if(h.heroTitle) title.innerHTML = esc(h.heroTitle);
+    if(h.heroSubtitle) sub.textContent = h.heroSubtitle;
+    if(h.bannerImage) img.src = safeImg(h.bannerImage);
 
     const galleryEl = document.getElementById("home-gallery");
     galleryEl.innerHTML = "";
 
-    if (Array.isArray(h.gallery) && h.gallery.length){
-      h.gallery.slice(0, 8).forEach((u, index) => {
+    if(Array.isArray(h.gallery) && h.gallery.length){
+      h.gallery.slice(0,8).forEach((u,i)=>{
         const card = document.createElement("a");
         card.className = "product";
         card.href = "perfume.html";
-        card.innerHTML = `
-          <img src="${escapeHtml(safeImg(u))}" alt="B’s Beauty Blossom collection image ${index + 1}" loading="lazy">
-          <div class="pad">
-            <h3>Beauty Pick</h3>
-            <div class="muted">From our collection</div>
-          </div>
-        `;
+        card.innerHTML = `<img src="${esc(safeImg(u))}" alt="Beauty collection ${i+1}" loading="lazy"><div class="pad"><h3>Beauty Pick</h3><div class="muted">From our collection</div></div>`;
         galleryEl.appendChild(card);
       });
-    } else {
+    }else{
       galleryEl.innerHTML = '<p class="muted">No gallery yet.</p>';
     }
 
-    const featuredSection = document.getElementById("featured-section");
     const grid = document.getElementById("home-featured");
+    const featuredSection = document.getElementById("featured-section");
 
-    if (h.showFeatured && h.featuredCategory){
+    if(h.showFeatured && h.featuredCategory){
       const snap = await db.collection("products")
-        .where("category", "==", String(h.featuredCategory).toLowerCase())
-        .where("active", "==", true)
+        .where("category","==",String(h.featuredCategory).toLowerCase())
+        .where("active","==",true)
         .limit(8)
         .get();
 
       grid.innerHTML = "";
-
-      if (snap.empty) {
-        grid.innerHTML = '<p class="muted">No featured products.</p>';
-      } else {
-        snap.forEach(d => {
-          grid.insertAdjacentHTML("beforeend", productCard(d.id, d.data() || {}));
-        });
-      }
-    } else {
+      if(snap.empty) grid.innerHTML = '<p class="muted">No featured products.</p>';
+      else snap.forEach(d=>grid.insertAdjacentHTML("beforeend", productCard(d.id, d.data() || {})));
+    }else{
       featuredSection.style.display = "none";
     }
   };
@@ -799,12 +538,8 @@
     await window.applyHomeData(snap.exists ? snap.data() : {});
   }catch(e){
     console.error("Home load error", e);
-
-    const featured = document.getElementById("home-featured");
-    const gallery = document.getElementById("home-gallery");
-
-    if (featured) featured.innerHTML = '<p class="muted">Could not load featured products.</p>';
-    if (gallery) gallery.innerHTML = '<p class="muted">Could not load gallery.</p>';
+    document.getElementById("home-featured").innerHTML = '<p class="muted">Could not load featured products.</p>';
+    document.getElementById("home-gallery").innerHTML = '<p class="muted">Could not load gallery.</p>';
   }
 })();
 </script>
