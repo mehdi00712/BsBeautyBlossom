@@ -3,15 +3,49 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>B’s Beauty Blossom | Beauty, Perfume & Gifts</title>
 
-  <meta name="description" content="Shop curated perfumes, skincare, cosmetics, body care, jewellery and gifts at B’s Beauty Blossom.">
-  <meta property="og:title" content="B’s Beauty Blossom">
-  <meta property="og:description" content="Curated beauty, perfumes and gifts.">
+  <title>B’s Beauty Blossom Mauritius | Perfume, Skincare, Cosmetics & Gifts</title>
+  <meta name="description" content="Shop perfumes, skincare, cosmetics, body care, jewellery and beauty gifts in Mauritius at B’s Beauty Blossom. Curated beauty products with WhatsApp support.">
+  <meta name="keywords" content="B's Beauty Blossom, perfume Mauritius, skincare Mauritius, cosmetics Mauritius, beauty shop Mauritius, body care Mauritius, jewellery Mauritius, beauty gifts Mauritius">
+  <meta name="author" content="B’s Beauty Blossom">
+  <meta name="robots" content="index, follow">
+
+  <meta property="og:title" content="B’s Beauty Blossom Mauritius">
+  <meta property="og:description" content="Shop perfumes, skincare, cosmetics, body care, jewellery and beauty gifts in Mauritius.">
   <meta property="og:type" content="website">
+  <meta property="og:image" content="22.jpg">
+  <meta property="og:url" content="https://mehdi00712.github.io/BsBeautyBlossom/">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="B’s Beauty Blossom Mauritius">
+  <meta name="twitter:description" content="Curated perfume, skincare, cosmetics and gifts in Mauritius.">
+  <meta name="twitter:image" content="22.jpg">
+
+  <link rel="canonical" href="https://mehdi00712.github.io/BsBeautyBlossom/">
+  <link rel="icon" href="22.jpg">
 
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
+
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"Store",
+    "name":"B’s Beauty Blossom",
+    "description":"Perfume, skincare, cosmetics, body care, jewellery and beauty gifts in Mauritius.",
+    "url":"https://mehdi00712.github.io/BsBeautyBlossom/",
+    "sameAs":[
+      "https://www.instagram.com/bsbeautyblossom2023/",
+      "https://www.tiktok.com/@bs.beauty.blossom"
+    ],
+    "areaServed":"Mauritius",
+    "contactPoint":{
+      "@type":"ContactPoint",
+      "telephone":"+23058195560",
+      "contactType":"customer service"
+    }
+  }
+  </script>
 
   <style>
     .home-hero{
@@ -108,7 +142,11 @@
       color:#1f2933;
     }
 
-    .hero-btn:hover{
+    .hero-btn:hover,
+    .hero-stat:hover,
+    .luxury-item:hover,
+    .floating-card:hover,
+    .brand-pill:hover{
       transform:translateY(-2px);
       box-shadow:0 14px 28px rgba(31,41,51,.12);
     }
@@ -126,6 +164,7 @@
       border-radius:18px;
       padding:14px;
       box-shadow:var(--shadow);
+      transition:.2s ease;
     }
 
     .hero-stat strong{
@@ -169,6 +208,12 @@
       border:1px solid var(--line);
       box-shadow:0 28px 70px rgba(31,41,51,.18);
       transform:rotate(2deg);
+      display:block;
+      transition:.2s ease;
+    }
+
+    .hero-img-card:hover{
+      transform:rotate(0deg) translateY(-4px);
     }
 
     .hero-img-card img{
@@ -187,6 +232,7 @@
       box-shadow:0 18px 44px rgba(31,41,51,.16);
       color:#1f2933;
       max-width:210px;
+      transition:.2s ease;
     }
 
     .floating-card.one{
@@ -271,6 +317,7 @@
       gap:12px;
       align-items:center;
       box-shadow:var(--shadow);
+      transition:.2s ease;
     }
 
     .luxury-icon{
@@ -281,6 +328,7 @@
       place-items:center;
       background:#fff3f7;
       font-size:1.35rem;
+      flex:0 0 auto;
     }
 
     .luxury-item strong{
@@ -338,6 +386,7 @@
       padding:8px 12px;
       font-weight:700;
       color:#1f2933;
+      transition:.2s ease;
     }
 
     .home-gallery-polish .product{
@@ -414,7 +463,9 @@
 <header>
   <nav class="navbar">
     <div class="logo">
-      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
+      <a href="index.html" aria-label="B’s Beauty Blossom Home">
+        <span class="logo-mark">B’s</span> Beauty Blossom
+      </a>
     </div>
 
     <ul class="nav-links">
@@ -445,79 +496,82 @@
 <section id="hero" class="home-hero">
   <div class="home-hero-inner">
     <div>
-      <div class="hero-kicker">✨ Curated beauty in Mauritius</div>
+      <div class="hero-kicker">✨ Beauty, perfume & gifts in Mauritius</div>
 
       <h1 id="hero-title">Bloom into your <span>signature scent</span></h1>
 
       <p id="hero-subtitle">
-        Discover perfumes, skincare, cosmetics and gifts chosen to make every day feel elegant.
+        Discover perfumes, skincare, cosmetics, body care and gifts selected to make every day feel elegant.
       </p>
 
       <div class="hero-actions">
         <a class="hero-btn primary" href="perfume.html">Shop Perfumes</a>
         <a class="hero-btn secondary" href="gift.html">Explore Gifts</a>
+        <a class="hero-btn secondary" href="cart.html">View Cart</a>
       </div>
 
       <div class="hero-stats">
-        <div class="hero-stat">
-          <strong>100%</strong>
-          <span>Curated picks</span>
-        </div>
-        <div class="hero-stat">
-          <strong>6+</strong>
-          <span>Beauty categories</span>
-        </div>
-        <div class="hero-stat">
+        <a class="hero-stat" href="perfume.html" aria-label="Shop perfume">
+          <strong>Perfume</strong>
+          <span>Shop fragrances</span>
+        </a>
+
+        <a class="hero-stat" href="skincare.html" aria-label="Shop skincare">
+          <strong>Skincare</strong>
+          <span>Glow essentials</span>
+        </a>
+
+        <a class="hero-stat" href="https://wa.me/23058195560" target="_blank" rel="noopener" aria-label="Contact B’s Beauty Blossom on WhatsApp">
           <strong>💬</strong>
           <span>WhatsApp support</span>
-        </div>
+        </a>
       </div>
     </div>
 
     <div class="hero-visual">
       <div class="hero-glow"></div>
 
-      <div class="hero-img-card">
-        <img id="hero-banner" src="https://placehold.co/900x1100/fff3f7/d96c8a?text=B%27s+Beauty+Blossom" alt="B’s Beauty Blossom Banner">
-      </div>
+      <a class="hero-img-card" href="perfume.html" aria-label="Shop perfume collection">
+        <img id="hero-banner" src="22.jpg" alt="Perfume and beauty collection at B’s Beauty Blossom Mauritius">
+      </a>
 
-      <div class="floating-card one">
+      <a class="floating-card one" href="perfume.html" aria-label="Shop luxury perfume">
         <strong>Luxury feel</strong>
         <span>Perfumes, body care and gifts in one place.</span>
-      </div>
+      </a>
 
-      <div class="floating-card two">
+      <a class="floating-card two" href="cart.html" aria-label="View shopping cart">
         <strong>Easy shopping</strong>
         <span>Browse, add to cart and order smoothly.</span>
-      </div>
+      </a>
     </div>
   </div>
 </section>
 
 <section class="luxury-strip">
-  <div class="luxury-item">
+  <a class="luxury-item" href="perfume.html" aria-label="Shop quality beauty products">
     <div class="luxury-icon">✨</div>
     <div>
       <strong>Quality Assured</strong>
-      <span>Selected products and trusted beauty picks</span>
+      <span>Selected beauty products and fragrances</span>
     </div>
-  </div>
+  </a>
 
-  <div class="luxury-item">
+  <a class="luxury-item" href="cart.html" aria-label="Open cart and order">
     <div class="luxury-icon">🚚</div>
     <div>
-      <strong>Island-wide Options</strong>
-      <span>Pickup, postage and delivery options</span>
+      <strong>Easy Ordering</strong>
+      <span>Add to cart and send your order</span>
     </div>
-  </div>
+  </a>
 
-  <div class="luxury-item">
+  <a class="luxury-item" href="https://wa.me/23058195560" target="_blank" rel="noopener" aria-label="WhatsApp support">
     <div class="luxury-icon">💬</div>
     <div>
       <strong>Friendly Support</strong>
       <span>Quick help through WhatsApp</span>
     </div>
-  </div>
+  </a>
 </section>
 
 <section class="section">
@@ -529,33 +583,33 @@
   </div>
 
   <div class="category-grid">
-    <a class="category-card" href="perfume.html">
-      <img src="22.jpg" alt="Perfume">
+    <a class="category-card" href="perfume.html" aria-label="Shop perfumes">
+      <img src="22.jpg" alt="Perfume collection Mauritius">
       <span>Perfume</span>
     </a>
 
-    <a class="category-card" href="body.html">
-      <img src="33.jpg" alt="Body care">
+    <a class="category-card" href="body.html" aria-label="Shop body care">
+      <img src="33.jpg" alt="Body care products Mauritius">
       <span>Body</span>
     </a>
 
-    <a class="category-card" href="skincare.html">
-      <img src="11.jpg" alt="Skincare">
+    <a class="category-card" href="skincare.html" aria-label="Shop skincare">
+      <img src="11.jpg" alt="Skincare products Mauritius">
       <span>Skincare</span>
     </a>
 
-    <a class="category-card" href="cosmetics.html">
-      <img src="55.jpg" alt="Cosmetics">
+    <a class="category-card" href="cosmetics.html" aria-label="Shop cosmetics">
+      <img src="55.jpg" alt="Cosmetics and makeup Mauritius">
       <span>Cosmetics</span>
     </a>
 
-    <a class="category-card" href="jewellery.html">
-      <img src="66.jpg" alt="Jewellery">
+    <a class="category-card" href="jewellery.html" aria-label="Shop jewellery">
+      <img src="66.jpg" alt="Jewellery accessories Mauritius">
       <span>Jewellery</span>
     </a>
 
-    <a class="category-card" href="gift.html">
-      <img src="44.jpg" alt="Gift">
+    <a class="category-card" href="gift.html" aria-label="Shop gifts">
+      <img src="44.jpg" alt="Beauty gifts Mauritius">
       <span>Gift</span>
     </a>
   </div>
@@ -565,14 +619,14 @@
   <div class="brand-banner-inner">
     <div>
       <h2>Beauty that feels personal</h2>
-      <p>From everyday freshness to statement fragrances, find the product that fits your style.</p>
+      <p>From everyday freshness to statement fragrances, find products that match your style.</p>
     </div>
 
     <div class="brand-pill-row">
-      <span class="brand-pill">Perfume</span>
-      <span class="brand-pill">Skincare</span>
-      <span class="brand-pill">Body Care</span>
-      <span class="brand-pill">Gifts</span>
+      <a class="brand-pill" href="perfume.html">Perfume</a>
+      <a class="brand-pill" href="skincare.html">Skincare</a>
+      <a class="brand-pill" href="body.html">Body Care</a>
+      <a class="brand-pill" href="gift.html">Gifts</a>
     </div>
   </div>
 </section>
@@ -596,7 +650,7 @@
   <div class="section-head">
     <div>
       <h2>Our Collection</h2>
-      <p>A little preview of the beauty world inside B’s Beauty Blossom.</p>
+      <p>A preview of the beauty world inside B’s Beauty Blossom.</p>
     </div>
   </div>
 
@@ -604,12 +658,12 @@
 </section>
 
 <footer class="site-footer">
-  <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
+  <p>© 2025 B’s Beauty Blossom • Perfume, skincare, cosmetics and gifts in Mauritius</p>
 
   <div class="social-links">
-    <a href="https://wa.me/23058195560" target="_blank" aria-label="WhatsApp">💬 WhatsApp</a>
-    <a href="https://www.instagram.com/bsbeautyblossom2023/" target="_blank" aria-label="Instagram">📸 Instagram</a>
-    <a href="https://www.tiktok.com/@bs.beauty.blossom" target="_blank" aria-label="TikTok">🎵 TikTok</a>
+    <a href="https://wa.me/23058195560" target="_blank" rel="noopener" aria-label="WhatsApp">💬 WhatsApp</a>
+    <a href="https://www.instagram.com/bsbeautyblossom2023/" target="_blank" rel="noopener" aria-label="Instagram">📸 Instagram</a>
+    <a href="https://www.tiktok.com/@bs.beauty.blossom" target="_blank" rel="noopener" aria-label="TikTok">🎵 TikTok</a>
   </div>
 </footer>
 
@@ -622,7 +676,7 @@
 <script>
 (function(){
   function safeImg(url){
-    return url || "https://placehold.co/900x1100/fff3f7/d96c8a?text=B%27s+Beauty+Blossom";
+    return url || "22.jpg";
   }
 
   function escapeHtml(value = ""){
@@ -666,7 +720,7 @@
     return `
       <a class="product ${out ? "out-of-stock" : ""}" href="product.html?id=${encodeURIComponent(id)}">
         <div style="position:relative">
-          <img src="${escapeHtml(safeImg(img))}" alt="${escapeHtml(p.name || "Product")}" loading="lazy">
+          <img src="${escapeHtml(safeImg(img))}" alt="${escapeHtml(p.name || "Beauty product")}" loading="lazy">
           ${hasDiscount ? `<span class="sale-tag">Sale</span>` : ""}
           ${out ? `<span class="soldout-tag">Out of Stock</span>` : ""}
         </div>
@@ -700,7 +754,7 @@
         card.className = "product";
         card.href = "perfume.html";
         card.innerHTML = `
-          <img src="${escapeHtml(safeImg(u))}" alt="Collection image ${index + 1}" loading="lazy">
+          <img src="${escapeHtml(safeImg(u))}" alt="B’s Beauty Blossom collection image ${index + 1}" loading="lazy">
           <div class="pad">
             <h3>Beauty Pick</h3>
             <div class="muted">From our collection</div>
