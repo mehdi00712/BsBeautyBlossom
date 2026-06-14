@@ -4,7 +4,8 @@ if (!window.firebase) throw new Error("❌ Firebase SDK missing");
 
 const auth = firebase.auth();
 const db = firebase.firestore();
-const storage = firebase.storage();
+
+const WORKER_UPLOAD_URL = window.WORKER_UPLOAD_URL || "https://bbb-r2-uploader.mbhoyroo246.workers.dev";
 
 const ALLOWED_UIDS = [
   "nyQYzolZI2fLFqIkAPNHHbcSJ2p1",
@@ -56,13 +57,30 @@ function canSeeAdmin(user) {
   return !!user && ALLOWED_UIDS.includes(user.uid);
 }
 
-async function uploadToFirebase(file, folder) {
-  const uid = auth.currentUser?.uid || "anon";
-  const safeName = String(file.name || "image").replace(/[^\w.\-]+/g, "_");
-  const path = `${folder}/${uid}/${Date.now()}_${safeName}`;
-  const ref = storage.ref(path);
-  await ref.put(file);
-  return await ref.getDownloadURL();
+async function uploadToR2(file, folder = "products") {
+  if (!file) throw new Error("No file selected.");
+
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("folder", folder);
+
+  const res = await fetch(WORKER_UPLOAD_URL, {
+    method: "POST",
+    body: fd
+  });
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error("Cloudflare Worker did not return valid JSON.");
+  }
+
+  if (!res.ok || !data.ok || !data.url) {
+    throw new Error(data.error || "Cloudflare R2 upload failed.");
+  }
+
+  return data.url;
 }
 
 function renderSizes(arr) {
@@ -156,7 +174,7 @@ function rowHTML(id, order) {
     completed: "status completed"
   }[status] || "status";
 
-  const phone = (order.phone || order.customer?.phone || "").trim();
+  const phone = String(order.phone || order.customer?.phone || "").trim();
   const total = order.total ?? order.totalAmount;
 
   return `
@@ -188,6 +206,8 @@ function attachOrdersListener() {
   const ref = firebase.database().ref("orders").limitToLast(500);
 
   ref.on("value", snap => {
+    if (!ordersBody) return;
+
     ordersBody.innerHTML = "";
 
     const data = snap.val() || {};
@@ -207,6 +227,9 @@ function attachOrdersListener() {
       : "No orders yet.";
 
     window.__applyOrderFilters?.();
+  }, err => {
+    console.error(err);
+    ordersStatus.textContent = "Permission error or missing rules.";
   });
 
   ordersListenerAttached = true;
@@ -262,6 +285,8 @@ const site = {
 const siteDocRef = db.collection("site").doc("home");
 
 async function loadSite() {
+  if (!site.heroTitle || !site.heroSubtitle || !site.featuredCategory || !site.showFeatured) return;
+
   try {
     site.status.textContent = "Loading…";
 
@@ -274,15 +299,16 @@ async function loadSite() {
     site.showFeatured.checked = !!data.showFeatured;
 
     site.bannerPreview.innerHTML = data.bannerImage
-      ? `<img src="${data.bannerImage}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #ccc">`
+      ? `<img src="${esc(data.bannerImage)}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #ccc">`
       : "";
 
     site.galleryPreview.innerHTML = Array.isArray(data.gallery)
-      ? data.gallery.map(u => `<img src="${u}" style="width:86px;height:86px;border-radius:8px;border:1px solid #ccc;object-fit:cover">`).join("")
+      ? data.gallery.map(u => `<img src="${esc(u)}" style="width:86px;height:86px;border-radius:8px;border:1px solid #ccc;object-fit:cover">`).join("")
       : "";
 
     site.status.textContent = "Ready.";
   } catch (e) {
+    console.error(e);
     site.status.textContent = "Error loading site settings.";
   }
 }
@@ -296,13 +322,13 @@ site.saveBtn?.addEventListener("click", async () => {
     let bannerUrl = "";
     let galleryUrls = [];
 
-    if (site.banner.files.length) {
-      bannerUrl = await uploadToFirebase(site.banner.files[0], "site/banner");
+    if (site.banner?.files?.length) {
+      bannerUrl = await uploadToR2(site.banner.files[0], "site/banner");
     }
 
-    if (site.gallery.files.length) {
+    if (site.gallery?.files?.length) {
       galleryUrls = await Promise.all(
-        [...site.gallery.files].map(f => uploadToFirebase(f, "site/gallery"))
+        [...site.gallery.files].map(f => uploadToR2(f, "site/gallery"))
       );
     }
 
@@ -321,6 +347,7 @@ site.saveBtn?.addEventListener("click", async () => {
     site.status.textContent = "Saved ✓";
     loadSite();
   } catch (e) {
+    console.error(e);
     site.status.textContent = "Save failed: " + e.message;
   }
 });
@@ -397,7 +424,6 @@ function getVariantsFromRows() {
     .map(row => {
       const label = row.querySelector(".variant-label")?.value.trim() || "";
       const price = Number(row.querySelector(".variant-price")?.value || 0);
-
       return { label, price };
     })
     .filter(v => v.label && Number.isFinite(v.price) && v.price > 0);
@@ -433,17 +459,17 @@ addVariantBtn?.addEventListener("click", () => {
    Products
 ========================= */
 function resetForm() {
-  docIdEl.value = "";
-  nameEl.value = "";
-  priceEl.value = "";
-  discountPriceEl.value = "";
-  brandEl.value = "";
-  subcategoryEl.value = "";
-  sizesEl.value = "";
-  descEl.value = "";
-  categoryEl.value = "perfume";
-  activeEl.checked = true;
-  imagesEl.value = "";
+  if (docIdEl) docIdEl.value = "";
+  if (nameEl) nameEl.value = "";
+  if (priceEl) priceEl.value = "";
+  if (discountPriceEl) discountPriceEl.value = "";
+  if (brandEl) brandEl.value = "";
+  if (subcategoryEl) subcategoryEl.value = "";
+  if (sizesEl) sizesEl.value = "";
+  if (descEl) descEl.value = "";
+  if (categoryEl) categoryEl.value = "perfume";
+  if (activeEl) activeEl.checked = true;
+  if (imagesEl) imagesEl.value = "";
 
   loadVariantsIntoRows([]);
 }
@@ -485,6 +511,8 @@ function renderProductsTable() {
   const perPage = getProductsPerPage();
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / perPage));
 
+  if (!tableBody) return;
+
   if (currentPage > totalPages) currentPage = totalPages;
   if (currentPage < 1) currentPage = 1;
 
@@ -492,7 +520,7 @@ function renderProductsTable() {
 
   if (!filteredProducts.length) {
     tableBody.innerHTML = `<tr><td colspan="9">No products found</td></tr>`;
-    productPagination.innerHTML = "";
+    if (productPagination) productPagination.innerHTML = "";
     return;
   }
 
@@ -523,7 +551,7 @@ function renderProductsTable() {
       <td>${esc(p.subcategory || "-")}</td>
       <td>${renderSizes(p.sizes)}</td>
       <td>Rs${Number(p.basePrice || 0).toFixed(2)}</td>
-      <td>${p.discountPrice ? `Rs${p.discountPrice}` : "-"}</td>
+      <td>${p.discountPrice ? `Rs${Number(p.discountPrice).toFixed(2)}` : "-"}</td>
       <td>${p.active ? "Yes" : "No"}</td>
 
       <td>
@@ -593,15 +621,15 @@ function bindProductButtons() {
 
       const p = snap.data();
 
-      docIdEl.value = snap.id;
-      nameEl.value = p.name || "";
-      priceEl.value = p.basePrice || "";
-      discountPriceEl.value = p.discountPrice || "";
-      brandEl.value = p.brand || "";
-      subcategoryEl.value = p.subcategory || "";
-      descEl.value = p.description || "";
-      categoryEl.value = normalizeCategory(p.category);
-      activeEl.checked = !!p.active;
+      if (docIdEl) docIdEl.value = snap.id;
+      if (nameEl) nameEl.value = p.name || "";
+      if (priceEl) priceEl.value = p.basePrice || "";
+      if (discountPriceEl) discountPriceEl.value = p.discountPrice || "";
+      if (brandEl) brandEl.value = p.brand || "";
+      if (subcategoryEl) subcategoryEl.value = p.subcategory || "";
+      if (descEl) descEl.value = p.description || "";
+      if (categoryEl) categoryEl.value = normalizeCategory(p.category);
+      if (activeEl) activeEl.checked = !!p.active;
 
       loadVariantsIntoRows(p.sizes || []);
 
@@ -634,22 +662,29 @@ function bindProductButtons() {
 }
 
 async function loadProducts() {
-  tableBody.innerHTML = `<tr><td colspan="9">Loading…</td></tr>`;
+  if (!tableBody) return;
 
-  const snap = await db.collection("products").get();
+  try {
+    tableBody.innerHTML = `<tr><td colspan="9">Loading…</td></tr>`;
 
-  allProducts = snap.docs.map(doc => ({
-    id: doc.id,
-    data: doc.data() || {}
-  }));
+    const snap = await db.collection("products").get();
 
-  allProducts.sort((a, b) => {
-    const an = String(a.data.name || "").toLowerCase();
-    const bn = String(b.data.name || "").toLowerCase();
-    return an.localeCompare(bn);
-  });
+    allProducts = snap.docs.map(doc => ({
+      id: doc.id,
+      data: doc.data() || {}
+    }));
 
-  applyProductFilters();
+    allProducts.sort((a, b) => {
+      const an = String(a.data.name || "").toLowerCase();
+      const bn = String(b.data.name || "").toLowerCase();
+      return an.localeCompare(bn);
+    });
+
+    applyProductFilters();
+  } catch (e) {
+    console.error(e);
+    tableBody.innerHTML = `<tr><td colspan="9">Error loading products: ${esc(e.message)}</td></tr>`;
+  }
 }
 
 refreshBtn?.addEventListener("click", loadProducts);
@@ -668,7 +703,7 @@ saveBtn?.addEventListener("click", async () => {
     const sizes = getVariantsFromRows();
 
     const basePrice = Number(priceEl.value || 0);
-    const discountPrice = discountPriceEl.value
+    const discountPrice = discountPriceEl?.value
       ? Number(discountPriceEl.value)
       : null;
 
@@ -677,7 +712,7 @@ saveBtn?.addEventListener("click", async () => {
       basePrice,
       discountPrice,
       brand: brandEl.value.trim(),
-      subcategory: normalizeSubcategory(subcategoryEl.value),
+      subcategory: normalizeSubcategory(subcategoryEl?.value),
       sizes,
       description: descEl.value.trim(),
       category: normalizeCategory(categoryEl.value),
@@ -706,7 +741,7 @@ saveBtn?.addEventListener("click", async () => {
 
     if (imagesEl.files.length) {
       const urls = await Promise.all(
-        [...imagesEl.files].map(f => uploadToFirebase(f, "products"))
+        [...imagesEl.files].map(f => uploadToR2(f, "products"))
       );
 
       data.images = urls;
@@ -737,7 +772,7 @@ auth.onAuthStateChanged(user => {
   if (!logged) {
     authStatus.textContent = "Please sign in.";
   } else if (canSeeAdmin(user)) {
-    authStatus.textContent = `Signed in as ${user.email}`;
+    authStatus.textContent = `Signed in as ${user.email || user.uid}`;
   } else {
     authStatus.textContent = "Access denied.";
   }
