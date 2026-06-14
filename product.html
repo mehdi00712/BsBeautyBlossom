@@ -4,210 +4,397 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Product – B’s Beauty Blossom</title>
+
   <link rel="stylesheet" href="style.css"/>
+
   <style>
-    /* ✅ hard stop for horizontal overflow */
     html,body{overflow-x:hidden}
 
-    .out-of-stock .desc,
-    .out-of-stock #product-image { opacity: .6; }
-
-    .soldout-tag{
-      position:absolute;left:10px;top:10px;
-      background:#ef4444;color:#fff;font-weight:700;
-      padding:6px 10px;border-radius:999px;font-size:.9rem
+    .product-page{
+      max-width:1180px;
+      margin:0 auto;
+      padding:34px 18px;
     }
 
-    .btn[disabled], .btn[aria-disabled="true"]{
-      opacity:.6; cursor:not-allowed; pointer-events:none;
-    }
-
-    /* ✅ Better Product Page Layout (mobile friendly, premium look) */
     .product-detail{
       display:grid;
-      grid-template-columns: 1.05fr .95fr;
-      gap:22px;
+      grid-template-columns:1.05fr .95fr;
+      gap:32px;
       align-items:start;
-
-      /* ✅ stops any accidental overflow */
-      max-width:100%;
-      overflow-x:hidden;
-    }
-    @media (max-width: 900px){
-      .product-detail{ grid-template-columns: 1fr; }
     }
 
-    /* ✅ media wrapper should never overflow */
-    .product-media{
-      max-width:100%;
-      overflow:hidden;
+    .product-media,
+    .product-info{
+      min-width:0;
     }
 
-    /* ✅ FIX: centered stable image frame (no huge empty box, no spill) */
+    .media-card{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:26px;
+      box-shadow:var(--shadow);
+      padding:18px;
+    }
+
     .media-frame{
       position:relative;
       width:100%;
-      max-width:520px;       /* ✅ keeps it nicely centered */
-      margin:0 auto;         /* ✅ centers */
-      background:#fff;
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:10px;
-      box-shadow:var(--shadow);
-      overflow:hidden;
-
-      height:360px;
+      height:520px;
       display:flex;
       align-items:center;
       justify-content:center;
-    }
-    @media (max-width:600px){
-      .media-frame{ height:320px; max-width:100%; }
-    }
-
-    /* Image fills frame */
-    .product-media img#product-image{
-      width:100% !important;
-      height:100% !important;
-      object-fit:contain !important;
-      background:transparent !important;
-      border:none !important;
-      border-radius:12px;
-      padding:0 !important;
-      max-height:none !important;
-      display:block;
-      margin:0 auto;
+      background:linear-gradient(135deg,#fff7fa,#fff);
+      border-radius:22px;
+      overflow:hidden;
     }
 
-    /* ✅ thumbs centered under image + arrows ALWAYS visible */
+    #product-image{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      padding:18px;
+    }
+
+    .soldout-tag{
+      position:absolute;
+      top:16px;
+      left:16px;
+      background:#ef4444;
+      color:#fff;
+      font-weight:800;
+      padding:8px 12px;
+      border-radius:999px;
+      font-size:.9rem;
+      z-index:5;
+    }
+
+    .sale-tag-detail{
+      position:absolute;
+      top:16px;
+      right:16px;
+      background:var(--brand);
+      color:#fff;
+      font-weight:800;
+      padding:8px 12px;
+      border-radius:999px;
+      font-size:.9rem;
+      z-index:5;
+    }
+
     .thumbs-wrap{
       position:relative;
-      width:100%;
-      max-width:520px;      /* match image frame */
-      margin:12px auto 0;   /* center */
-      overflow:hidden;      /* nothing goes outside */
+      margin-top:16px;
     }
 
     .thumbs{
       display:flex;
-      flex-wrap:nowrap;
-      gap:10px;
+      gap:12px;
       overflow-x:auto;
-      overflow-y:hidden;
       scroll-behavior:smooth;
-      -webkit-overflow-scrolling:touch;
-
-      padding:8px 52px;     /* space for arrows */
+      padding:6px 46px;
       scrollbar-width:none;
     }
+
     .thumbs::-webkit-scrollbar{display:none}
 
     .thumbs img{
-      width:74px;
-      height:74px;
+      width:78px;
+      height:78px;
       object-fit:cover;
-      border-radius:12px;
+      border-radius:16px;
       border:2px solid transparent;
-      background:#fff;
+      background:#fff7fa;
       cursor:pointer;
       flex:0 0 auto;
+      padding:4px;
     }
+
     .thumbs img.active{
       border-color:var(--brand);
-      box-shadow:0 0 0 3px rgba(199,162,106,.18);
+      box-shadow:0 0 0 4px rgba(217,108,138,.14);
     }
 
     .thumb-nav{
       position:absolute;
       top:50%;
       transform:translateY(-50%);
+      width:36px;
+      height:36px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:#fff;
+      color:#1f2933;
+      font-size:22px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow:var(--shadow);
+      z-index:10;
+    }
+
+    .thumb-nav.prev{left:0}
+    .thumb-nav.next{right:0}
+    .thumb-nav:disabled{opacity:.35;cursor:not-allowed}
+
+    .product-info{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:26px;
+      box-shadow:var(--shadow);
+      padding:26px;
+      position:sticky;
+      top:92px;
+    }
+
+    .product-brand{
+      display:inline-flex;
+      background:#fff3f7;
+      color:var(--brand);
+      border:1px solid var(--line);
+      padding:7px 12px;
+      border-radius:999px;
+      font-weight:800;
+      font-size:.88rem;
+      margin-bottom:14px;
+    }
+
+    .product-info h1{
+      font-family:'Playfair Display',serif;
+      font-size:clamp(1.8rem,4vw,2.7rem);
+      line-height:1.05;
+      color:#1f2933;
+      margin-bottom:12px;
+    }
+
+    .desc{
+      color:#6b7280;
+      margin:10px 0 22px;
+      line-height:1.7;
+    }
+
+    .product-meta{
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:12px;
+      margin:18px 0;
+    }
+
+    .meta-box{
+      background:#fff7fa;
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+    }
+
+    .meta-box span{
+      display:block;
+      color:#6b7280;
+      font-size:.82rem;
+    }
+
+    .meta-box strong{
+      color:#1f2933;
+      font-size:.95rem;
+    }
+
+    .field-group{
+      margin:18px 0;
+    }
+
+    .field-group label{
+      display:block;
+      font-weight:800;
+      margin-bottom:8px;
+      color:#1f2933;
+    }
+
+    #size{
+      min-height:48px;
+      border-radius:14px;
+      background:#fff;
+    }
+
+    .price-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      margin:22px 0;
+      flex-wrap:wrap;
+    }
+
+    .price-wrap{
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+    }
+
+    .price-label{
+      font-size:.85rem;
+      color:#6b7280;
+      font-weight:700;
+    }
+
+    #price{
+      font-size:2rem;
+      font-weight:900;
+      color:var(--brand);
+      line-height:1;
+    }
+
+    #old-price{
+      color:#9ca3af;
+      text-decoration:line-through;
+      font-weight:700;
+      margin-left:8px;
+      font-size:1rem;
+    }
+
+    .qty{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      background:#fff7fa;
+      border:1px solid var(--line);
+      padding:6px;
+      border-radius:16px;
+    }
+
+    .qty button{
       width:38px;
       height:38px;
       border-radius:12px;
       border:1px solid var(--line);
       background:#fff;
-      color:#573d21;
-      font-size:22px;
-      line-height:1;
-      display:flex;          /* ✅ always show */
-      align-items:center;
-      justify-content:center;
-      box-shadow:var(--shadow);
-      z-index:80;            /* ✅ above thumbs, clickable */
-      pointer-events:auto;
-    }
-    .thumb-nav.prev{ left:8px; }
-    .thumb-nav.next{ right:8px; }
-
-    .thumb-nav:hover{ box-shadow:0 0 12px rgba(199,162,106,.35); }
-    .thumb-nav:disabled{ opacity:.35; cursor:not-allowed; box-shadow:none; }
-
-    @media (max-width:600px){
-      .thumb-nav{ width:34px; height:34px; border-radius:10px; }
-    }
-
-    /* info */
-    .product-info{
-      background:#fff;
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:16px;
-      box-shadow:var(--shadow);
-      max-width:100%;
-      overflow:hidden;
-    }
-    .product-info h1{ margin-bottom:6px; }
-    .desc{ margin:12px 0 14px; }
-
-    /* price + qty row */
-    .price-qty{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:14px;
-      margin:14px 0;
-      flex-wrap:wrap;
-    }
-    .price{
-      font-size:1.35rem;
-      font-weight:800;
-      color:var(--brand);
-    }
-
-    /* qty controls */
-    .qty{
-      display:flex;
-      align-items:center;
-      gap:10px;
-    }
-    .qty button{
-      width:42px;
-      height:42px;
-      border-radius:12px;
-      border:1px solid var(--line);
-      background:#fff;
       font-size:20px;
-      line-height:1;
-    }
-    .qty input{
-      width:78px;
-      text-align:center;
+      color:#1f2933;
       font-weight:800;
-      border-radius:12px;
     }
 
-    /* add button full width */
+    .qty input{
+      width:58px;
+      border:0;
+      background:transparent;
+      text-align:center;
+      font-weight:900;
+      color:#1f2933;
+    }
+
     #add-to-cart{
       width:100%;
-      margin-top:8px;
+      min-height:54px;
+      border-radius:18px;
+      background:linear-gradient(180deg,var(--brand),var(--brand-600));
+      color:#fff;
+      border:0;
+      font-size:1rem;
+      font-weight:900;
+      box-shadow:0 16px 32px rgba(217,108,138,.26);
+    }
+
+    #add-to-cart:hover{
+      transform:translateY(-2px);
+      box-shadow:0 20px 38px rgba(217,108,138,.34);
+    }
+
+    #add-to-cart:disabled{
+      background:#9ca3af;
+      box-shadow:none;
+      cursor:not-allowed;
+      transform:none;
+    }
+
+    .product-trust{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+      margin-top:18px;
+    }
+
+    .trust-mini{
+      text-align:center;
+      background:#fff7fa;
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px 8px;
+      color:#1f2933;
+      font-size:.82rem;
+      font-weight:800;
+    }
+
+    .out-of-stock .media-frame,
+    .out-of-stock .desc{
+      opacity:.65;
+    }
+
+    @media(max-width:900px){
+      .product-page{
+        padding:22px 14px;
+      }
+
+      .product-detail{
+        grid-template-columns:1fr;
+        gap:20px;
+      }
+
+      .product-info{
+        position:static;
+        padding:20px;
+      }
+
+      .media-frame{
+        height:390px;
+      }
+    }
+
+    @media(max-width:560px){
+      .media-card,
+      .product-info{
+        border-radius:22px;
+      }
+
+      .media-frame{
+        height:330px;
+        border-radius:18px;
+      }
+
+      #product-image{
+        padding:12px;
+      }
+
+      .product-meta{
+        grid-template-columns:1fr;
+      }
+
+      .price-row{
+        display:block;
+      }
+
+      .qty{
+        width:max-content;
+        margin-top:16px;
+      }
+
+      .product-trust{
+        grid-template-columns:1fr;
+      }
+
+      .thumbs img{
+        width:68px;
+        height:68px;
+      }
     }
   </style>
 </head>
+
 <body>
 
 <header>
   <nav class="navbar">
-    <div class="logo"><a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a></div>
+    <div class="logo">
+      <a href="index.html"><span class="logo-mark">B’s</span> Beauty Blossom</a>
+    </div>
+
     <ul class="nav-links">
       <li class="nav-close" aria-label="Close menu">&times;</li>
       <li><a href="index.html">Home</a></li>
@@ -220,48 +407,80 @@
       <li><a href="cart.html">🛒 Cart (<span id="cart-count">0</span>)</a></li>
       <li><a href="admin.html">Admin</a></li>
     </ul>
+
     <div class="hamburger" aria-label="menu" aria-expanded="false">&#9776;</div>
   </nav>
 </header>
 
-<!-- ✅ overlay should be OUTSIDE header (fix "film" on menu) -->
 <div id="navOverlay" class="nav-overlay"></div>
 
-<main class="section" id="product-main">
+<main class="product-page" id="product-main">
   <div class="product-detail" id="product-detail">
+
     <div class="product-media">
+      <div class="media-card">
+        <div class="media-frame">
+          <img id="product-image" src="https://via.placeholder.com/800x800?text=Product" alt="Product image">
+          <div id="badge-slot"></div>
+        </div>
 
-      <div class="media-frame" style="position:relative">
-        <img id="product-image" src="https://via.placeholder.com/800x800?text=Product" alt="Product image">
-        <div id="oos-badge-slot"></div>
-      </div>
-
-      <div class="thumbs-wrap">
-        <button type="button" class="thumb-nav prev" id="thumbPrev" aria-label="Scroll thumbnails left">‹</button>
-        <div id="product-thumbs" class="thumbs"></div>
-        <button type="button" class="thumb-nav next" id="thumbNext" aria-label="Scroll thumbnails right">›</button>
+        <div class="thumbs-wrap">
+          <button type="button" class="thumb-nav prev" id="thumbPrev" aria-label="Scroll thumbnails left">‹</button>
+          <div id="product-thumbs" class="thumbs"></div>
+          <button type="button" class="thumb-nav next" id="thumbNext" aria-label="Scroll thumbnails right">›</button>
+        </div>
       </div>
     </div>
 
     <div class="product-info">
+      <div id="product-brand" class="product-brand">Brand</div>
+
       <h1 id="product-name">Product name</h1>
-      <div id="product-brand" class="muted">Brand</div>
+
       <p id="product-desc" class="desc">Description</p>
 
-      <label for="size">Choose size</label>
-      <select id="size"></select>
+      <div class="product-meta">
+        <div class="meta-box">
+          <span>Availability</span>
+          <strong id="product-stock">Checking...</strong>
+        </div>
 
-      <div class="price-qty">
-        <div class="price" id="price">Rs0</div>
+        <div class="meta-box">
+          <span>Ordering</span>
+          <strong>Cart + WhatsApp</strong>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="size">Choose size</label>
+        <select id="size"></select>
+      </div>
+
+      <div class="price-row">
+        <div class="price-wrap">
+          <span class="price-label">Price</span>
+          <div>
+            <span id="price">Rs0</span>
+            <span id="old-price"></span>
+          </div>
+        </div>
+
         <div class="qty">
-          <button id="qty-minus" type="button" aria-label="decrease quantity">–</button>
+          <button id="qty-minus" type="button" aria-label="Decrease quantity">–</button>
           <input id="qty" type="number" value="1" min="1">
-          <button id="qty-plus" type="button" aria-label="increase quantity">+</button>
+          <button id="qty-plus" type="button" aria-label="Increase quantity">+</button>
         </div>
       </div>
 
       <button id="add-to-cart" class="btn">Add to Cart</button>
+
+      <div class="product-trust">
+        <div class="trust-mini">✨ Quality Pick</div>
+        <div class="trust-mini">💬 WhatsApp Help</div>
+        <div class="trust-mini">🎁 Gift Ready</div>
+      </div>
     </div>
+
   </div>
 </main>
 
@@ -269,238 +488,304 @@
   <p>© 2025 B’s Beauty Blossom • All rights reserved</p>
 </footer>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- ============================================================
-     PRODUCT LOADER WITH FULL DISCOUNT SUPPORT
-=============================================================== -->
 <script>
 (function(){
-  const $ = (id)=>document.getElementById(id);
-  const fmt = (n)=>"Rs" + Number(n||0).toFixed(0);
+  const $ = id => document.getElementById(id);
+  const fmt = n => "Rs" + Number(n || 0).toFixed(0);
+
+  function escapeHtml(value = ""){
+    return String(value).replace(/[&<>"']/g, m => ({
+      "&":"&amp;",
+      "<":"&lt;",
+      ">":"&gt;",
+      '"':"&quot;",
+      "'":"&#39;"
+    }[m]));
+  }
 
   function isOutOfStock(p){
-    if (String(p.stockStatus||"").toLowerCase() === "out") return true;
-    if (!isNaN(Number(p.stock))) return Number(p.stock) <= 0;
+    if(String(p.stockStatus || "").toLowerCase() === "out") return true;
+    const stock = Number(p.stock);
+    if(Number.isFinite(stock)) return stock <= 0;
     return false;
   }
 
-  function applyOOSUI(out){
-    const addBtn  = $("add-to-cart");
-    const detail  = $("product-detail");
-    const qty     = $("qty");
-    const minus   = $("qty-minus");
-    const plus    = $("qty-plus");
-    const badgeSlot = $("oos-badge-slot");
+  function getImages(p){
+    if(Array.isArray(p.images) && p.images.length) return p.images.filter(Boolean);
+    if(p.imageURL) return [p.imageURL];
+    return ["https://via.placeholder.com/800x800?text=Product"];
+  }
 
-    if (out){
+  function getDiscount(p){
+    const discount = Number(p.discountPrice || 0);
+    return discount > 0 ? discount : 0;
+  }
+
+  function applyStockUI(out){
+    const addBtn = $("add-to-cart");
+    const detail = $("product-detail");
+    const stock = $("product-stock");
+    const badge = $("badge-slot");
+
+    if(out){
       addBtn.textContent = "Out of Stock";
-      addBtn.setAttribute("disabled","disabled");
-
-      minus.setAttribute("disabled","disabled");
-      plus.setAttribute("disabled","disabled");
-      qty.setAttribute("disabled","disabled");
-
+      addBtn.disabled = true;
       detail.classList.add("out-of-stock");
-      badgeSlot.innerHTML = `<span class="soldout-tag">Out of Stock</span>`;
-    } else {
+      stock.textContent = "Out of Stock";
+      badge.innerHTML = `<span class="soldout-tag">Out of Stock</span>`;
+    }else{
       addBtn.textContent = "Add to Cart";
-      addBtn.removeAttribute("disabled");
-
-      minus.removeAttribute("disabled");
-      plus.removeAttribute("disabled");
-      qty.removeAttribute("disabled");
-
+      addBtn.disabled = false;
       detail.classList.remove("out-of-stock");
-      badgeSlot.innerHTML = "";
+      stock.textContent = "In Stock";
+      badge.innerHTML = "";
     }
   }
 
-  function wireQty(){
+  function bindQty(){
     const input = $("qty");
     const minus = $("qty-minus");
-    const plus  = $("qty-plus");
+    const plus = $("qty-plus");
 
-    if (!input || !minus || !plus) return;
+    minus.addEventListener("click", () => {
+      input.value = Math.max(1, Number(input.value || 1) - 1);
+    });
 
-    // ✅ prevent double-binding (product-detail.js also binds)
-    if (minus.dataset.bound === "1" || plus.dataset.bound === "1") return;
+    plus.addEventListener("click", () => {
+      input.value = Math.max(1, Number(input.value || 1) + 1);
+    });
 
-    if (!minus.dataset.bound) {
-      minus.dataset.bound = "1";
-      minus.addEventListener("click", ()=>{
-        input.value = Math.max(1, Number(input.value || 1) - 1);
-      });
-    }
-
-    if (!plus.dataset.bound) {
-      plus.dataset.bound = "1";
-      plus.addEventListener("click", ()=>{
-        input.value = Math.max(1, Number(input.value || 1) + 1);
-      });
-    }
+    input.addEventListener("input", () => {
+      if(Number(input.value) < 1 || !Number.isFinite(Number(input.value))) input.value = 1;
+    });
   }
 
-  /* ✅ arrows for thumbnail scroller */
-  function bindThumbArrows(){
+  function bindThumbs(){
     const thumbs = $("product-thumbs");
+    const big = $("product-image");
     const prev = $("thumbPrev");
     const next = $("thumbNext");
-    if (!thumbs || !prev || !next) return;
 
-    if (thumbs.dataset.arrowBound === "1") return;
-    thumbs.dataset.arrowBound = "1";
+    thumbs.addEventListener("click", e => {
+      const img = e.target.closest("img[data-src]");
+      if(!img) return;
 
-    const step = () => Math.max(220, Math.floor(thumbs.clientWidth * 0.7));
+      big.src = img.dataset.src;
+      thumbs.querySelectorAll("img").forEach(x => x.classList.remove("active"));
+      img.classList.add("active");
+    });
+
+    function step(){
+      return Math.max(220, Math.floor(thumbs.clientWidth * .75));
+    }
 
     function update(){
-      const max = Math.max(0, thumbs.scrollWidth - thumbs.clientWidth - 2);
+      const max = thumbs.scrollWidth - thumbs.clientWidth - 2;
       prev.disabled = thumbs.scrollLeft <= 2;
       next.disabled = thumbs.scrollLeft >= max;
     }
 
-    prev.addEventListener("click", (e)=>{
-      e.preventDefault();
-      thumbs.scrollBy({ left: -step(), behavior: "smooth" });
-      setTimeout(update, 220);
+    prev.addEventListener("click", () => {
+      thumbs.scrollBy({left:-step(), behavior:"smooth"});
+      setTimeout(update,250);
     });
 
-    next.addEventListener("click", (e)=>{
-      e.preventDefault();
-      thumbs.scrollBy({ left: step(), behavior: "smooth" });
-      setTimeout(update, 220);
+    next.addEventListener("click", () => {
+      thumbs.scrollBy({left:step(), behavior:"smooth"});
+      setTimeout(update,250);
     });
 
     thumbs.addEventListener("scroll", update);
     window.addEventListener("resize", update);
-
-    // initial state
-    setTimeout(update, 200);
+    setTimeout(update,300);
   }
 
-  async function load(){
-    const params = new URLSearchParams(location.search);
-    const id = params.get("id");
-    if (!id) return;
+  function updateCartCount(){
+    try{
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      const total = cart.reduce((s,i) => s + Number(i.quantity || i.qty || 0), 0);
+      const badge = $("cart-count");
+      if(badge) badge.textContent = total;
+    }catch{
+      const badge = $("cart-count");
+      if(badge) badge.textContent = "0";
+    }
+  }
 
-    const doc = await db.collection("products").doc(id).get();
-    if (!doc.exists) return;
+  function getCart(){
+    try{
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      return Array.isArray(cart) ? cart : [];
+    }catch{
+      return [];
+    }
+  }
 
-    const p = doc.data();
+  function saveCart(cart){
+    localStorage.setItem("cart", JSON.stringify(cart));
+    updateCartCount();
+  }
 
-    // BASIC INFO
-    $("product-name").textContent  = p.name || "";
-    $("product-brand").textContent = p.brand || "";
-    $("product-desc").textContent  = p.description || "";
+  function addToCart(productId, product){
+    const sizeSelect = $("size");
+    const opt = sizeSelect.selectedOptions[0];
+    const qty = Math.max(1, Number($("qty").value || 1));
+    const price = Number(opt.dataset.price || 0);
+    const base = Number(opt.dataset.base || price);
+    const selectedSize = opt.value || "";
 
-    // IMAGES
-    const allImages = Array.isArray(p.images) && p.images.length
-      ? p.images
-      : (p.imageURL ? [p.imageURL] : []);
-
-    const big = $("product-image");
-    const thumbs = $("product-thumbs");
-
-    if (allImages.length){
-      big.src = allImages[0];
-      thumbs.innerHTML = allImages.map((src,i)=>`
-        <img data-src="${src}" src="${src}" class="${i===0?'active':''}">
-      `).join("");
-
-      // ✅ prevent double-binding if load() runs again
-      if (!thumbs.dataset.bound){
-        thumbs.dataset.bound = "1";
-        thumbs.addEventListener("click",(e)=>{
-          const t = e.target.closest("img[data-src]");
-          if (!t) return;
-          big.src = t.dataset.src;
-          thumbs.querySelectorAll("img").forEach(img=>img.classList.remove("active"));
-          t.classList.add("active");
-        });
-      }
-
-      // ✅ bind arrow buttons AFTER thumbs exist
-      bindThumbArrows();
+    if(!price || price <= 0){
+      alert("This product has no valid price.");
+      return;
     }
 
-    // DISCOUNT LOGIC
-    const hasDiscount = p.discountPrice && Number(p.discountPrice) > 0;
-    const discountVal = hasDiscount ? Number(p.discountPrice) : 0;
-
-    const sizes = Array.isArray(p.sizes) ? p.sizes : [];
-
-    const finalSizes = sizes.map(s => {
-      const base = Number(s.price || 0);
-      const final = hasDiscount ? Math.min(base, discountVal) : base;
-      return { label: s.label, basePrice: base, finalPrice: final };
-    });
-
-    let noSizeFinalPrice = null;
-    if (!sizes.length){
-      const base = Number(p.basePrice || 0);
-      noSizeFinalPrice = hasDiscount ? Math.min(base, discountVal) : base;
-    }
-
-    // SIZE DROPDOWN
-    const sizeSel = $("size");
-
-    if (finalSizes.length){
-      sizeSel.innerHTML = finalSizes.map(s=>`
-        <option data-price="${s.finalPrice}" data-base="${s.basePrice}" value="${s.label}">
-          ${s.label} - Rs${s.finalPrice}
-        </option>
-      `).join("");
-    } else {
-      sizeSel.innerHTML = `
-        <option data-price="${noSizeFinalPrice}" data-base="${p.basePrice}">
-          Rs${noSizeFinalPrice}
-        </option>
-      `;
-    }
-
-    // PRICE HANDLE
-    const priceEl = $("price");
-    function updatePrice(){
-      const opt = sizeSel.selectedOptions[0];
-      priceEl.textContent = fmt(opt.dataset.price);
-    }
-    if (!sizeSel.dataset.bound){
-      sizeSel.dataset.bound = "1";
-      sizeSel.addEventListener("change", updatePrice);
-    }
-    updatePrice();
-
-    // SEND DATA TO product-detail.js
-    window.__productData = {
-      id,
-      name: p.name,
-      brand: p.brand,
-      description: p.description,
-      discountPrice: hasDiscount ? discountVal : 0,
-      sizes: finalSizes.length ? finalSizes.map(s=>({
-        label: s.label,
-        price: s.finalPrice
-      })) : [],
-      basePrice: p.basePrice || 0
+    const item = {
+      productId,
+      name: product.name || "Product",
+      brand: product.brand || "",
+      size: selectedSize,
+      displayName: selectedSize ? `${product.name} (${selectedSize})` : product.name,
+      price,
+      basePrice: base,
+      oldPrice: base > price ? base : null,
+      discountPrice: base > price ? price : null,
+      quantity: qty,
+      imageURL: $("product-image").src,
+      category: product.category || "",
+      addedAt: new Date().toISOString()
     };
 
-    // OOS
-    applyOOSUI(isOutOfStock(p) || !p.active);
+    const cart = getCart();
 
-    // ✅ only binds if product-detail.js didn't already
-    wireQty();
+    const existing = cart.findIndex(x =>
+      String(x.productId) === String(item.productId) &&
+      String(x.size || "") === String(item.size || "") &&
+      Number(x.price) === Number(item.price)
+    );
+
+    if(existing >= 0){
+      cart[existing].quantity = Number(cart[existing].quantity || 0) + qty;
+      cart[existing].addedAt = new Date().toISOString();
+    }else{
+      cart.push(item);
+    }
+
+    saveCart(cart);
+
+    const btn = $("add-to-cart");
+    btn.textContent = "Added ✓";
+    setTimeout(() => {
+      if(!btn.disabled) btn.textContent = "Add to Cart";
+    }, 1200);
   }
 
-  load();
+  function setupSizes(product){
+    const sizeSelect = $("size");
+    const priceEl = $("price");
+    const oldPriceEl = $("old-price");
+    const discount = getDiscount(product);
+    const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+
+    let options = [];
+
+    if(sizes.length){
+      options = sizes.map(s => {
+        const base = Number(s.price || 0);
+        const finalPrice = discount > 0 && discount < base ? discount : base;
+
+        return {
+          label: s.label || "Size",
+          base,
+          price: finalPrice
+        };
+      });
+    }else{
+      const base = Number(product.basePrice || 0);
+      const finalPrice = discount > 0 && discount < base ? discount : base;
+
+      options = [{
+        label: "Default",
+        base,
+        price: finalPrice
+      }];
+    }
+
+    sizeSelect.innerHTML = options.map(o => `
+      <option value="${escapeHtml(o.label)}" data-price="${o.price}" data-base="${o.base}">
+        ${escapeHtml(o.label)} - ${fmt(o.price)}
+      </option>
+    `).join("");
+
+    function updatePrice(){
+      const opt = sizeSelect.selectedOptions[0];
+      const price = Number(opt.dataset.price || 0);
+      const base = Number(opt.dataset.base || price);
+
+      priceEl.textContent = fmt(price);
+
+      if(base > price){
+        oldPriceEl.style.display = "inline";
+        oldPriceEl.textContent = fmt(base);
+        $("badge-slot").innerHTML += `<span class="sale-tag-detail">Sale</span>`;
+      }else{
+        oldPriceEl.style.display = "none";
+        oldPriceEl.textContent = "";
+      }
+    }
+
+    sizeSelect.addEventListener("change", updatePrice);
+    updatePrice();
+  }
+
+  async function loadProduct(){
+    const id = new URLSearchParams(location.search).get("id");
+    if(!id){
+      $("product-name").textContent = "Product not found";
+      return;
+    }
+
+    const doc = await db.collection("products").doc(id).get();
+
+    if(!doc.exists){
+      $("product-name").textContent = "Product not found";
+      return;
+    }
+
+    const product = doc.data() || {};
+    const images = getImages(product);
+
+    $("product-name").textContent = product.name || "Product";
+    $("product-brand").textContent = product.brand || "B’s Beauty Blossom";
+    $("product-desc").textContent = product.description || "No description available.";
+    $("product-image").src = images[0];
+
+    $("product-thumbs").innerHTML = images.map((src,i) => `
+      <img src="${escapeHtml(src)}" data-src="${escapeHtml(src)}" class="${i === 0 ? "active" : ""}" alt="Product thumbnail ${i + 1}">
+    `).join("");
+
+    setupSizes(product);
+    applyStockUI(isOutOfStock(product) || product.active === false);
+
+    $("add-to-cart").addEventListener("click", () => {
+      addToCart(id, product);
+    });
+
+    bindThumbs();
+    bindQty();
+    updateCartCount();
+  }
+
+  loadProduct().catch(err => {
+    console.error(err);
+    $("product-name").textContent = "Could not load product";
+  });
 })();
 </script>
 
-<!-- Extra scripts -->
-<script src="product-detail.js"></script>
 <script src="script.js"></script>
-
 </body>
 </html>
