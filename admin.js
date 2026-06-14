@@ -5,7 +5,9 @@ if (!window.firebase) throw new Error("❌ Firebase SDK missing");
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-const WORKER_UPLOAD_URL = window.WORKER_UPLOAD_URL || "https://bbb-r2-uploader.mbhoyroo246.workers.dev";
+const WORKER_UPLOAD_URL =
+  window.WORKER_UPLOAD_URL ||
+  "https://bbb-r2-uploader.mbhoyroo246.workers.dev/upload";
 
 const ALLOWED_UIDS = [
   "nyQYzolZI2fLFqIkAPNHHbcSJ2p1",
@@ -40,7 +42,10 @@ function esc(v) {
 function fmtMoney(v) {
   const n = Number(v);
   return isFinite(n)
-    ? new Intl.NumberFormat(undefined, { style: "currency", currency: "MUR" }).format(n)
+    ? new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: "MUR"
+      }).format(n)
     : "-";
 }
 
@@ -76,6 +81,7 @@ async function uploadToR2(file, folder = "products") {
   });
 
   let data;
+
   try {
     data = await res.json();
   } catch {
@@ -91,7 +97,10 @@ async function uploadToR2(file, folder = "products") {
 
 function renderSizes(arr) {
   if (!Array.isArray(arr) || !arr.length) return "-";
-  return arr.map(s => `${esc(s.label)} (Rs${Number(s.price || 0)})`).join("<br>");
+
+  return arr
+    .map(s => `${esc(s.label)} (Rs${Number(s.price || 0)})`)
+    .join("<br>");
 }
 
 function getPaymentProofUrl(order) {
@@ -131,15 +140,18 @@ const ordersBody = $("orders-body");
 loginBtn?.addEventListener("click", async () => {
   try {
     if (emailEl?.value && passEl?.value) {
-      await auth.signInWithEmailAndPassword(emailEl.value.trim(), passEl.value.trim());
+      await auth.signInWithEmailAndPassword(
+        emailEl.value.trim(),
+        passEl.value.trim()
+      );
     } else {
       const provider = new firebase.auth.GoogleAuthProvider();
       await auth.signInWithPopup(provider);
     }
 
-    authStatus.textContent = "✅ Logged in";
+    if (authStatus) authStatus.textContent = "✅ Logged in";
   } catch (e) {
-    authStatus.textContent = "❌ " + (e?.message || e);
+    if (authStatus) authStatus.textContent = "❌ " + (e?.message || e);
     console.error(e);
   }
 });
@@ -147,7 +159,7 @@ loginBtn?.addEventListener("click", async () => {
 logoutBtn?.addEventListener("click", async () => {
   try {
     await auth.signOut();
-    authStatus.textContent = "Logged out";
+    if (authStatus) authStatus.textContent = "Logged out";
   } catch (e) {
     console.error(e);
   }
@@ -165,7 +177,7 @@ btnSeeOrders?.addEventListener("click", () => {
   show(btnBack);
   hide(btnSeeOrders);
 
-  ordersStatus.textContent = "Loading orders…";
+  if (ordersStatus) ordersStatus.textContent = "Loading orders…";
   attachOrdersListener();
 });
 
@@ -178,7 +190,9 @@ btnBack?.addEventListener("click", () => {
 
 function rowHTML(id, order) {
   const itemsText = Array.isArray(order.items)
-    ? order.items.map(i => `${i.displayName || i.name || i.title || "item"} x${i.qty || i.quantity || 1}`).join(", ")
+    ? order.items
+        .map(i => `${i.displayName || i.name || i.title || "item"} x${i.qty || i.quantity || 1}`)
+        .join(", ")
     : "";
 
   const status = String(order.status || "pending").toLowerCase();
@@ -233,29 +247,35 @@ function attachOrdersListener() {
 
   const ref = firebase.database().ref("orders").limitToLast(500);
 
-  ref.on("value", snap => {
-    const data = snap.val() || {};
+  ref.on(
+    "value",
+    snap => {
+      const data = snap.val() || {};
 
-    allOrders = Object.entries(data).map(([id, order]) => ({
-      id,
-      order: order || {},
-      time: order?.timestamp || order?.createdAt || 0
-    }));
+      allOrders = Object.entries(data).map(([id, order]) => ({
+        id,
+        order: order || {},
+        time: order?.timestamp || order?.createdAt || 0
+      }));
 
-    allOrders.sort((a, b) => {
-      return new Date(b.time).getTime() - new Date(a.time).getTime();
-    });
+      allOrders.sort((a, b) => {
+        return new Date(b.time).getTime() - new Date(a.time).getTime();
+      });
 
-    currentOrderPage = 1;
-    applyOrderFilters();
+      currentOrderPage = 1;
+      applyOrderFilters();
 
-    ordersStatus.textContent = allOrders.length
-      ? `Loaded ${allOrders.length} order(s).`
-      : "No orders yet.";
-  }, err => {
-    console.error(err);
-    ordersStatus.textContent = "Permission error or missing rules.";
-  });
+      if (ordersStatus) {
+        ordersStatus.textContent = allOrders.length
+          ? `Loaded ${allOrders.length} order(s).`
+          : "No orders yet.";
+      }
+    },
+    err => {
+      console.error(err);
+      if (ordersStatus) ordersStatus.textContent = "Permission error or missing rules.";
+    }
+  );
 
   ordersListenerAttached = true;
 }
@@ -328,10 +348,12 @@ function renderOrderPagination() {
   prev.className = "page-btn";
   prev.textContent = "‹";
   prev.disabled = currentOrderPage === 1;
+
   prev.addEventListener("click", () => {
     currentOrderPage--;
     renderOrdersPage();
   });
+
   wrap.appendChild(prev);
 
   for (let i = 1; i <= totalPages; i++) {
@@ -351,10 +373,12 @@ function renderOrderPagination() {
   next.className = "page-btn";
   next.textContent = "›";
   next.disabled = currentOrderPage === totalPages;
+
   next.addEventListener("click", () => {
     currentOrderPage++;
     renderOrdersPage();
   });
+
   wrap.appendChild(next);
 }
 
@@ -366,7 +390,7 @@ window.__applyOrderFilters = function () {
 $("orderSearch")?.addEventListener("input", window.__applyOrderFilters);
 $("orderStatusFilter")?.addEventListener("change", window.__applyOrderFilters);
 
-document.addEventListener("click", async (e) => {
+document.addEventListener("click", async e => {
   const setBtn = e.target.closest("[data-set-status]");
   const delBtn = e.target.closest("[data-delete-id]");
 
@@ -434,7 +458,9 @@ async function loadSite() {
       : "";
 
     site.galleryPreview.innerHTML = Array.isArray(data.gallery)
-      ? data.gallery.map(u => `<img src="${esc(u)}" style="width:86px;height:86px;border-radius:8px;border:1px solid #ccc;object-fit:cover">`).join("")
+      ? data.gallery
+          .map(u => `<img src="${esc(u)}" style="width:86px;height:86px;border-radius:8px;border:1px solid #ccc;object-fit:cover">`)
+          .join("")
       : "";
 
     site.status.textContent = "Ready.";
@@ -714,10 +740,12 @@ function renderPagination(totalPages) {
   prev.className = "page-btn";
   prev.textContent = "‹";
   prev.disabled = currentPage === 1;
+
   prev.addEventListener("click", () => {
     currentPage--;
     renderProductsTable();
   });
+
   productPagination.appendChild(prev);
 
   for (let i = 1; i <= totalPages; i++) {
@@ -737,10 +765,12 @@ function renderPagination(totalPages) {
   next.className = "page-btn";
   next.textContent = "›";
   next.disabled = currentPage === totalPages;
+
   next.addEventListener("click", () => {
     currentPage++;
     renderProductsTable();
   });
+
   productPagination.appendChild(next);
 }
 
@@ -764,7 +794,10 @@ function bindProductButtons() {
 
       loadVariantsIntoRows(p.sizes || []);
 
-      productSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+      productSection?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
     });
   });
 
@@ -821,6 +854,7 @@ async function loadProducts() {
 refreshBtn?.addEventListener("click", loadProducts);
 filterCategory?.addEventListener("change", applyProductFilters);
 productSearch?.addEventListener("input", applyProductFilters);
+
 productsPerPage?.addEventListener("change", () => {
   currentPage = 1;
   renderProductsTable();
@@ -861,6 +895,7 @@ saveBtn?.addEventListener("click", async () => {
 
     if (!sizes.length) {
       const useBase = confirm("No variants added. Use base price as one default variant?");
+
       if (useBase) {
         data.sizes = [{ label: "Default", price: basePrice }];
       }
@@ -901,11 +936,11 @@ auth.onAuthStateChanged(user => {
   logged ? show(logoutBtn) : hide(logoutBtn);
 
   if (!logged) {
-    authStatus.textContent = "Please sign in.";
+    if (authStatus) authStatus.textContent = "Please sign in.";
   } else if (canSeeAdmin(user)) {
-    authStatus.textContent = `Signed in as ${user.email || user.uid}`;
+    if (authStatus) authStatus.textContent = `Signed in as ${user.email || user.uid}`;
   } else {
-    authStatus.textContent = "Access denied.";
+    if (authStatus) authStatus.textContent = "Access denied.";
   }
 
   const allowed = logged && canSeeAdmin(user);
@@ -913,19 +948,20 @@ auth.onAuthStateChanged(user => {
   allowed ? show(btnSeeOrders) : hide(btnSeeOrders);
 
   if (allowed) {
-    dashboardWrap.style.display = "block";
-    siteSection.style.display = "block";
-    productSection.style.display = "block";
-    listSection.style.display = "block";
+    if (dashboardWrap) dashboardWrap.style.display = "block";
+    if (siteSection) siteSection.style.display = "block";
+    if (productSection) productSection.style.display = "block";
+    if (listSection) listSection.style.display = "block";
 
     loadVariantsIntoRows([]);
     loadSite();
     loadProducts();
   } else {
-    dashboardWrap.style.display = "none";
-    siteSection.style.display = "none";
-    productSection.style.display = "none";
-    listSection.style.display = "none";
+    if (dashboardWrap) dashboardWrap.style.display = "none";
+    if (siteSection) siteSection.style.display = "none";
+    if (productSection) productSection.style.display = "none";
+    if (listSection) listSection.style.display = "none";
+
     hide(ordersSection);
     hide(btnBack);
   }
