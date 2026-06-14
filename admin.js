@@ -4,10 +4,7 @@ if (!window.firebase) throw new Error("❌ Firebase SDK missing");
 
 const auth = firebase.auth();
 const db = firebase.firestore();
-
-const WORKER_UPLOAD_URL =
-  window.WORKER_UPLOAD_URL ||
-  "https://bbb-r2-uploader.mbhoyroo246.workers.dev/upload";
+const storage = firebase.storage();
 
 const ALLOWED_UIDS = [
   "nyQYzolZI2fLFqIkAPNHHbcSJ2p1",
@@ -68,31 +65,24 @@ function canSeeAdmin(user) {
   return !!user && ALLOWED_UIDS.includes(user.uid);
 }
 
-async function uploadToR2(file, folder = "products") {
+async function uploadToFirebase(file, folder = "products") {
   if (!file) throw new Error("No file selected.");
 
-  const fd = new FormData();
-  fd.append("file", file);
-  fd.append("folder", folder);
-
-  const res = await fetch(WORKER_UPLOAD_URL, {
-    method: "POST",
-    body: fd
-  });
-
-  let data;
-
-  try {
-    data = await res.json();
-  } catch {
-    throw new Error("Cloudflare Worker did not return valid JSON.");
+  if (!firebase.storage) {
+    throw new Error("Firebase Storage SDK missing. Add firebase-storage-compat.js in admin.html.");
   }
 
-  if (!res.ok || !data.ok || !data.url) {
-    throw new Error(data.error || "Cloudflare R2 upload failed.");
-  }
+  const ext = file.name.split(".").pop() || "jpg";
+  const cleanName = file.name
+    .replace(/\.[^/.]+$/, "")
+    .replace(/[^a-zA-Z0-9-_]/g, "-")
+    .toLowerCase();
 
-  return data.url;
+  const path = `${folder}/${Date.now()}-${cleanName}.${ext}`;
+  const ref = storage.ref().child(path);
+
+  await ref.put(file);
+  return await ref.getDownloadURL();
 }
 
 function renderSizes(arr) {
@@ -114,9 +104,6 @@ function getPaymentProofUrl(order) {
   );
 }
 
-/* =========================
-   UI refs
-========================= */
 const loginBtn = $("loginBtn");
 const logoutBtn = $("logoutBtn");
 const authStatus = $("auth-status");
@@ -134,9 +121,6 @@ const ordersSection = $("orders-section");
 const ordersStatus = $("orders-status");
 const ordersBody = $("orders-body");
 
-/* =========================
-   Auth
-========================= */
 loginBtn?.addEventListener("click", async () => {
   try {
     if (emailEl?.value && passEl?.value) {
@@ -165,9 +149,6 @@ logoutBtn?.addEventListener("click", async () => {
   }
 });
 
-/* =========================
-   Orders
-========================= */
 btnSeeOrders?.addEventListener("click", () => {
   const u = auth.currentUser;
   if (!canSeeAdmin(u)) return;
@@ -420,9 +401,6 @@ document.addEventListener("click", async e => {
   }
 });
 
-/* =========================
-   Site Settings
-========================= */
 const site = {
   heroTitle: $("site-heroTitle"),
   heroSubtitle: $("site-heroSubtitle"),
@@ -480,12 +458,12 @@ site.saveBtn?.addEventListener("click", async () => {
     let galleryUrls = [];
 
     if (site.banner?.files?.length) {
-      bannerUrl = await uploadToR2(site.banner.files[0], "site/banner");
+      bannerUrl = await uploadToFirebase(site.banner.files[0], "site/banner");
     }
 
     if (site.gallery?.files?.length) {
       galleryUrls = await Promise.all(
-        [...site.gallery.files].map(f => uploadToR2(f, "site/gallery"))
+        [...site.gallery.files].map(f => uploadToFirebase(f, "site/gallery"))
       );
     }
 
@@ -509,9 +487,6 @@ site.saveBtn?.addEventListener("click", async () => {
   }
 });
 
-/* =========================
-   Product refs
-========================= */
 const nameEl = $("name");
 const priceEl = $("price");
 const discountPriceEl = $("discountPrice");
@@ -537,9 +512,6 @@ const resetBtn = $("resetBtn");
 const saveBtn = $("saveBtn");
 const docIdEl = $("docId");
 
-/* =========================
-   Variant builder
-========================= */
 function addVariantRow(label = "", price = "") {
   if (!variantRows) return;
 
@@ -612,9 +584,6 @@ addVariantBtn?.addEventListener("click", () => {
   addVariantRow("", "");
 });
 
-/* =========================
-   Products
-========================= */
 function resetForm() {
   if (docIdEl) docIdEl.value = "";
   if (nameEl) nameEl.value = "";
@@ -907,7 +876,7 @@ saveBtn?.addEventListener("click", async () => {
 
     if (imagesEl.files.length) {
       const urls = await Promise.all(
-        [...imagesEl.files].map(f => uploadToR2(f, "products"))
+        [...imagesEl.files].map(f => uploadToFirebase(f, "products"))
       );
 
       data.images = urls;
@@ -926,9 +895,6 @@ saveBtn?.addEventListener("click", async () => {
   }
 });
 
-/* =========================
-   Auth state
-========================= */
 auth.onAuthStateChanged(user => {
   const logged = !!user;
 
