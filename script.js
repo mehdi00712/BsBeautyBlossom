@@ -1,14 +1,13 @@
-// script.js — slide-in mobile nav (with ✖ close) + overlay + cart badge
-// ✅ FIXED to work on ALL pages including admin
+// script.js — mobile nav + overlay + cart badge
+// Works on all pages including admin
 
 document.addEventListener("DOMContentLoaded", function () {
-
   const hamburger = document.querySelector(".hamburger");
-  const navLinks  = document.querySelector(".nav-links");
-  const navClose  = document.querySelector(".nav-close");
+  const navLinks = document.querySelector(".nav-links");
+  const navClose = document.querySelector(".nav-close");
 
-  // ✅ Overlay (created once, reused on all pages incl. admin)
   let overlay = document.getElementById("navOverlay");
+
   if (!overlay) {
     overlay = document.createElement("div");
     overlay.id = "navOverlay";
@@ -16,18 +15,20 @@ document.addEventListener("DOMContentLoaded", function () {
     document.body.appendChild(overlay);
   }
 
+  function isMobile() {
+    return window.innerWidth <= 1023;
+  }
+
   function lockBody(lock) {
     document.body.style.overflow = lock ? "hidden" : "";
   }
 
   function openMenu() {
-    if (!navLinks) return;
+    if (!navLinks || !isMobile()) return;
 
     navLinks.classList.add("show");
+    overlay.classList.add("show");
     hamburger?.setAttribute("aria-expanded", "true");
-
-    // show overlay only on mobile
-    if (window.innerWidth <= 1023) overlay.classList.add("show");
     lockBody(true);
   }
 
@@ -35,22 +36,23 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!navLinks) return;
 
     navLinks.classList.remove("show");
-    hamburger?.setAttribute("aria-expanded", "false");
-
     overlay.classList.remove("show");
+    hamburger?.setAttribute("aria-expanded", "false");
     lockBody(false);
   }
 
   function toggleMenu() {
     if (!navLinks) return;
-    navLinks.classList.contains("show") ? closeMenu() : openMenu();
+
+    if (navLinks.classList.contains("show")) {
+      closeMenu();
+    } else {
+      openMenu();
+    }
   }
 
-  // ✅ HARD RESET ON LOAD
-  overlay.classList.remove("show");
-  if (!navLinks?.classList.contains("show")) lockBody(false);
+  closeMenu();
 
-  // ✅ Avoid double-binding
   if (hamburger && hamburger.dataset.navBound !== "1") {
     hamburger.dataset.navBound = "1";
     hamburger.addEventListener("click", toggleMenu);
@@ -66,54 +68,57 @@ document.addEventListener("DOMContentLoaded", function () {
     overlay.addEventListener("click", closeMenu);
   }
 
-  // Close when clicking link inside panel
   if (navLinks && navLinks.dataset.navLinksBound !== "1") {
     navLinks.dataset.navLinksBound = "1";
-    navLinks.addEventListener("click", (e) => {
-      if (e.target.closest("a")) closeMenu();
-    });
-  }
 
-  // Close if resized to desktop
-  if (!window.datasetNavResizeBound) {
-    window.datasetNavResizeBound = "1";
-
-    window.addEventListener("resize", () => {
-      const w = window.innerWidth;
-
-      if (w > 1023) {
+    navLinks.addEventListener("click", function (e) {
+      if (e.target.closest("a")) {
         closeMenu();
-        overlay.classList.remove("show");
-        lockBody(false);
-      } else {
-        if (navLinks?.classList.contains("show")) overlay.classList.add("show");
       }
     });
   }
 
-  // ESC to close
-  if (!document.documentElement.datasetNavEscBound) {
-    document.documentElement.datasetNavEscBound = "1";
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeMenu();
+  if (window.datasetNavResizeBound !== "1") {
+    window.datasetNavResizeBound = "1";
+
+    window.addEventListener("resize", function () {
+      if (!isMobile()) {
+        closeMenu();
+      } else if (navLinks?.classList.contains("show")) {
+        overlay.classList.add("show");
+      }
     });
   }
 
-  // ===============================
-  // 🛒 Cart badge
-  // ===============================
+  if (document.documentElement.datasetNavEscBound !== "1") {
+    document.documentElement.datasetNavEscBound = "1";
 
-  const cartCountEl = document.getElementById("cart-count");
-  if (cartCountEl) {
-    try {
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      cartCountEl.textContent = cart.reduce(
-        (sum, i) => sum + Number(i.quantity || 0),
-        0
-      );
-    } catch {
-      cartCountEl.textContent = 0;
-    }
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        closeMenu();
+      }
+    });
   }
 
+  updateCartCount();
+  window.updateCartCount = updateCartCount;
 });
+
+function updateCartCount() {
+  const cartCountEl = document.getElementById("cart-count");
+  if (!cartCountEl) return;
+
+  try {
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+    const total = Array.isArray(cart)
+      ? cart.reduce((sum, item) => {
+          return sum + Number(item.quantity || item.qty || 0);
+        }, 0)
+      : 0;
+
+    cartCountEl.textContent = total;
+  } catch {
+    cartCountEl.textContent = "0";
+  }
+}
