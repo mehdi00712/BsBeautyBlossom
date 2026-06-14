@@ -11,26 +11,13 @@
 <script src="firebase-config.js"></script>
 
 <style>
-.old-price-cart {
-  text-decoration: line-through;
-  color: #777;
-  margin-right: 6px;
-}
-.new-price-cart {
-  color: #b30000;
-  font-weight: bold;
-}
-.cart-actions {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-}
-.qty-btn {
-  min-width: 34px;
-  padding: 6px 10px;
-}
+.old-price-cart{text-decoration:line-through;color:#777;margin-right:6px}
+.new-price-cart{color:#b30000;font-weight:bold}
+.cart-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.qty-btn{min-width:34px;padding:6px 10px}
+.proof-box{margin-top:14px;text-align:left}
+.proof-box input{margin-top:8px}
+.proof-help{font-size:.9rem;color:#6b7280;margin-top:6px}
 </style>
 </head>
 
@@ -101,7 +88,13 @@
         <p>1. Open your Juice app</p>
         <p>2. Transfer the total amount to:</p>
         <p><strong>Account Number: 000450702685</strong></p>
-        <p>3. Send your payment receipt to <strong>+230 58195560</strong></p>
+        <p>3. Upload your payment receipt below.</p>
+
+        <div class="proof-box">
+          <label for="paymentProof"><strong>Upload Payment Proof *</strong></label>
+          <input type="file" id="paymentProof" accept="image/*,.pdf">
+          <div class="proof-help">Upload a Juice screenshot, bank receipt, or PDF proof.</div>
+        </div>
       </div>
 
       <button type="submit" id="submit-order" class="btn btn-primary" style="margin-top:10px">
@@ -119,6 +112,8 @@
 
 <script>
 (function () {
+  const R2_UPLOAD_URL = "https://bbb-r2-uploader.mbhoyroo246.workers.dev/upload";
+
   const list = document.getElementById("cart-items");
   const subtotalEl = document.getElementById("subtotal");
   const shippingEl = document.getElementById("shipping");
@@ -135,13 +130,38 @@
   let shipping = 0;
   let isSubmitting = false;
 
+  async function uploadToR2(file, folder = "payment-proofs") {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("folder", folder);
+
+    const res = await fetch(R2_UPLOAD_URL, {
+      method: "POST",
+      body: fd
+    });
+
+    let data = {};
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error("Upload server did not return JSON.");
+    }
+
+    if (!res.ok || !data.ok) {
+      throw new Error(data.error || "Payment proof upload failed.");
+    }
+
+    return data.url;
+  }
+
   function money(n) {
     return "Rs" + Number(n || 0).toFixed(0);
   }
 
   function getCart() {
     try {
-      return JSON.parse(localStorage.getItem("cart") || "[]");
+      const saved = JSON.parse(localStorage.getItem("cart") || "[]");
+      return Array.isArray(saved) ? saved : [];
     } catch {
       return [];
     }
@@ -160,14 +180,23 @@
     return Math.max(1, Number(item.quantity || item.qty || 1));
   }
 
+  function escapeHtml(value = "") {
+    return String(value).replace(/[&<>"']/g, function (m) {
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[m];
+    });
+  }
+
   function updateCartCount() {
     const badge = document.getElementById("cart-count");
     if (!badge) return;
 
-    const totalQty = cart.reduce((sum, item) => {
-      return sum + getItemQuantity(item);
-    }, 0);
-
+    const totalQty = cart.reduce((sum, item) => sum + getItemQuantity(item), 0);
     badge.textContent = totalQty;
   }
 
@@ -207,14 +236,14 @@
       row.className = "cart-row";
 
       row.innerHTML = `
-        <img class="cart-thumb" src="${img}" alt="${title}">
+        <img class="cart-thumb" src="${escapeHtml(img)}" alt="${escapeHtml(title)}">
 
         <div>
-          <div class="cart-title">${title}</div>
+          <div class="cart-title">${escapeHtml(title)}</div>
 
           <div class="cart-meta">
-            ${item.brand ? `${item.brand}<br>` : ""}
-            ${item.size ? `Size: ${item.size}<br>` : ""}
+            ${item.brand ? `${escapeHtml(item.brand)}<br>` : ""}
+            ${item.size ? `Size: ${escapeHtml(item.size)}<br>` : ""}
             ${oldPrice && oldPrice > price ? `<span class="old-price-cart">Rs${oldPrice}</span>` : ""}
             <span class="new-price-cart">Rs${price}</span> × ${qty}
           </div>
@@ -237,11 +266,8 @@
         const index = Number(this.dataset.minus);
         const qty = getItemQuantity(cart[index]);
 
-        if (qty <= 1) {
-          cart.splice(index, 1);
-        } else {
-          cart[index].quantity = qty - 1;
-        }
+        if (qty <= 1) cart.splice(index, 1);
+        else cart[index].quantity = qty - 1;
 
         saveCart();
         renderCart();
@@ -295,12 +321,14 @@
       setShipping(this.value);
 
       const juiceRadio = form.querySelector('input[name="payment"][value="juice"]');
+      const pickupPaymentRadio = form.querySelector('input[name="payment"][value="pickup_payment"]');
 
       if (this.value === "delivery" || this.value === "postage") {
         juiceRadio.checked = true;
         juiceInfo.style.display = "block";
       } else {
-        juiceInfo.style.display =
+        if (pickupPaymentRadio.checked) juiceInfo.style.display = "none";
+        else juiceInfo.style.display =
           form.querySelector('input[name="payment"]:checked')?.value === "juice"
             ? "block"
             : "none";
@@ -322,9 +350,20 @@
 
     const deliveryMethod = form.querySelector('input[name="delivery"]:checked')?.value;
     const paymentMethod = form.querySelector('input[name="payment"]:checked')?.value;
+    const proofFile = document.getElementById("paymentProof")?.files?.[0];
 
     if (!cart.length) {
       alert("Cart is empty.");
+      return false;
+    }
+
+    if (!deliveryMethod) {
+      alert("Please choose a delivery method.");
+      return false;
+    }
+
+    if (!paymentMethod) {
+      alert("Please choose a payment method.");
       return false;
     }
 
@@ -353,10 +392,15 @@
       return false;
     }
 
+    if (paymentMethod === "juice" && !proofFile) {
+      alert("Please upload your payment proof.");
+      return false;
+    }
+
     return true;
   }
 
-  function buildOrder() {
+  function buildOrder(paymentProofUrl = "") {
     const deliveryMethod = form.querySelector('input[name="delivery"]:checked').value;
     const paymentMethod = form.querySelector('input[name="payment"]:checked').value;
 
@@ -417,14 +461,18 @@
       payment: {
         method: paymentMethod,
         label: paymentMethod === "juice" ? "Juice" : "Pay at Pick Up",
-        status: paymentMethod === "juice" ? "awaiting_receipt" : "pay_on_pickup"
+        status: paymentMethod === "juice" ? "pending_verification" : "pay_on_pickup",
+        proofUrl: paymentProofUrl || "",
+        paymentProofUrl: paymentProofUrl || ""
       },
+
+      paymentProofUrl: paymentProofUrl || "",
 
       subtotal: subtotal,
       shipping: shipping,
       total: subtotal + shipping,
 
-      status: "pending",
+      status: paymentMethod === "juice" ? "pending_verification" : "pending",
       createdAt: new Date().toISOString(),
       timestamp: new Date().toISOString()
     };
@@ -444,7 +492,19 @@
     submitBtn.textContent = "Placing order...";
 
     try {
-      const order = buildOrder();
+      const paymentMethod = form.querySelector('input[name="payment"]:checked')?.value;
+      let paymentProofUrl = "";
+
+      if (paymentMethod === "juice") {
+        const proofFile = document.getElementById("paymentProof").files[0];
+
+        submitBtn.textContent = "Uploading payment proof...";
+        paymentProofUrl = await uploadToR2(proofFile, "payment-proofs");
+      }
+
+      submitBtn.textContent = "Saving order...";
+
+      const order = buildOrder(paymentProofUrl);
       const ref = await firebase.database().ref("orders").push(order);
 
       localStorage.removeItem("cart");
@@ -455,7 +515,7 @@
       window.location.href = "index.html";
     } catch (error) {
       console.error("Order error:", error);
-      alert("Failed to place order. Please try again.");
+      alert("Failed to place order: " + (error.message || error));
 
       isSubmitting = false;
       submitBtn.disabled = false;
