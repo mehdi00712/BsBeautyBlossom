@@ -4,10 +4,12 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Cart - B’s Beauty Blossom</title>
+
 <link rel="stylesheet" href="style.css">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="firebase-config.js"></script>
 
 <style>
@@ -18,10 +20,21 @@
 .proof-box{margin-top:14px;text-align:left}
 .proof-box input{margin-top:8px}
 .proof-help{font-size:.9rem;color:#6b7280;margin-top:6px}
+.checkout-shell{max-width:950px;margin:0 auto}
+.checkout-card{background:#fff;border-radius:18px;padding:22px;box-shadow:0 12px 35px rgba(0,0,0,.08);margin-top:18px}
+.checkout-title{font-family:'Playfair Display',serif;margin-bottom:12px}
+.option-box{display:block;padding:13px 15px;border:1px solid #ead8dd;border-radius:14px;margin-bottom:10px;cursor:pointer;background:#fffafb}
+.option-box:hover{border-color:#c96b87}
+.option-box input{margin-right:8px}
+.payment-disabled{opacity:.45;pointer-events:none}
+.order-note{margin-top:10px;font-size:.92rem;color:#6b7280}
+.empty-cart-actions{margin-top:14px}
+@media(max-width:700px){.cart-actions{justify-content:flex-start}.checkout-card{padding:16px}}
 </style>
 </head>
 
 <body>
+
 <header>
   <nav class="navbar">
     <div class="logo">
@@ -46,62 +59,86 @@
 </header>
 
 <section class="section">
-  <h1>Cart & Checkout</h1>
+  <div class="checkout-shell">
+    <h1>Cart & Checkout</h1>
 
-  <div id="cart-items" class="cart-list"></div>
+    <div id="cart-items" class="cart-list"></div>
 
-  <div class="totals">
-    <div class="totals-row"><span>Subtotal</span><span id="subtotal">Rs0</span></div>
-    <div class="totals-row"><span>Shipping</span><span id="shipping">Rs0</span></div>
-    <div class="totals-row"><strong>Total</strong><strong id="total">Rs0</strong></div>
-  </div>
-
-  <h2 style="margin-top:20px">Delivery Method</h2>
-
-  <form id="checkout-form">
-    <label><input type="radio" name="delivery" value="pickup" required> Pick Up (Free)</label><br>
-    <label><input type="radio" name="delivery" value="postage"> Postage (+Rs125)</label><br>
-    <label><input type="radio" name="delivery" value="delivery"> Delivery (+Rs150)</label><br><br>
-
-    <div id="customer-info" class="card" style="display:none;margin-top:10px">
-      <h3 style="font-family:'Playfair Display',serif;margin-bottom:10px">Customer Details</h3>
-
-      <div class="row row-2">
-        <div><input type="text" id="name" placeholder="Full Name" required></div>
-        <div><input type="email" id="email" placeholder="Email" required></div>
-      </div>
-
-      <div class="row row-2">
-        <div><input type="tel" id="phone" placeholder="Phone, example: 58195560" required></div>
-        <div id="address-wrap" style="display:none">
-          <input type="text" id="address" placeholder="Delivery / Postage Address">
-        </div>
-      </div>
-
-      <h3 style="font-family:'Playfair Display',serif;margin:10px 0 8px">Payment</h3>
-
-      <label><input type="radio" name="payment" value="juice" required> Juice Payment</label><br>
-      <label><input type="radio" name="payment" value="pickup_payment"> Pay at Pick Up</label><br>
-
-      <div id="juice-info" class="card" style="display:none;margin-top:10px;text-align:center">
-        <h4>Juice Payment Instructions</h4>
-        <p>1. Open your Juice app</p>
-        <p>2. Transfer the total amount to:</p>
-        <p><strong>Account Number: 000450702685</strong></p>
-        <p>3. Upload your payment receipt below.</p>
-
-        <div class="proof-box">
-          <label for="paymentProof"><strong>Upload Payment Proof *</strong></label>
-          <input type="file" id="paymentProof" accept="image/*,.pdf">
-          <div class="proof-help">Upload a Juice screenshot, bank receipt, or PDF proof.</div>
-        </div>
-      </div>
-
-      <button type="submit" id="submit-order" class="btn btn-primary" style="margin-top:10px">
-        Confirm Order
-      </button>
+    <div class="totals checkout-card">
+      <div class="totals-row"><span>Subtotal</span><span id="subtotal">Rs0</span></div>
+      <div class="totals-row"><span>Shipping</span><span id="shipping">Rs0</span></div>
+      <div class="totals-row"><strong>Total</strong><strong id="total">Rs0</strong></div>
     </div>
-  </form>
+
+    <form id="checkout-form" class="checkout-card">
+      <h2 class="checkout-title">Delivery Method</h2>
+
+      <label class="option-box">
+        <input type="radio" name="delivery" value="pickup" required>
+        Pick Up — Free
+      </label>
+
+      <label class="option-box">
+        <input type="radio" name="delivery" value="postage">
+        Postage — Rs125
+      </label>
+
+      <label class="option-box">
+        <input type="radio" name="delivery" value="delivery">
+        Delivery — Rs150
+      </label>
+
+      <div id="customer-info" style="display:none;margin-top:18px">
+        <h2 class="checkout-title">Customer Details</h2>
+
+        <div class="row row-2">
+          <div><input type="text" id="name" placeholder="Full Name" required></div>
+          <div><input type="email" id="email" placeholder="Email" required></div>
+        </div>
+
+        <div class="row row-2">
+          <div><input type="tel" id="phone" placeholder="Phone, example: 58195560" required></div>
+          <div id="address-wrap" style="display:none">
+            <input type="text" id="address" placeholder="Delivery / Postage Address">
+          </div>
+        </div>
+
+        <h2 class="checkout-title" style="margin-top:16px">Payment</h2>
+
+        <label class="option-box" id="juice-payment-label">
+          <input type="radio" name="payment" value="juice" required>
+          Juice Payment
+        </label>
+
+        <label class="option-box" id="pickup-payment-label">
+          <input type="radio" name="payment" value="pickup_payment">
+          Pay at Pick Up
+        </label>
+
+        <p id="payment-note" class="order-note" style="display:none">
+          Delivery and postage orders must be paid by Juice before confirmation.
+        </p>
+
+        <div id="juice-info" class="checkout-card" style="display:none;text-align:center">
+          <h3>Juice Payment Instructions</h3>
+          <p>1. Open your Juice app.</p>
+          <p>2. Transfer the total amount to:</p>
+          <p><strong>Account Number: 000450702685</strong></p>
+          <p>3. Upload your payment receipt below.</p>
+
+          <div class="proof-box">
+            <label for="paymentProof"><strong>Upload Payment Proof *</strong></label>
+            <input type="file" id="paymentProof" accept="image/*,.pdf">
+            <div class="proof-help">Upload a Juice screenshot, bank receipt, or PDF proof.</div>
+          </div>
+        </div>
+
+        <button type="submit" id="submit-order" class="btn btn-primary" style="margin-top:16px">
+          Confirm Order
+        </button>
+      </div>
+    </form>
+  </div>
 </section>
 
 <footer class="site-footer">
@@ -112,8 +149,6 @@
 
 <script>
 (function () {
-  const R2_UPLOAD_URL = "https://bbb-r2-uploader.mbhoyroo246.workers.dev/upload";
-
   const list = document.getElementById("cart-items");
   const subtotalEl = document.getElementById("subtotal");
   const shippingEl = document.getElementById("shipping");
@@ -124,35 +159,13 @@
   const addressWrap = document.getElementById("address-wrap");
   const juiceInfo = document.getElementById("juice-info");
   const submitBtn = document.getElementById("submit-order");
+  const paymentNote = document.getElementById("payment-note");
+  const pickupPaymentLabel = document.getElementById("pickup-payment-label");
 
   let cart = [];
   let subtotal = 0;
   let shipping = 0;
   let isSubmitting = false;
-
-  async function uploadToR2(file, folder = "payment-proofs") {
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("folder", folder);
-
-    const res = await fetch(R2_UPLOAD_URL, {
-      method: "POST",
-      body: fd
-    });
-
-    let data = {};
-    try {
-      data = await res.json();
-    } catch {
-      throw new Error("Upload server did not return JSON.");
-    }
-
-    if (!res.ok || !data.ok) {
-      throw new Error(data.error || "Payment proof upload failed.");
-    }
-
-    return data.url;
-  }
 
   function money(n) {
     return "Rs" + Number(n || 0).toFixed(0);
@@ -173,7 +186,11 @@
   }
 
   function getItemPrice(item) {
-    return Number(item.price || item.discountPrice || 0);
+    const discount = Number(item.discountPrice || 0);
+    const price = Number(item.price || 0);
+    if (discount > 0) return discount;
+    if (price > 0) return price;
+    return 0;
   }
 
   function getItemQuantity(item) {
@@ -208,14 +225,39 @@
     totalEl.textContent = money(subtotal + shipping);
   }
 
+  async function uploadPaymentProof(file) {
+    if (!file) return "";
+
+    if (!window.firebase || !firebase.storage) {
+      throw new Error("Firebase Storage is not loaded. Check firebase-storage-compat.js and firebase-config.js.");
+    }
+
+    const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const filePath = "payment-proofs/" + Date.now() + "-" + cleanName;
+
+    const storageRef = firebase.storage().ref(filePath);
+    const snapshot = await storageRef.put(file);
+
+    return await snapshot.ref.getDownloadURL();
+  }
+
   function renderCart() {
     cart = getCart();
     list.innerHTML = "";
     subtotal = 0;
 
     if (!cart.length) {
-      list.innerHTML = '<p class="muted">Your cart is empty.</p>';
+      list.innerHTML = `
+        <div class="checkout-card">
+          <p class="muted">Your cart is empty.</p>
+          <div class="empty-cart-actions">
+            <a href="index.html" class="btn btn-primary">Continue Shopping</a>
+          </div>
+        </div>
+      `;
+
       customerInfo.style.display = "none";
+      shipping = 0;
       updateCartCount();
       updateTotals();
       return;
@@ -224,13 +266,13 @@
     cart.forEach((item, index) => {
       const qty = getItemQuantity(item);
       const price = getItemPrice(item);
-      const oldPrice = Number(item.oldPrice || item.basePrice || 0);
+      const oldPrice = Number(item.oldPrice || item.basePrice || item.originalPrice || 0);
       const lineTotal = price * qty;
 
       subtotal += lineTotal;
 
       const title = item.displayName || item.name || "Product";
-      const img = item.imageURL || "https://via.placeholder.com/80";
+      const img = item.imageURL || item.imageUrl || item.image || "https://via.placeholder.com/90";
 
       const row = document.createElement("div");
       row.className = "cart-row";
@@ -240,7 +282,6 @@
 
         <div>
           <div class="cart-title">${escapeHtml(title)}</div>
-
           <div class="cart-meta">
             ${item.brand ? `${escapeHtml(item.brand)}<br>` : ""}
             ${item.size ? `Size: ${escapeHtml(item.size)}<br>` : ""}
@@ -289,6 +330,7 @@
     list.querySelectorAll("[data-remove]").forEach(btn => {
       btn.addEventListener("click", function () {
         const index = Number(this.dataset.remove);
+
         cart.splice(index, 1);
 
         saveCart();
@@ -300,18 +342,49 @@
     updateTotals();
   }
 
+  function setPaymentRules(deliveryMethod) {
+    const juiceRadio = form.querySelector('input[name="payment"][value="juice"]');
+    const pickupPaymentRadio = form.querySelector('input[name="payment"][value="pickup_payment"]');
+
+    const mustUseJuice = deliveryMethod === "delivery" || deliveryMethod === "postage";
+
+    if (mustUseJuice) {
+      juiceRadio.checked = true;
+      pickupPaymentRadio.checked = false;
+      pickupPaymentRadio.disabled = true;
+
+      pickupPaymentLabel.classList.add("payment-disabled");
+      paymentNote.style.display = "block";
+      juiceInfo.style.display = "block";
+    } else {
+      pickupPaymentRadio.disabled = false;
+      pickupPaymentLabel.classList.remove("payment-disabled");
+      paymentNote.style.display = "none";
+
+      const checkedPayment = form.querySelector('input[name="payment"]:checked')?.value;
+      juiceInfo.style.display = checkedPayment === "juice" ? "block" : "none";
+    }
+  }
+
   function setShipping(deliveryMethod) {
+    const addressInput = document.getElementById("address");
+
     if (deliveryMethod === "delivery") {
       shipping = 150;
       addressWrap.style.display = "block";
+      addressInput.required = true;
     } else if (deliveryMethod === "postage") {
       shipping = 125;
       addressWrap.style.display = "block";
+      addressInput.required = true;
     } else {
       shipping = 0;
       addressWrap.style.display = "none";
+      addressInput.required = false;
+      addressInput.value = "";
     }
 
+    setPaymentRules(deliveryMethod);
     updateTotals();
   }
 
@@ -319,20 +392,6 @@
     radio.addEventListener("change", function () {
       customerInfo.style.display = "block";
       setShipping(this.value);
-
-      const juiceRadio = form.querySelector('input[name="payment"][value="juice"]');
-      const pickupPaymentRadio = form.querySelector('input[name="payment"][value="pickup_payment"]');
-
-      if (this.value === "delivery" || this.value === "postage") {
-        juiceRadio.checked = true;
-        juiceInfo.style.display = "block";
-      } else {
-        if (pickupPaymentRadio.checked) juiceInfo.style.display = "none";
-        else juiceInfo.style.display =
-          form.querySelector('input[name="payment"]:checked')?.value === "juice"
-            ? "block"
-            : "none";
-      }
     });
   });
 
@@ -383,7 +442,7 @@
     }
 
     if ((deliveryMethod === "delivery" || deliveryMethod === "postage") && address.length < 5) {
-      alert("Please enter your address.");
+      alert("Please enter your delivery/postage address.");
       return false;
     }
 
@@ -414,7 +473,7 @@
       const price = getItemPrice(item);
 
       return {
-        productId: item.productId || "",
+        productId: item.productId || item.id || "",
         name: item.name || "Product",
         displayName: item.displayName || item.name || "Product",
         brand: item.brand || "",
@@ -426,7 +485,7 @@
         oldPrice: item.oldPrice || null,
         discountPrice: item.discountPrice || null,
         lineTotal: price * qty,
-        imageURL: item.imageURL || ""
+        imageURL: item.imageURL || item.imageUrl || item.image || ""
       };
     });
 
@@ -499,10 +558,14 @@
         const proofFile = document.getElementById("paymentProof").files[0];
 
         submitBtn.textContent = "Uploading payment proof...";
-        paymentProofUrl = await uploadToR2(proofFile, "payment-proofs");
+        paymentProofUrl = await uploadPaymentProof(proofFile);
       }
 
       submitBtn.textContent = "Saving order...";
+
+      if (!window.firebase || !firebase.database) {
+        throw new Error("Firebase Realtime Database is not loaded. Check firebase-config.js.");
+      }
 
       const order = buildOrder(paymentProofUrl);
       const ref = await firebase.database().ref("orders").push(order);
